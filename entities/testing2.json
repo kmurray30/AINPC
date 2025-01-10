@@ -1,0 +1,48 @@
+[
+  {
+    "summary": "Blane",
+    "content": "",
+    "vector": null,
+    "tags": "",
+    "connections": ["Blane's scar"]
+  },
+  {
+    "summary": "Arcana",
+    "content": "",
+    "vector": null,
+    "tags": "",
+    "connections": []
+  },
+  {
+    "summary": "Blane's knowledge of arcana",
+    "content": "",
+    "vector": null,
+    "tags": "",
+    "parent": "Blane",
+    "connections": ["Blane", "Arcana", "Wizard school"]
+  },
+  {
+    "summary": "Blane's fear towards arcana",
+    "content": "Blane is afraid of arcana due to an accident he had with it that led to a scar on his face.",
+    "vector": null,
+    "tags": "",
+    "parent": "Blane",
+    "connections": ["Blane", "Arcana", "Blane's self esteem", "Blane's scar"]
+  },
+  {
+    "summary": "Blane telling me about arcana",
+    "content": "",
+    "vector": null,
+    "tags": "",
+    "parent": "Blane",
+    "connections": ["Blane", "Arcana", "Blane's fear towards arcana"]
+  },
+  {
+    "summary": "Wizard school",
+    "content": "",
+    "vector": null,
+    "tags": "",
+    "parent": "Arcana",
+    "connections": ["Blane's knowledge of arcana"]
+  }
+]

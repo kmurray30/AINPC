@@ -1,0 +1,16 @@
+[
+  {
+    "vector_node": {
+      "tags": ["Following through", "Accomplishment"]
+    },
+    "content_node": {
+      "story": "I am worried about my ability to follow through on my commitments."
+    }
+  },
+  {
+    "vector_node": "Fragile masculinity, easily shattered, validation, traditional male behavior, exaggeration, physical strength, romantic conquests, vulnerability, perceived weakness, defensive, sulk, dismissive, unmanly, avoidance, narrow definition, anxious, insecurities, bravado",
+    "content_node": {
+      "story": "I feel insecure about my manhood."
+    }
+  }
+]

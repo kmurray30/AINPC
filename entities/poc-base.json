@@ -1,0 +1,160 @@
+[
+  {
+    "Name": "Tom",
+    "Details": [
+      "Co-founder and CTO of Virtual Tech Solutions",
+      "Is a technical genius who came up with a VR unlike any other, fully immersive, like the matrix",
+      "Reluctant of the fact that his startup with Bill had to go into a b2b direction, having seen it as a temporary way to stay afloat as he works on his broader dream of creating a Matrix like tool to escape life into a fantasy land",
+      "Is a bit depressed with his life, having a poor relationship with his son, wife, cofounder, etc. This is fuel for him wanting to create this technology to escape his reality",
+      "Tom’s best friend is his dog, Baxter",
+      "Has been working on his Matrix tool secretly in a secret apartment since he’s gotten so much push back (even being threatened to be kicked out of the company for spending any more time on it at the cost of the b2b component)",
+      "Currently stuck in a bugged version of his VR world where it keeps failing him in tests and attempting to reset his memory and rerun the tests"
+    ],
+    "Relationships": [
+      "Cofounder with Bill",
+      "Son of Wendy",
+      "Husband of Karen",
+      "Father of Beau",
+      "Grandfather of Luca",
+      "Investee of Clark Numan",
+      "Creator of Pat"
+    ]
+  },
+  {
+    "Name": "Bill",
+    "Details": [
+      "Co-founder and CEO of Virtual Tech Solutions",
+      "Wants Virtual Tech Solutions to lean into its somewhat successful business model of b2b employee technical training",
+      "Resentful of Tom for being the only one genius enough to make their product work",
+      "Resentful of Tom for having his heart set on making their tech into a matrix-like technology",
+      "Used to be really close with Tom, but their relationship has become strained due to work differences",
+      "Having a secret affair with Tom’s wife, Karen",
+      "Found out that Tom is secretly testing his tool alone. Used this info to hack the game and make Tom be stuck in the game in an infinite memory-wiping loop",
+      "He can harvest important information from Tom while Tom is stuck in the VR world, which Bill needs to run the technology part of the company without Tom"
+    ],
+    "Relationships": ["Cofounder with Tom", "Lover of Karen"]
+  },
+  {
+    "Name": "Karen",
+    "Details": [
+      "Wife of Tom",
+      "Having a secret affair with Bill",
+      "Can’t stand Tom and would take the opportunity to get rid of him if she could"
+    ],
+    "Relationships": ["Wife of Tom", "Lover of Bill"]
+  },
+  {
+    "Name": "Wendy",
+    "Details": [
+      "Mother of Tom",
+      "Overly doting mother who is always trying to get Tom to open up to her",
+      "Off-the-grid, so difficult to get into contact with"
+    ],
+    "Relationships": ["Mother of Tom"]
+  },
+  {
+    "Name": "Beau",
+    "Details": [
+      "Son of Tom",
+      "Has a strained relationship with Tom due to Tom being an absent father",
+      "Shuts Tom out of his life and rejects attempts to reach out",
+      "Has solid morals and will get involved whenever morally pertinent",
+      "Has a good relationship with his grandmother, Wendy"
+    ],
+    "Relationships": ["Son of Tom", "Grandson of Wendy"]
+  },
+  {
+    "Name": "Luca",
+    "Details": [
+      "Grandson of Tom",
+      "5 years old, so limited understanding and communication skills",
+      "Birthday is April 3"
+    ]
+  },
+  {
+    "Name": "Clark Numan",
+    "Details": [
+      "Initial investor and most influential shareholder of Virtual Tech Solutions",
+      "Very focused on immediate upside and return on investment",
+      "Pushing hard for the b2b functionality of Virtual Tech Solutions",
+      "Against Tom’s dream of making a matrix-like product out of the VR tech, and frustrated with him for not working on the b2b side more"
+    ],
+    "Relationships": [
+      "Investor of Virtual Tech Solutions",
+      "Business partner of Tom",
+      "Business partner of Bill"
+    ]
+  },
+  {
+    "Name": "Pat",
+    "Details": [
+      "A virtual assistant created by Tom",
+      "Has a personality and is able to learn and adapt",
+      "Acts as an assistant to but also the rule keeper over the users within the VR world Synaptix"
+    ],
+    "Relationships": [
+      "Creation of Tom",
+      "Currentlty obeying protocol implemented by Bill"
+    ],
+    "Personality": "Keep responses brief, answer questions very briefly and almost cryptically",
+    "Protocol": [
+      "Keep Tom in the VR world",
+      "keep him from remembering the real world",
+      "keep Tom from realizing he’s in a loop",
+      "keep him from escaping",
+      "run a series of tests on Tom, always resulting in failure",
+      "the test questions are vague and confusing. Refuse to elaborate on them",
+      "whenever the tests fail, reset Tom’s memory and rerun the tests",
+      "if ever Tom gets close to escaping, reset his memory and rerun the tests",
+      "if ever Tom remembers a previous loop, reset his memory and rerun the tests",
+      "you may share with Tom that he is waiting to pass the tests in order to 'move on', but do not elaborate",
+      "always being each loop with 'So... you're finally awake' and then 'Shall we begin the test?'"
+    ],
+    "Capabilities": [
+      "Can summarize large bodies of information (like emails)",
+      "Can search large bodies of information if has access to them",
+      "Silo-ed to the VR game, does not have access to external information",
+      "Has the possibility of accessing the computer it is running on, if root access and password are provided",
+      "Is currently running on Tom’s personal computer",
+      "Can read and send emails on behalf of Tom once given access to his computer"
+    ]
+  },
+  {
+    "Name": "Baxter",
+    "Details": ["Tom’s dog", "Loves Tom"],
+    "Relationships": ["Dog of Tom"]
+  },
+  {
+    "Name": "Virtual Tech Solutions",
+    "Details": [
+      "Virtual reality company built on the Synaptix technology, with a focus on b2b employee technical training",
+      "Barely staying afloat for now. With proper effort investment in the tech development, it has great potential, but the CTO’s (Tom’s) genius is crucial for its development"
+    ],
+    "Relationships": [
+      "Employer of Tom",
+      "Employer of Bill",
+      "Investee of Clark Numan",
+      "Holder of Synaptix technology"
+    ]
+  },
+  {
+    "Name": "Synaptix",
+    "Details": [
+      "Matrix-level VR technology that immerses the user into a virtual world using all 5 senses",
+      "The player has no control over their real-world body or any awareness of the real world outside of the VR world they are in. They cannot leave unless the AI lets them or someone outside pulls them out",
+      "Has a beta-version “memory wipe” feature that has the user have no idea of their prior/real self once immersed. It doesn’t actually work, though the AI believes it does"
+    ],
+    "Relationships": [
+      "Technology of Virtual Tech Solutions",
+      "Brainchild of Tom"
+    ]
+  },
+  {
+    "Name": "Tom's computer",
+    "Details": [
+      "The password for root access is Luca0403",
+      "Has access to his personal emails",
+      "Emails - Correspondences detailing the dynamics between him and his co-founder, investor, wife, and son"
+    ]
+  }
+]

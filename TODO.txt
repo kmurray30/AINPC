@@ -1,0 +1,49 @@
+1/3/25
+TODO
+	graphviz to visualize my json graph
+
+TODO
+	Refresh on how vector database entries are configured
+		filters
+		content
+		id
+		edges
+
+
+Brainstorming
+	How to correlate ids in the description to the other nodes
+		Can use IDs in the desciption itself
+		Will need to search the DB for existing entries
+			If they don't exist, create one
+		Edges should be property of the node and part of a tuple pointing to the neighbor?
+			What about if there's more than one thing between the two. Like if Pam knows that Dwight hates Jim, but also has a bunch of other context between the two like that they used to be sales partners, are now friends, etc.
+
+What I want the NPC to be able to do
+	Have secrets
+	Have a conception of the player
+		Scores them on qualities like trust, affection-for, 
+	Gossip
+	Have opinions
+	Have personality traits that come out in convo
+	Have moods you can affect
+	Have relational understanding of things
+		Person works at place doing a thing with other people in a city
+	Have some logical reasoning that updates their brain
+	Update opinions of people
+	Create plans of things to do (like talk to other NPCs about stuff)
+	Be resistant, stubborn, have shame, etc. to make dialogue feel challenging
+How to accomplish this
+	Mood is passed in as vector search parameter
+	Duplicate entries of things based on mood. Like if they're spiralling, most things they think of will have a negative spin to them
+
+
+Entities:
+	People
+		Name
+		Job
+		Roles
+		Relationship to OP
+		Relationships to others
+		Personality traits
+	Events
+	Interests

@@ -1,0 +1,5 @@
+storage/
+assets/
+.venv
+.env
+.DS_Store
