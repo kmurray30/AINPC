@@ -11,10 +11,12 @@ def load_json_custom(file_path):
         data = json.load(file)
     return data
 
-def add_to_entities(entity_df, id, content, vector):
+def add_to_entities(entity_df, id, content, from_field, to_field, vector):
     entity_df[0].append(id)
     entity_df[1].append(content)
-    entity_df[2].append(vector)
+    entity_df[2].append(from_field)
+    entity_df[3].append(to_field)
+    entity_df[4].append(vector)
 
 def add_to_hashtable(hashtable, id, content):
     hashtable[id] = hash(content)
