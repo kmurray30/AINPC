@@ -3,3 +3,4 @@ assets/
 .venv
 .env
 .DS_Store
+TODO.txt

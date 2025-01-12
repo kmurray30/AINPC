@@ -1,3 +1,21 @@
+BAML issues
+	wasn't clear the python code isn't plug-and-play
+	the instructions here mention a command that doesn't exist (baml generate) - https://github.com/BoundaryML/baml/blob/canary/docs/code-generation.md
+	missing brew install baml step
+*	the top level bamltest.py file works, but the one in my runbooks folder does not
+	No module named requests"
+*		How to report? ReportMissingModuleSource - https://github.com/microsoft/pyright/blob/main/docs/configuration.md#reportMissingModuleSource
+	Discord - 
+	Playground is no longer openable from the baml files. nor is it working if I open it directly
+		Errors:
+			from baml_src/__test__ - "Error validating: A BAML file must have the file extension `.baml`, 0, 0, 0, 0"
+			from baml_src/main.baml - Property not known: "package_version_command". Did you mean one of these: "version", "on_generate", "default_client_mode", "project"?
+			
+		Check the "problems window"
+		Tried
+			Deleting the __test__ folder within baml_src
+			Deleting the main.baml file in baml_src
+
 TODO Jan 8 2025
 	regex for converting notepad notes into a json:
 		\n.*\* 
@@ -13,7 +31,6 @@ TODO Jan 8 2025
 
 TODO 1/3/25
 	graphviz to visualize my json graph
-	
 
 TODO
 	Refresh on how vector database entries are configured
@@ -21,7 +38,6 @@ TODO
 		content
 		id
 		edges
-
 
 Brainstorming
 	How to correlate ids in the description to the other nodes
