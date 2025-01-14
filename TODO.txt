@@ -5,16 +5,18 @@ BAML issues
 *	the top level bamltest.py file works, but the one in my runbooks folder does not
 	No module named requests"
 *		How to report? ReportMissingModuleSource - https://github.com/microsoft/pyright/blob/main/docs/configuration.md#reportMissingModuleSource
-	Discord - 
+	Discord - https://discord.gg/BTNBeXGuaS
 	Playground is no longer openable from the baml files. nor is it working if I open it directly
 		Errors:
 			from baml_src/__test__ - "Error validating: A BAML file must have the file extension `.baml`, 0, 0, 0, 0"
 			from baml_src/main.baml - Property not known: "package_version_command". Did you mean one of these: "version", "on_generate", "default_client_mode", "project"?
-			
 		Check the "problems window"
 		Tried
 			Deleting the __test__ folder within baml_src
 			Deleting the main.baml file in baml_src
+	baml runbook is not outputting anything...
+	baml-py version is 0.72.0
+	baml brew version is 0.19.0
 
 TODO Jan 8 2025
 	regex for converting notepad notes into a json:
