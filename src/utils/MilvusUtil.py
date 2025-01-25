@@ -7,7 +7,7 @@ import ollama
 
 filename = os.path.splitext(os.path.basename(__file__))[0]
 if __name__ == "__main__" or __name__ == filename: # If the script is being run directly
-    from Utilities import *
+    from utils import *
 else: # If the script is being imported
     from .Utilities import *
 
