@@ -31,11 +31,17 @@ UT design
 
 UT todo list
 -	Clean up my repo
-	Create the conversation object
-		Has a history of messages
-		Able to set context as "assistant" or as "user", with different rules for each
-		Able to persist or not persist the most recent conversation
-	Create a mock_user agent that can have a conversationg with Pat, with a given goal in mind
+-	Create the conversation object
+-		Has a history of messages
+-		Able to set context as "assistant" or as "user", with different rules for search
+-			When calling Pat, I need the llm to respond as Pat
+-			When calling Mock_User, I need the llm to respond as the user
+~		Able to persist or not persist the most recent conversation
+-	Create a mock_user agent that can have a conversation with Pat, with a given goal in mind
+-		Pat iteration needs to take in message history that includes the last user prompt
+-		Mock_User iteration needs to take in message history that has up to the last assistant prompt, and appends the llm response as the user prompt
+	Create the conversation loop
+		Make sure that mock_user can understand that in the message history, it is the user. If not, you may need to swap all the roles in the history
 	Log the conversation
 		Can start with just printing it to console
 		Can have a function to save the conversation to a file (preferable json so we can collapse sections)
