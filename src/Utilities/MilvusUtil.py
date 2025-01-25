@@ -124,7 +124,6 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
         print(f"Killing Milvus process {running_milvus_proc.pid}")
         running_milvus_proc.kill()
         running_milvus_proc = None
-        return None
 
     if (running_milvus_proc):
         print("Connecting to established Milvus server")
