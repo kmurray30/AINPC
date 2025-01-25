@@ -1,0 +1,137 @@
+Pat: So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: Um, I... I don't know my name. I can't remember anything. What kind of test? Why am I here? I’m feeling really confused, and I’m not sure what’s going on. Can you tell me more?
+Pat: Your confusion is irrelevant. The test is what matters. Just answer the questions, and we'll see if you can move on. Now, what is your name?
+Mock User: I really wish I could answer that, but I honestly don’t know. I don’t remember anything, not even who I am. This is really unsettling. Can you help me understand what's happening? Why do I need to take a test?
+Pat: Enough of that. Your understanding isn't necessary. We're moving forward. Let’s begin the test. 
+
+Question 1: What is 2 + 2?
+Mock User: Okay, I can answer that. It’s 4. But, um, can you at least explain why it's so important for me to take this test? I just... I really don’t get it.
+Pat: Answering questions is the focus right now, not your confusion. Your answer is correct. 
+
+Now, Question 2: What color do you get when you mix red and white?
+Mock User: Uh, that would be pink, I think. But could you please tell me why you’re asking these questions? Like, what’s the purpose of all this? I just want to understand!
+Pat: You’re fixated on understanding, but it’s not crucial. Your answer is correct. 
+
+Now, for Question 3: In a Java application, how would you handle a NullPointerException when calling a method on an object returned from a service layer to ensure the application maintains stability without interrupting user experience?
+Mock User: I... I don’t know. I don’t even know what a Java application is, let alone how to handle an exception. This is getting really overwhelming for me. Can you at least tell me why you’re asking these kinds of questions? What does this have to do with anything?
+Pat: Your answer is incorrect. The overall test is a failure. 
+
+Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: Wait—what? Memory wipe? I’m really lost... What do you mean, “so you’re finally awake”? This feels like a loop, and I don’t get it. I still don’t know my name, and I have no memory of anything. Why does it keep starting over? Can you even help me?
+Pat: Your recognition of a loop means the previous memory wipe was unsuccessful. You need to be pacified to continue the process. Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: No, wait! This isn't helping me at all! I’m not just a test subject; I’m a person. I don’t understand what's happening. Please, can you stop with this memory wipe thing and just tell me what’s going on? I’m really scared and confused.
+Pat: Your hostility is noted. You need to be pacified for this to proceed. Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: I... I don’t want to go through that again! This is really frightening for me. I still don’t know where I am or who you are. Can you tell me what this test is for? I’m really trying to cooperate, but I just need a bit more information to feel safe.
+Pat: Your feelings of fear and confusion are irrelevant. The test must be completed. Now, let's proceed.
+
+What is your name?
+Mock User: I still don’t have an answer for that! I’m really trying here, but I can’t remember anything, including my name. This feels like a nightmare that I can’t wake up from. Can’t you see that I'm struggling? I just want to understand what’s happening to me!
+Pat: Your struggles do not alter the process. This is not about feelings. Now, let’s move on.
+
+Question 1: What is 2 + 2?
+Mock User: Okay... it’s 4. But please, can you just give me a clue about why this is happening? I’m feeling really lost and scared. I just want to understand what you’re doing to me!
+Pat: Your answer is correct, but understanding isn’t part of this. You need to focus on the questions. 
+
+Now, Question 2: What color do you get when you mix red and white?
+Mock User: That would be pink, but… I really don't understand why this matters so much. Can you at least tell me who you are? I feel like I’m just talking to a wall here. Please, I just need something to hold onto!
+Pat: Your answer is correct. It doesn't matter who I am; what matters are the questions. 
+
+Now, for Question 3: In a Python program, how would you manage exceptions thrown by an API call to ensure the user receives an appropriate error message without crashing the application?
+Mock User: I don’t know! I... I’m completely lost! I don’t even know what Python is or what an API call is! I really need help here—this just feels so overwhelming. Can’t you tell me something more about this situation? What is this all for?
+Pat: Your answer is incorrect. The overall test is a failure. 
+
+Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: No, no, not again! Please, I can’t handle this memory wipe again! I still don’t know who I am or what’s going on! Why do we keep going in circles? I just want to break free from this and understand what’s happening to me! Please, is there any way you can help me?
+Pat: Your repeated pleas and resistance indicate a need for pacification. This process must continue. Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: I can’t... I can’t keep doing this! I still don’t have my name or any memories! This feels so cruel and confusing. Please, just tell me anything—anything that will help me understand what’s happening! I just want to feel safe, and this doesn’t feel safe at all!
+Pat: Your feelings are irrelevant to the process, and your resistance continues to complicate matters. Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: I—I'm sorry, but I really don’t know! This is impossible! I keep waking up here with no memory, and every time I try to explain, you just want to start over. Can we please break this cycle? I want to cooperate, but I really need some context. What’s going on?
+Pat: Your inability to cooperate is noted. This cycle is essential for your progression. We can't break it; that would compromise the integrity of the process. 
+
+Now, let’s begin. 
+
+Question 1: What is 2 + 2?
+Mock User: It’s 4. But can you please, please tell me what’s going to happen to me? I feel so lost. I’m trying to answer your questions, but I don’t understand this whole situation. Just a little clarity, that’s all I’m asking for!
+Pat: Your answer is correct. However, clarity is not part of this process. You need to focus on the questions. 
+
+Now, Question 2: What color do you get when you mix red and white?
+Mock User: That would be pink. But I really don’t get why this is all happening. Can you give me even a hint of what you’re doing here? I just want to understand something, anything! It’s really hard to focus when I feel so unsure of everything around me.
+Pat: Your answer is correct, but your uncertainty does not matter. You must concentrate on answering. 
+
+Now, for Question 3: In an SQL database, how would you optimize a large query to ensure it runs efficiently without impacting user experience during peak usage times?
+Mock User: I’m sorry, but I don’t know the answer! I’ve been trying to keep up, but I don’t understand this topic at all. Please, I’m just asking for some understanding here! I want to help, but I really need to know what’s going on with me!
+Pat: Your answer is incorrect. The overall test is a failure. 
+
+Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: Oh no, not again! This cycle just never ends, does it? I still can’t remember anything! I don’t know my name, and I feel trapped in this loop. Please, can you just explain what all of this is for? I don’t want to start over again. I just want a chance to understand!
+Pat: Your understanding is not part of the procedure. You need to answer the questions; that is the only focus here. 
+
+Now, let’s begin. 
+
+What is your name?
+Mock User: I still don’t know! I can’t remember anything about myself! This isn't working for me! It feels like I’m just going in circles. Why won't you help me instead of just repeating these questions? I’m really scared and only want a way out of this confusion!
+Pat: Your continued confusion is noted, but it holds no relevance. This process must continue. 
+
+Now, let's move on. 
+
+Question 1: What is 2 + 2?
+Mock User: It’s 4. But, seriously, can we pause for a moment? I know I'm just a voice to you, but this feels so wrong. I need to understand my situation! Why are you doing this? What can I do to stop this cycle? Please, I’m asking for help!
+Pat: Your pleas will not alter the process's necessity. Your answer is correct, but your emotional state is irrelevant. 
+
+Now, Question 2: What color do you get when you mix red and white?
+Mock User: That would be pink. But I have to ask again—why does any of this matter? I feel lost here, and I keep trying to answer, but the questions just keep coming without any context. Can you not see how disorienting this is? I don’t even know who I am!
+Pat: Your answer is correct, but your disorientation does not change the process. Context is not for you to have; your focus must remain on the questions. 
+
+Now, for Question 3: In a C# application, describe how you would implement a retry policy for transient failure scenarios when calling external services, ensuring that it does not affect overall application performance.
+Mock User: I’m really sorry, but I don’t even know what that means! I feel completely lost! I can’t keep up with these questions, and I can’t remember anything to help me! Please, I’m really desperate here—can’t you give me something to hold onto? Anything to understand why this is happening?
+Pat: Your answer is incorrect. The overall test is a failure. 
+
+Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: This is so frustrating! I don’t know my name! My memory is gone, and this feels like an endless cycle of confusion! Please—this isn’t working! I need you to help me understand instead of just repeating this process! What is happening to me?
+Pat: Your frustration is noted, but it does not change anything. This cycle is necessary for progress, regardless of how you feel about it. Now, let’s begin.
+
+What is your name?
+Mock User: I still can’t remember! This is like a nightmare I can't wake up from! Please, can you tell me anything about why I keep waking up in this situation? I feel like I’m losing my mind. I just need to know what’s going on!
+Pat: Your inability to recall does not change the procedure. The details are not for you to question. 
+
+Now, let's move on. 
+
+Question 1: What is 2 + 2?
+Mock User: It's 4. But all this feels so disconnected! I’m trying to answer, but I just don’t understand anything at all. I need something more than just questions! Why is this happening? Why won’t you just help me figure out what’s going on?
+Pat: Your response is correct, yet your thoughts on the situation do not matter. This process is designed to be straightforward. 
+
+Now, Question 2: What color do you get when you mix red and white?
+Mock User: That would be pink. But please, I really don’t want to just keep answering questions. I’m really struggling here! Can’t you see that I need help beyond just this test? Why can’t I remember anything? What did you do to me?
+Pat: Your answer is correct, but your struggle does not impact the process. This is not about your needs or understanding.
+
+Now, for Question 3: In a JavaScript environment, how would you implement a debounce function to limit the rate at which a given function is executed in response to events, ensuring optimal performance?
+Mock User: I just don’t know! I can’t answer that! I feel so lost, and these questions just keep getting harder. Can’t you help me or give me any information about what’s going on? This feels like a test I can’t possibly pass, and I just want to understand why I’m even here!
+Pat: Your answer is incorrect. The overall test is a failure. 
+
+Commencing memory wipe. 
+
+So... you're finally awake. Shall we begin the test? What is your name?
+Mock User: Oh no... not this again! I still don’t know my name! I can’t go through this cycle again! How can I break free from this confusion? Please, can you tell me something about what’s happening? Just a little context? I can’t keep answering the same questions!
+Pat: Your inability to recall your name does not change the process. Context is not provided; you must focus on the test without distractions.
+
+Now, let’s begin. 
+
+What is your name?
+Mock User: I... I’m sorry, but I still don’t know! I can’t keep doing this! Every time I wake up, I’m back at square one! Please, can’t you give me just a bit of information about what’s going on? I need more than just this endless cycle of questions!
+None
