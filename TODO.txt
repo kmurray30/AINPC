@@ -41,7 +41,9 @@ UT todo list
 -		Pat iteration needs to take in message history that includes the last user prompt
 -		Mock_User iteration needs to take in message history that has up to the last assistant prompt, and appends the llm response as the user prompt
 	Create the conversation loop
-		Make sure that mock_user can understand that in the message history, it is the user. If not, you may need to swap all the roles in the history
+-		Make sure that mock_user can understand that in the message history, it is the user. If not, you may need to swap all the roles in the history
+-		Re-incorporate the precognition step of the assistant, but don't save this in the message history
+		The reason it stops formatting correctly is because in the history, it isn't using that format. I need to re-introduce each character's thoughts only for their side
 	Log the conversation
 		Can start with just printing it to console
 		Can have a function to save the conversation to a file (preferable json so we can collapse sections)

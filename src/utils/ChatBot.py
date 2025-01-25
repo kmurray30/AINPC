@@ -9,7 +9,7 @@ import ollama
 
 filename = os.path.splitext(os.path.basename(__file__))[0]
 if __name__ == "__main__" or __name__ == filename: # If the script is being run directly
-    from utils import init_dotenv
+    from Utilities import init_dotenv
 else: # If the script is being imported
     from .Utilities import init_dotenv
 
