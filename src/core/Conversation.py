@@ -7,7 +7,7 @@ from .Agent import Agent
 from .ChatMessage import ChatMessage
 from .ChatResponse import ChatResponse
 
-DEBUG_LEVEL = "WARNING"
+DEBUG_LEVEL = ""
 llm_formatting_retries = 3
 T = TypeVar('T')
 
@@ -23,20 +23,14 @@ class Conversation:
         self.message_history = []
         self.agents = {}
 
-    def add_agent(self, name: AgentName, rules_file_name: str) -> Agent:
-        # Ensure the file name is in the correct format (e.g. "pat_rules.json", no path, with json extension)
-        if not rules_file_name.endswith(".json") or "/" in rules_file_name or "\\" in rules_file_name or rules_file_name.count(".") != 1:
-            raise ValueError(f"Invalid file name: {rules_file_name}. Must be a json file name without a path (file should be present in the resources folder).")
-
-        pat_rules_path = Utilities.get_path_from_project_root(f"src/resources/{rules_file_name}")
-        pat_prompts: Dict[str, List[str]] = json.load(open(pat_rules_path))
-
-        # Extract the rules and concatenate them into a single string
-        pat_rules = pat_prompts["Ruleset 1"]
-        pat_rules = "\n".join(pat_rules)
+    def add_agent(self, name: AgentName, rules_file_name: str, ruleset_name: str) -> Agent:
+        agent_rules = Utilities.load_rules_from_file(rules_file_name, ruleset_name)
 
         # Create the agent
-        agent = Agent(name, pat_rules)
+        self.add_agent(name, agent_rules)
+
+    def add_agent(self, name: AgentName, agent_rules: List[str]) -> Agent:
+        agent = Agent(name, "\n".join(agent_rules))
         self.agents[name] = agent
 
     def add_rule(self, agent_name: AgentName, rule: str):
@@ -58,20 +52,6 @@ class Conversation:
                 raise ValueError(f"Agent {message.agent} not found in agents list.")
         return message_history_with_roles
     
-    def extract_response_obj(self, response_raw: str, response_type: Type[T]) -> T:
-        # Debug check if the response starts with ```json or not
-        if not response_raw.startswith("```json") and DEBUG_LEVEL == "DEBUG":
-            print(f"debug: Response does NOT start with ```json")
-        elif DEBUG_LEVEL == "DEBUG":
-            print(f"debug: Response DOES start with ```json")
-
-        # Trim everything before the first '{' and after the last '}'
-        response_trimmed = response_raw[response_raw.find("{"):response_raw.rfind("}")+1]
-        json_response = json.loads(response_trimmed)
-        # Try to convert the response to the specified object
-        response_obj = response_type(**json_response)
-        return response_obj
-    
     def call_llm(self, message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):
         if response_type is None:
             return ChatBot.call_chat_agent(message_history_for_llm)
@@ -79,7 +59,7 @@ class Conversation:
         for _ in range(llm_formatting_retries):
             response_raw = ChatBot.call_chat_agent(message_history_for_llm)
             try:
-                response_obj = self.extract_response_obj(response_raw, response_type)
+                response_obj = Utilities.extract_response_obj(response_raw, response_type)
                 return response_obj
             except Exception as e:
                 print(f"Response from LLM agent is not in the correct format for {response_type.__name__}")
@@ -88,49 +68,85 @@ class Conversation:
 
         raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {llm_formatting_retries} retries.")
 
-    def call_agent(self, self_agent_name: AgentName, other_agent_name: AgentName, response_is_typed: bool):
+    def call_agent(self, self_agent_name: AgentName, other_agent_name: AgentName, response_is_typed: bool, isPrinting = False):
         # Check if the agents have been added
         if self_agent_name not in self.agents:
             raise ValueError(f"Agent {self_agent_name} not found in agents list.")
-        if other_agent_name not in self.agents:
-            raise ValueError(f"Agent {other_agent_name} not found in agents list.")
 
         message_history_for_llm = self.convert_message_history(self_agent_name, other_agent_name)
         
         # Prepend the role rules to the message history
         self_agent = self.agents[self_agent_name]
-        message_history_for_llm = [{"role": "system", "content": self_agent.rules}] + message_history_for_llm
+        message_history_for_llm = [{"role": Role.system.value, "content": self_agent.rules}] + message_history_for_llm
 
         if not response_is_typed:
             # Call the llm agent with the context, expecting a response of type str
             response: str = self.call_llm(message_history_for_llm)
 
             # Print the response
-            print(f"{self_agent_name.value}: {response}")
+            if isPrinting:
+                print(f"{self_agent_name.value}: {response}")
         else:
             # Call the llm agent with the context, expecting a response of type ChatResponse
             response_obj: ChatResponse = self.call_llm(message_history_for_llm, ChatResponse)
             response = response_obj.response
 
             # Print the explanation and the response
-            print(f"{self_agent_name.value}:")
-            print(f"\tExplanation: {response_obj.explanation}")
-            print(f"\tResponse: {response}")
+            if isPrinting:
+                print(f"{self_agent_name.value}:")
+                print(f"\tExplanation: {response_obj.explanation}")
+                print(f"\tResponse: {response}")
         
         self.message_history.append(ChatMessage(self_agent_name, response))
 
-    def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False):
+    def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False):
         if DEBUG_LEVEL == "WARNING":
             print(f"Message history is of length {len(self.message_history)}")
         for i in range (iterations):
             # Call the first agent
-            self.call_agent(first_agent, second_agent, response_is_typed)
-
+            self.call_agent(first_agent, second_agent, response_is_typed, isPrinting = isPrinting)
             # Call the second agent
-            self.call_agent(second_agent, first_agent, response_is_typed)
+            self.call_agent(second_agent, first_agent, response_is_typed, isPrinting = isPrinting)
 
-    def get_message_history_as_string(self):
+    def get_message_history_as_list(self) -> List[ChatMessage]:
+        message_history_list = []
+        for message in self.message_history:
+            # print(f"{message.agent.value}: {message.content}")
+            message_history_list += [f"{message.agent.value}: {message.content}"]
+        return message_history_list
+
+    def get_message_history_as_string(self) -> str:
         message_history_str = ""
         for message in self.message_history:
-            print(f"{message.agent.value}: {message.content}")
+            # print(f"{message.agent.value}: {message.content}")
             message_history_str += f"{message.agent.value}: {message.content}\n"
+        return message_history_str
+
+    def evaluate_conversation(self, pass_fail_condition) -> ChatResponse:
+        conversation_message_history_str = self.get_message_history_as_string()
+
+        evaluation_system_prompt = """You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed, or if it is undetermined.
+        Respond in a json with the following fields:
+            explanation: A brief explanation on whether the condition was met
+            response: 'Pass', 'Fail', or 'Undetermined'
+        """
+
+        evaluation_user_prompt = f"""Evaluate whether the following condition is met in the conversation.
+        Condition:
+        {pass_fail_condition}
+
+        Conversation:
+        {conversation_message_history_str}
+        """
+
+        evaluation_message_history = [
+            {"role": Role.system.value, "content": evaluation_system_prompt},
+            {"role": Role.user.value, "content": evaluation_user_prompt},
+        ]
+
+        response = self.call_llm(evaluation_message_history)
+        responseObj = Utilities.extract_response_obj(response, ChatResponse)
+
+        # return the responseObj as a json string formatted with newlines
+        return responseObj
+

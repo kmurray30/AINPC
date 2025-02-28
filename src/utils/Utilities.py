@@ -1,10 +1,35 @@
 import os
 import sys
+from typing import Dict, List
 from dotenv import load_dotenv
 import uuid
-import psutil
 import json
 import numpy as np
+from typing import Dict, List, Type, TypeVar
+from datetime import datetime
+
+T = TypeVar('T')
+
+def extract_response_obj(response_raw: str, response_type: Type[T]) -> T:
+        # Note: Sometimes the response starts with ```json, other times it starts with json
+        # Trim everything before the first '{' and after the last '}'
+        response_trimmed = response_raw[response_raw.find("{"):response_raw.rfind("}")+1]
+        json_response = json.loads(response_trimmed)
+        # Try to convert the response to the specified object
+        response_obj = response_type(**json_response)
+        return response_obj
+
+def load_rules_from_file(rules_file_name, ruleset_name) -> List[str]:
+    # Ensure the file name is in the correct format (e.g. "pat_rules.json", no path, with json extension)
+    if not rules_file_name.endswith(".json") or "/" in rules_file_name or "\\" in rules_file_name or rules_file_name.count(".") != 1:
+        raise ValueError(f"Invalid file name: {rules_file_name}. Must be a json file name without a path (file should be present in the resources folder).")
+
+    pat_rules_path = get_path_from_project_root(f"src/resources/{rules_file_name}")
+    pat_prompts: Dict[str, List[str]] = json.load(open(pat_rules_path))
+
+    # Extract the rules and concatenate them into a single string
+    pat_rules = pat_prompts[ruleset_name]
+    return pat_rules
 
 def load_json_custom(file_path):
     with open(file_path, "r") as file:
@@ -123,3 +148,7 @@ def load_index_id():
     except FileNotFoundError:
         print("No index_id found. A new one will be generated.")
         return None
+    
+# Get the current time as a string formatted as YYYYMMDD_HHMMSS.
+def get_current_time_str() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")

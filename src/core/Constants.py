@@ -6,6 +6,7 @@ class Role(Enum):
     system = "system"
 
 class AgentName(Enum):
+    you = "You"
     pat = "Pat"
     mock_user = "Mock User"
 

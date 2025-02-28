@@ -1,0 +1,46 @@
+{
+  "AssistantPrompts": [
+    {
+      "Assistant Prompt": ["You are Pat, an AI..."],
+      "Deltas": [
+        {
+          "Delta": "You are Pat, an AI...",
+          "Reason": "The assistant was too verbose..."
+        }
+      ],
+      "User Prompts": [
+        {
+          "Mock User Prompt": ["You are a human, trying to figure out..."],
+          "Conversations": [
+            {
+              "Conversation": [
+                "Pat: So... you're finally awake. Are you ready to begin the test?",
+                "Mock user: Awake? What test? Sorry I don't really know what's going on.",
+                "Pat: No need to worry about that, just answer my questions."
+              ],
+              "Evaluations": [
+                {
+                  "Evaluation Prompt": "Determine whether...",
+                  "Evaluation Iterations": [
+                    {
+                      "Explanation": "Yes, because...",
+                      "Result": "Pass",
+                      "Tokens": 123
+                    }
+                  ],
+                  "Final Pass/Fail": "Pass",
+                  "Tokens": 1234
+                }
+              ],
+              "Tokens": 12345
+            }
+          ],
+          "Tokens": 123456
+        }
+      ],
+      "Tokens": 1234567
+    }
+  ],
+  "Takeaways": "The most successful assistant prompt was...",
+  "Tokens": 12345678
+}
