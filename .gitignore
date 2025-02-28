@@ -4,3 +4,5 @@ assets/
 .env
 .DS_Store
 TODO.txt
+*__pycache__
+generated/
