@@ -6,3 +6,4 @@ assets/
 TODO.txt
 *__pycache__
 generated/
+src/test/reports/*
