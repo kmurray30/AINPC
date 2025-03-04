@@ -11,6 +11,8 @@ from src.test.TestClasses import TestCaseSuite
 from src.core.ChatResponse import ChatResponse
 from src.test.TestReport import *
 from src.utils import Utilities
+from src.utils import Logger
+from src.utils.Logger import Level
 
 # Notes:
 # - See runbooks/test.ipynb for sample usage
@@ -45,13 +47,27 @@ test_suite: TestCaseSuite = TestUtil.load_test_suite_from_file("TestSuites/TestS
 assistant_prompt_report = AssistantPromptCase(assistant_prompt=Utilities.decode_list(pat_rules), deltas=[], user_prompt_cases=[], tokens=0)
 test_report = TestReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
+Logger.log("Pat Rules:", Level.VERBOSE)
+Logger.increment_indent(2)
+for pat_rule in pat_rules:
+    Logger.log(pat_rule, Level.VERBOSE)
+Logger.decrement_indent(2)
+
+Logger.increment_indent()
 for test_case in test_suite.test_cases:
-    print(f"Test case: {test_case}")
+    Logger.log(f"∟ Test case:", Level.VERBOSE)
+    Logger.increment_indent(2)
+    Logger.log(f"Goals: {test_case.goals}", Level.VERBOSE)
+    Logger.log(f"Evaluations: {test_case.evaluations}", Level.VERBOSE)
+    Logger.decrement_indent(2)
     user_prompt_report = UserPromptCase(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
     assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
+    Logger.increment_indent()
     for i in range(1, convos_per_user_prompt + 1):
-        print(f"Conversation {i}")
+        conversation_name = f"Conversation {i}"
+        Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
+        Logger.increment_indent(2) # Start of conversation contents
 
         # Create a new conversation
         conversation = Conversation()
@@ -66,30 +82,35 @@ for test_case in test_suite.test_cases:
         conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
 
         message_history_list = conversation.get_message_history_as_list()
-        conversation_name = f"Conversation {i}"
         user_prompt_report.conversations.append([conversation_name,message_history_list])
+        Logger.decrement_indent(2) # End of conversation contents
 
-        # # Print the conversation
-        # print(conversation.get_message_history_as_string())
+        Logger.increment_indent()
+        Logger.log(f"∟ Beginning evaluations for {conversation_name}", Level.VERBOSE)
 
         # Evaluate the conversation
+        Logger.increment_indent()
         for evaluation_prompt in test_case.evaluations:
-            print(f"Evaluating: {evaluation_prompt}")
+            Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
             # If the evaluation case is already in the dict, get it, otherwise create a new one and add it
             evaluation_report = next((evaluation for evaluation in user_prompt_report.evaluations if evaluation.evaluation_prompt == evaluation_prompt), None)
             if evaluation_report is None:
                 evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, evaluation_iterations={}, score="", tokens=0)
                 user_prompt_report.evaluations.append(evaluation_report)
             evaluation_report.evaluation_iterations[conversation_name] = []
-            for i in range(eval_iterations_per_eval):
-                print(f"Evaluating (attempt {i}): {evaluation_prompt}")
+            Logger.increment_indent()
+            for i in range(1, eval_iterations_per_eval + 1):
+                Logger.log(f"Evaluating (attempt {i}): {evaluation_prompt}", Level.VERBOSE)
                 result: ChatResponse = conversation.evaluate_conversation(evaluation_prompt)
                 # Print the result as a json
-                print(json.dumps(result.__dict__, indent=4))
+                Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
                 evaluation_iteration_report = EvaluationIteration(explanation=result.explanation, result=result.response, tokens=0)
                 
                 # If this conversation_name exists in the dict, append
                 evaluation_report.evaluation_iterations[conversation_name].append(evaluation_iteration_report)
+            Logger.decrement_indent()
+        Logger.decrement_indent(2)
+    Logger.decrement_indent()
 
     # Aggregate the results from each evaluation iteration
     for evaluation_report in user_prompt_report.evaluations:
@@ -104,10 +125,12 @@ for test_case in test_suite.test_cases:
                     correct_score -= 1
         final_score = correct_score / iteration_count
         evaluation_report.score = final_score
+Logger.decrement_indent()
 
 # Write the test report to a json file
 current_time = Utilities.get_current_time_str()
 test_report_path = Utilities.get_path_from_project_root(f"src/test/reports/TestReport1_{current_time}.json")
+Logger.log(f"Writing test report to {test_report_path}", Level.INFO)
 with open(test_report_path, "w") as f:
     json.dump(asdict(test_report), f, indent=4)
 

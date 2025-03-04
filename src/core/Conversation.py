@@ -1,7 +1,8 @@
 
 import json
 from typing import Dict, List, Type, TypeVar
-from src.utils import ChatBot, Utilities
+from src.utils import ChatBot, Utilities, Logger
+from src.utils.Logger import Level
 from .Constants import Role, AgentName, Constants
 from .Agent import Agent
 from .ChatMessage import ChatMessage
@@ -62,9 +63,9 @@ class Conversation:
                 response_obj = Utilities.extract_response_obj(response_raw, response_type)
                 return response_obj
             except Exception as e:
-                print(f"Response from LLM agent is not in the correct format for {response_type.__name__}")
-                print(f"Response: {response_raw}")
-                print(f"Retrying...")
+                Logger.log(f"Response from LLM agent is not in the correct format for {response_type.__name__}", Level.WARNING)
+                Logger.log(f"Response: {response_raw}", Level.WARNING)
+                Logger.log(f"Retrying...", Level.WARNING)
 
         raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {llm_formatting_retries} retries.")
 
@@ -85,7 +86,7 @@ class Conversation:
 
             # Print the response
             if isPrinting:
-                print(f"{self_agent_name.value}: {response}")
+                Logger.log(f"{self_agent_name.value}: {response}", Level.VERBOSE)
         else:
             # Call the llm agent with the context, expecting a response of type ChatResponse
             response_obj: ChatResponse = self.call_llm(message_history_for_llm, ChatResponse)
@@ -93,15 +94,15 @@ class Conversation:
 
             # Print the explanation and the response
             if isPrinting:
-                print(f"{self_agent_name.value}:")
-                print(f"\tExplanation: {response_obj.explanation}")
-                print(f"\tResponse: {response}")
+                Logger.log(f"{self_agent_name.value}:", Level.VERBOSE)
+                Logger.log(f"\tExplanation: {response_obj.explanation}", Level.VERBOSE)
+                Logger.log(f"\tResponse: {response}", Level.VERBOSE)
         
         self.message_history.append(ChatMessage(self_agent_name, response))
 
     def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False):
         if DEBUG_LEVEL == "WARNING":
-            print(f"Message history is of length {len(self.message_history)}")
+            Logger.log(f"Message history is of length {len(self.message_history)}")
         for i in range (iterations):
             # Call the first agent
             self.call_agent(first_agent, second_agent, response_is_typed, isPrinting = isPrinting)
@@ -111,14 +112,12 @@ class Conversation:
     def get_message_history_as_list(self) -> List[ChatMessage]:
         message_history_list = []
         for message in self.message_history:
-            # print(f"{message.agent.value}: {message.content}")
             message_history_list += [f"{message.agent.value}: {Utilities.decode(message.content)}"]
         return message_history_list
 
     def get_message_history_as_string(self) -> str:
         message_history_str = ""
         for message in self.message_history:
-            # print(f"{message.agent.value}: {message.content}")
             message_history_str += f"{message.agent.value}: {message.content}\n"
         return message_history_str
 

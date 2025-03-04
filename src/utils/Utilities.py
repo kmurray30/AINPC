@@ -8,6 +8,7 @@ import numpy as np
 from typing import Dict, List, Type, TypeVar
 from datetime import datetime
 import unidecode
+from . import Logger
 
 T = TypeVar('T')
 
@@ -62,7 +63,7 @@ def load_hashtable_from_file(filename, content_type=str):
                 k, v = line.strip().split(",")
                 hashtable[k] = content_type(v)
     except FileNotFoundError:
-        print(f"File {filename} not found. Creating empty hashtable...")
+        Logger.log(f"File {filename} not found. Creating empty hashtable...")
     return hashtable
 
 def cosine_similarity(embedding1, embedding2):
@@ -147,7 +148,7 @@ def load_index_id():
         with open('index_id.txt', 'r') as f:
             return int(f.read())
     except FileNotFoundError:
-        print("No index_id found. A new one will be generated.")
+        Logger.log("No index_id found. A new one will be generated.")
         return None
     
 # Get the current time as a string formatted as YYYYMMDD_HHMMSS.
