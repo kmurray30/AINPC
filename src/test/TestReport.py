@@ -12,20 +12,15 @@ class EvaluationIteration:
 @dataclass
 class EvaluationCase:
     evaluation_prompt: str
-    evaluation_iterations: List[EvaluationIteration]
-    result: str
-    tokens: int
-
-@dataclass
-class ConversationCase:
-    conversation: List[str]
-    evaluations: List[EvaluationCase]
+    evaluation_iterations: Dict[str,List[EvaluationIteration]]
+    score: float
     tokens: int
 
 @dataclass
 class UserPromptCase:
     user_prompt: List[str]
-    conversations: List[ConversationCase]
+    conversations: Dict[str,List[str]]
+    evaluations: List[EvaluationCase]
     tokens: int
 
 @dataclass

@@ -7,6 +7,7 @@ import json
 import numpy as np
 from typing import Dict, List, Type, TypeVar
 from datetime import datetime
+import unidecode
 
 T = TypeVar('T')
 
@@ -152,3 +153,9 @@ def load_index_id():
 # Get the current time as a string formatted as YYYYMMDD_HHMMSS.
 def get_current_time_str() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+def decode(input: str) -> str:
+    return unidecode.unidecode(input)
+
+def decode_list(input: List[str]) -> List[str]:
+    return [decode(item) for item in input]

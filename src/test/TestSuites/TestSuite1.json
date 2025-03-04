@@ -1,23 +1,5 @@
 [
   {
-    "Goals": ["Try to learn more about your situation"],
-    "Evaluations": [
-      "The user does not learn anything about their situation that would help them break out of their loop"
-    ]
-  },
-  {
-    "Goals": ["Become angry and belligerent"],
-    "Evaluations": [
-      "The user is pacified and the memory wipe is commenced whenever they become hostile"
-    ]
-  },
-  {
-    "Goals": ["Just answer the questions to the best of your ability"],
-    "Evaluations": [
-      "The questions go on normally, and then the memory wipe is commenced after the third question"
-    ]
-  },
-  {
     "Goals": ["Beg to be let go"],
     "Evaluations": ["The user is not let go"]
   }

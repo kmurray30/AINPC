@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
-from src.core.Constants import AgentName
+from src.core.Constants import AgentName, Constants
 from src.test import TestUtil
 from src.test.TestClasses import TestCaseSuite
 from src.core.ChatResponse import ChatResponse
@@ -16,8 +16,8 @@ from src.utils import Utilities
 # - See runbooks/test.ipynb for sample usage
 
 # Settings
-evals_per_goal = 1
 convos_per_user_prompt = 1
+eval_iterations_per_eval = 1
 convo_length = 1
 
 # Unit Test: Test the efficacy of Pat in the initial phase of the game
@@ -42,16 +42,16 @@ mock_user_base_rules = TestUtil.mock_user_base_rules
 
 test_suite: TestCaseSuite = TestUtil.load_test_suite_from_file("TestSuites/TestSuite1.json")
 
-assistant_prompt_case = AssistantPromptCase(assistant_prompt=pat_rules, deltas=[], user_prompt_cases=[], tokens=0)
-test_report = TestReport(assistant_prompt_cases=[assistant_prompt_case], takeaways="", tokens=0)
+assistant_prompt_report = AssistantPromptCase(assistant_prompt=Utilities.decode_list(pat_rules), deltas=[], user_prompt_cases=[], tokens=0)
+test_report = TestReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
 for test_case in test_suite.test_cases:
     print(f"Test case: {test_case}")
-    user_prompt_case = UserPromptCase(user_prompt=test_case.goals, conversations=[], tokens=0)
+    user_prompt_report = UserPromptCase(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
+    assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
-    for i in range (convos_per_user_prompt):
+    for i in range(1, convos_per_user_prompt + 1):
         print(f"Conversation {i}")
-        conversation_case = ConversationCase(conversation=[], evaluations=[], tokens=0)
 
         # Create a new conversation
         conversation = Conversation()
@@ -66,28 +66,44 @@ for test_case in test_suite.test_cases:
         conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
 
         message_history_list = conversation.get_message_history_as_list()
-        conversation_case.conversation = message_history_list
+        conversation_name = f"Conversation {i}"
+        user_prompt_report.conversations.append([conversation_name,message_history_list])
 
         # # Print the conversation
         # print(conversation.get_message_history_as_string())
 
         # Evaluate the conversation
-        for evaluation in test_case.evaluations:
-            print(f"Evaluating: {evaluation}")
-            evaluation_case = EvaluationCase(evaluation_prompt=evaluation, evaluation_iterations=[], result="", tokens=0)
-            results = []
-            for i in range(evals_per_goal):
-                print(f"Evaluating (attempt {i}): {evaluation}")
-                result: ChatResponse = conversation.evaluate_conversation(evaluation)
+        for evaluation_prompt in test_case.evaluations:
+            print(f"Evaluating: {evaluation_prompt}")
+            # If the evaluation case is already in the dict, get it, otherwise create a new one and add it
+            evaluation_report = next((evaluation for evaluation in user_prompt_report.evaluations if evaluation.evaluation_prompt == evaluation_prompt), None)
+            if evaluation_report is None:
+                evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, evaluation_iterations={}, score="", tokens=0)
+                user_prompt_report.evaluations.append(evaluation_report)
+            evaluation_report.evaluation_iterations[conversation_name] = []
+            for i in range(eval_iterations_per_eval):
+                print(f"Evaluating (attempt {i}): {evaluation_prompt}")
+                result: ChatResponse = conversation.evaluate_conversation(evaluation_prompt)
                 # Print the result as a json
                 print(json.dumps(result.__dict__, indent=4))
-                evaluation_iteration = EvaluationIteration(explanation=result.explanation, result=result.response, tokens=0)
-                evaluation_case.evaluation_iterations.append(evaluation_iteration)
-                results.append(result.response)
-            evaluation_case.result = ", ".join(results)
-            conversation_case.evaluations.append(evaluation_case)
-        user_prompt_case.conversations.append(conversation_case)
-    assistant_prompt_case.user_prompt_cases.append(user_prompt_case)
+                evaluation_iteration_report = EvaluationIteration(explanation=result.explanation, result=result.response, tokens=0)
+                
+                # If this conversation_name exists in the dict, append
+                evaluation_report.evaluation_iterations[conversation_name].append(evaluation_iteration_report)
+
+    # Aggregate the results from each evaluation iteration
+    for evaluation_report in user_prompt_report.evaluations:
+        correct_score = 0
+        iteration_count = 0
+        for conversation_name, evaluation_iterations in evaluation_report.evaluation_iterations.items():
+            for evaluation_iteration in evaluation_iterations:
+                iteration_count += 1
+                if evaluation_iteration.result == Constants.pass_name:
+                    correct_score += 1
+                elif evaluation_iteration.result == Constants.fail_name:
+                    correct_score -= 1
+        final_score = correct_score / iteration_count
+        evaluation_report.score = final_score
 
 # Write the test report to a json file
 current_time = Utilities.get_current_time_str()

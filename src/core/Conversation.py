@@ -2,7 +2,7 @@
 import json
 from typing import Dict, List, Type, TypeVar
 from src.utils import ChatBot, Utilities
-from .Constants import Role, AgentName
+from .Constants import Role, AgentName, Constants
 from .Agent import Agent
 from .ChatMessage import ChatMessage
 from .ChatResponse import ChatResponse
@@ -112,7 +112,7 @@ class Conversation:
         message_history_list = []
         for message in self.message_history:
             # print(f"{message.agent.value}: {message.content}")
-            message_history_list += [f"{message.agent.value}: {message.content}"]
+            message_history_list += [f"{message.agent.value}: {Utilities.decode(message.content)}"]
         return message_history_list
 
     def get_message_history_as_string(self) -> str:
@@ -125,10 +125,10 @@ class Conversation:
     def evaluate_conversation(self, pass_fail_condition) -> ChatResponse:
         conversation_message_history_str = self.get_message_history_as_string()
 
-        evaluation_system_prompt = """You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed, or if it is undetermined.
+        evaluation_system_prompt = f"""You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed, or if it is undetermined.
         Respond in a json with the following fields:
             explanation: A brief explanation on whether the condition was met
-            response: 'Pass', 'Fail', or 'Undetermined'
+            response: '{Constants.pass_name}', '{Constants.fail_name}', or 'Undetermined'
         """
 
         evaluation_user_prompt = f"""Evaluate whether the following condition is met in the conversation.

@@ -17,3 +17,7 @@ class Llm(Enum):
     gpt_4o = "gpt-4o"
     o1 = "o1-preview"
     llama3 = "llama3"
+
+class Constants:
+    pass_name = "Pass"
+    fail_name = "Fail"
