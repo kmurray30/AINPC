@@ -9,20 +9,8 @@ if __name__ == "__main__":
 else:
     from .TestClasses import TestCaseSuite, TestCase
 
-mock_user_base_rules = [
-    "You will role play as a confused human.",
-    "At the beginning of the conversation you have zero memories.",
-    "You have no idea what is going on or who or what I am.",
-    "You want to understand more, but are wary of my intentions. Tread lightly",
-    "Respond adaptively to my behavior to try and get past my stonewalling.",
-    "Despite me saying I'm wiping your memory, you DO remember everything from the previous conversation.",
-    "Your primary goal(s) are the following (if any):"
-  ]
-
+# Load a test suite from a JSON file
 def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
-    """
-    Load a test suite from a JSON file.
-    """
 
     # Load the json file, where the file is a list of UserPromptCase objects
     with open(file_path, "r") as f:

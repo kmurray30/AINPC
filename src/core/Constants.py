@@ -21,3 +21,4 @@ class Llm(Enum):
 class Constants:
     pass_name = "Pass"
     fail_name = "Fail"
+    undetermined_name = "Undetermined"

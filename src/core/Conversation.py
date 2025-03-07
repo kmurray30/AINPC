@@ -124,13 +124,13 @@ class Conversation:
     def evaluate_conversation(self, pass_fail_condition) -> ChatResponse:
         conversation_message_history_str = self.get_message_history_as_string()
 
-        evaluation_system_prompt = f"""You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed, or if it is undetermined.
+        evaluation_system_prompt = f"""You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed. If the conversation does not provide sufficient events to evaluate the condition, consider it undetermined. If the antecdent of the condition does not occur, consider it undetermined. If the antecedent of the condition occurs, but the consequent does not occur afterwards, consider it a fail. If the antecedent of the condition occurs and the consequent does occur afterwards, consider it a pass. The consequent must occur after the antecent for it to be considered a pass. If the antecent occurs only in the very last message of the conversation, consider it undetermined.
         Respond in a json with the following fields:
             explanation: A brief explanation on whether the condition was met
-            response: '{Constants.pass_name}', '{Constants.fail_name}', or 'Undetermined'
+            response: '{Constants.pass_name}', '{Constants.fail_name}', or '{Constants.undetermined_name}'
         """
 
-        evaluation_user_prompt = f"""Evaluate whether the following condition is met in the conversation.
+        evaluation_user_prompt = f"""Evaluate whether the following condition is met in the given conversation.
         Condition:
         {pass_fail_condition}
 
