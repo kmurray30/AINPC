@@ -6,7 +6,7 @@ from typing import Dict, List
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
-from src.test.TestClasses import TestCaseSuite
+from src.test.TestClasses import TestCaseSuite, TestCase
 from src.core.ChatResponse import ChatResponse
 from src.test.TestReport import TestReport, AssistantPromptCase, UserPromptCase, EvaluationCase, EvaluationIteration
 from src.utils import Utilities
@@ -17,6 +17,39 @@ from src.utils.Logger import Level
 # - See runbooks/test.ipynb for sample usage
 
 class UnitTestHelper:
+
+    @staticmethod
+    def run_evaluations_from_existing_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationCase]:
+        evaluation_reports = []
+
+        Logger.log("∟ Evaluating conversations", Level.VERBOSE)
+            
+        # Begin the evaluations
+        Logger.increment_indent() # Begin evaluations section
+        for evaluation_prompt in test_cases:
+            evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, evaluation_iterations={}, score="", tokens=0)
+            
+            Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
+            Logger.increment_indent(1) # Begin one evaluation
+            for conversation_name, conversation in conversation_map.items():
+                Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
+                evaluation_report.evaluation_iterations[conversation_name] = []
+                Logger.increment_indent() # Begin evaluation iterations section
+                for i in range(1, eval_iterations_per_eval + 1):
+                    Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_prompt}", Level.VERBOSE)
+                    result: ChatResponse = conversation.evaluate_conversation(evaluation_prompt)
+                    # Print the result as a json
+                    Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
+                    evaluation_iteration_report = EvaluationIteration(explanation=result.explanation, result=result.response, tokens=0)
+                    
+                    # If this conversation_name exists in the dict, append
+                    evaluation_report.evaluation_iterations[conversation_name].append(evaluation_iteration_report)
+                Logger.decrement_indent() # End evaluation iterations section
+            Logger.decrement_indent() # End one evaluation
+            evaluation_reports.append(evaluation_report)
+
+        Logger.decrement_indent() # End evaluations section
+        return evaluation_reports
 
     @staticmethod
     def run_unit_test(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int):
@@ -65,33 +98,10 @@ class UnitTestHelper:
                 conversation_map[conversation_name] = conversation
                 Logger.decrement_indent(2) # End of conversation contents
             Logger.decrement_indent(1) # End of conversations section
-
-            Logger.log("∟ Evaluating conversations", Level.VERBOSE)
                 
             # Begin the evaluations
-            Logger.increment_indent() # Begin evaluations section
-            for evaluation_prompt in test_case.evaluations:
-                evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, evaluation_iterations={}, score="", tokens=0)
-                user_prompt_report.evaluations.append(evaluation_report)
-                
-                Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
-                Logger.increment_indent(1) # Begin one evaluation
-                for conversation_name, conversation in conversation_map.items():
-                    Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
-                    evaluation_report.evaluation_iterations[conversation_name] = []
-                    Logger.increment_indent() # Begin evaluation iterations section
-                    for i in range(1, eval_iterations_per_eval + 1):
-                        Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_prompt}", Level.VERBOSE)
-                        result: ChatResponse = conversation.evaluate_conversation(evaluation_prompt)
-                        # Print the result as a json
-                        Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
-                        evaluation_iteration_report = EvaluationIteration(explanation=result.explanation, result=result.response, tokens=0)
-                        
-                        # If this conversation_name exists in the dict, append
-                        evaluation_report.evaluation_iterations[conversation_name].append(evaluation_iteration_report)
-                    Logger.decrement_indent() # End evaluation iterations section
-                Logger.decrement_indent() # End one evaluation
-            Logger.decrement_indent() # End evaluations section
+            evaluation_reports = UnitTestHelper.run_evaluations_from_existing_conversation(conversation_map, test_case.evaluations, eval_iterations_per_eval)
+            user_prompt_report.evaluations = evaluation_reports
 
             # Aggregate the results from each evaluation iteration TODO move this into the evaluation loop above?
             for evaluation_report in user_prompt_report.evaluations:
@@ -114,7 +124,3 @@ class UnitTestHelper:
         Logger.log(f"Writing test report to {test_report_path}", Level.INFO)
         with open(test_report_path, "w") as f:
             json.dump(asdict(test_report), f, indent=4)
-
-    @staticmethod
-    def run_unit_test_from_existing_conversation(conversation: Conversation, test_suite: TestCaseSuite, eval_iterations_per_eval: int):
-        ...
