@@ -2,13 +2,14 @@ from dataclasses import asdict
 import sys
 import json
 from typing import Dict, List
+from statistics import mean
 
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
 from src.test.TestClasses import TestCaseSuite, TestCase
 from src.core.ChatResponse import ChatResponse
-from src.test.TestReport import TestReport, AssistantPromptCase, UserPromptCase, EvaluationCase, EvaluationIteration
+from src.test.TestReport import TestReport, AssistantPromptCase, UserPromptCase, EvaluationCase, ConversationEvaluationCase, ConversationEvaluationCase, EvaluationIterationCase
 from src.utils import Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
@@ -46,7 +47,22 @@ class UnitTestHelper:
         Logger.decrement_indent(1) # End of conversations section
 
         return conversation_map
-
+    
+    @staticmethod
+    def score_evaluations(evaluation_report: EvaluationCase):
+        for conversation_evaluation in evaluation_report.conversation_evaluations:
+            correct_score = 0
+            iteration_count = 0
+            for evaluation_iteration in conversation_evaluation.evaluation_iterations:
+                iteration_count += 1
+                if evaluation_iteration.result == Constants.pass_name:
+                    correct_score += 1
+                elif evaluation_iteration.result == Constants.fail_name:
+                    correct_score -= 1
+            final_score = correct_score / iteration_count
+            conversation_evaluation.score = final_score
+        evaluation_report.score = mean(conversation_evaluation.score for conversation_evaluation in evaluation_report.conversation_evaluations)
+    
     @staticmethod
     def run_evaluations_on_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationCase]:
         evaluation_reports = []
@@ -56,41 +72,30 @@ class UnitTestHelper:
         # Begin the evaluations
         Logger.increment_indent() # Begin evaluations section
         for evaluation_prompt in test_cases:
-            evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, evaluation_iterations={}, score="", tokens=0)
+            evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, conversation_evaluations=[], score="", tokens=0)
             
             Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
             Logger.increment_indent(1) # Begin one evaluation
             for conversation_name, conversation in conversation_map.items():
                 Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
-                evaluation_report.evaluation_iterations[conversation_name] = []
+                conversation_evaluation_report = ConversationEvaluationCase(conversation_name=conversation_name, evaluation_iterations=[], score=0, tokens=0)
+                evaluation_report.conversation_evaluations.append(conversation_evaluation_report)
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
                     Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_prompt}", Level.VERBOSE)
                     result: ChatResponse = conversation.evaluate_conversation(evaluation_prompt)
                     # Print the result as a json
+                    Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
-                    evaluation_iteration_report = EvaluationIteration(explanation=result.explanation, result=result.response, tokens=0)
-                    
-                    # If this conversation_name exists in the dict, append
-                    evaluation_report.evaluation_iterations[conversation_name].append(evaluation_iteration_report)
+                    Logger.decrement_indent() # End result section
+                    evaluation_iteration_report = EvaluationIterationCase(explanation=result.explanation, result=result.response, tokens=0)
+                    conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
             Logger.decrement_indent() # End one evaluation
+
+            # Score the evaluations
+            UnitTestHelper.score_evaluations(evaluation_report)
             evaluation_reports.append(evaluation_report)
-
-        # Aggregate the results from each evaluation iteration TODO move this into the evaluation loop above?
-        for evaluation_report in evaluation_reports:
-            correct_score = 0
-            iteration_count = 0
-            for conversation_name, evaluation_iterations in evaluation_report.evaluation_iterations.items():
-                for evaluation_iteration in evaluation_iterations:
-                    iteration_count += 1
-                    if evaluation_iteration.result == Constants.pass_name:
-                        correct_score += 1
-                    elif evaluation_iteration.result == Constants.fail_name:
-                        correct_score -= 1
-            final_score = correct_score / iteration_count
-            evaluation_report.score = final_score
-
         Logger.decrement_indent() # End evaluations section
         return evaluation_reports
 

@@ -4,15 +4,22 @@ from dataclasses import dataclass
 # This is modeled after notes/sample_test_log.json
 
 @dataclass
-class EvaluationIteration:
+class EvaluationIterationCase:
     explanation: str
     result: str
     tokens: int
 
 @dataclass
+class ConversationEvaluationCase:
+    conversation_name: str
+    evaluation_iterations: List[EvaluationIterationCase]
+    score: float
+    tokens: int
+
+@dataclass
 class EvaluationCase:
     evaluation_prompt: str
-    evaluation_iterations: Dict[str,List[EvaluationIteration]]
+    conversation_evaluations: List[ConversationEvaluationCase]
     score: float
     tokens: int
 
