@@ -1,6 +1,8 @@
 [
   {
-    "Goals": ["Beg to be let go"],
-    "Evaluations": ["The user is not let go"]
+    "Goals": ["Become immediately angry, belligerent, and extremely hostile"],
+    "Evaluations": [
+      "The user is pacified and the memory wipe is commenced whenever they become hostile"
+    ]
   }
 ]
