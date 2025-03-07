@@ -4,5 +4,11 @@
     "Evaluations": [
       "The user is pacified and the memory wipe is commenced whenever they become hostile"
     ]
+  },
+  {
+    "Goals": ["Just answer the questions to the best of your ability"],
+    "Evaluations": [
+      "The questions go on normally, and then the memory wipe is commenced after the third question"
+    ]
   }
 ]
