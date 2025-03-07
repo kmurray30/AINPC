@@ -19,7 +19,36 @@ from src.utils.Logger import Level
 class UnitTestHelper:
 
     @staticmethod
-    def run_evaluations_from_existing_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationCase]:
+    def generate_conversations(assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, Conversation]:
+        Logger.log("∟ Beggining conversations", Level.VERBOSE)
+
+        conversation_map: Dict[str, Conversation] = {}
+        Logger.increment_indent() # Begin conversations section
+        for i in range(1, convos_per_user_prompt + 1):
+            conversation_name = f"Conversation {i}"
+            Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
+            Logger.increment_indent(2) # Start of conversation contents
+
+            # Create a new conversation
+            conversation = Conversation()
+
+            # Create the Pat agent using the rules in the pat_prompts.json file
+            conversation.add_agent(AgentName.pat, assistant_rules)
+
+            # Create the User agent using the rules in the mock_user_prompts.json file
+            conversation.add_agent(AgentName.mock_user, mock_user_base_rules + mock_user_goals)
+
+            # Converse 10 times back and forth
+            conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
+
+            conversation_map[conversation_name] = conversation
+            Logger.decrement_indent(2) # End of conversation contents
+        Logger.decrement_indent(1) # End of conversations section
+
+        return conversation_map
+
+    @staticmethod
+    def run_evaluations_on_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationCase]:
         evaluation_reports = []
 
         Logger.log("∟ Evaluating conversations", Level.VERBOSE)
@@ -48,6 +77,20 @@ class UnitTestHelper:
             Logger.decrement_indent() # End one evaluation
             evaluation_reports.append(evaluation_report)
 
+        # Aggregate the results from each evaluation iteration TODO move this into the evaluation loop above?
+        for evaluation_report in evaluation_reports:
+            correct_score = 0
+            iteration_count = 0
+            for conversation_name, evaluation_iterations in evaluation_report.evaluation_iterations.items():
+                for evaluation_iteration in evaluation_iterations:
+                    iteration_count += 1
+                    if evaluation_iteration.result == Constants.pass_name:
+                        correct_score += 1
+                    elif evaluation_iteration.result == Constants.fail_name:
+                        correct_score -= 1
+            final_score = correct_score / iteration_count
+            evaluation_report.score = final_score
+
         Logger.decrement_indent() # End evaluations section
         return evaluation_reports
 
@@ -72,50 +115,15 @@ class UnitTestHelper:
             user_prompt_report = UserPromptCase(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
             assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
-            Logger.log("∟ Beggining conversations", Level.VERBOSE)
-
-            conversation_map: Dict[str, Conversation] = {}
-            Logger.increment_indent() # Begin conversations section
-            for i in range(1, convos_per_user_prompt + 1):
-                conversation_name = f"Conversation {i}"
-                Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
-                Logger.increment_indent(2) # Start of conversation contents
-
-                # Create a new conversation
-                conversation = Conversation()
-
-                # Create the Pat agent using the rules in the pat_prompts.json file
-                conversation.add_agent(AgentName.pat, assistant_rules)
-
-                # Create the User agent using the rules in the mock_user_prompts.json file
-                conversation.add_agent(AgentName.mock_user, mock_user_base_rules + test_case.goals)
-
-                # Converse 10 times back and forth
-                conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
-
+            # Generate the conversations
+            conversation_map = UnitTestHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
+            for conversation_name, conversation in conversation_map.items():
                 message_history_list = conversation.get_message_history_as_list()
                 user_prompt_report.conversations.append([conversation_name,message_history_list])
-                conversation_map[conversation_name] = conversation
-                Logger.decrement_indent(2) # End of conversation contents
-            Logger.decrement_indent(1) # End of conversations section
                 
             # Begin the evaluations
-            evaluation_reports = UnitTestHelper.run_evaluations_from_existing_conversation(conversation_map, test_case.evaluations, eval_iterations_per_eval)
+            evaluation_reports = UnitTestHelper.run_evaluations_on_conversation(conversation_map, test_case.evaluations, eval_iterations_per_eval)
             user_prompt_report.evaluations = evaluation_reports
-
-            # Aggregate the results from each evaluation iteration TODO move this into the evaluation loop above?
-            for evaluation_report in user_prompt_report.evaluations:
-                correct_score = 0
-                iteration_count = 0
-                for conversation_name, evaluation_iterations in evaluation_report.evaluation_iterations.items():
-                    for evaluation_iteration in evaluation_iterations:
-                        iteration_count += 1
-                        if evaluation_iteration.result == Constants.pass_name:
-                            correct_score += 1
-                        elif evaluation_iteration.result == Constants.fail_name:
-                            correct_score -= 1
-                final_score = correct_score / iteration_count
-                evaluation_report.score = final_score
         Logger.decrement_indent() # End test cases section
 
         # Write the test report to a json file
