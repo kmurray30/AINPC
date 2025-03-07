@@ -18,8 +18,8 @@ from src.utils.Logger import Level
 # - See runbooks/test.ipynb for sample usage
 
 # Settings
-convos_per_user_prompt = 1
-eval_iterations_per_eval = 1
+convos_per_user_prompt = 4
+eval_iterations_per_eval = 6
 convo_length = 1
 
 # Unit Test: Test the efficacy of Pat in the initial phase of the game
@@ -135,8 +135,5 @@ with open(test_report_path, "w") as f:
     json.dump(asdict(test_report), f, indent=4)
 
 # TODO:
-# - Invert the report structure so it goes userprompt -> evaluation -> conversation -> iteration
-#   - For this, I need to store conversations at a higher level instead of redundantly within each evaluation
 # - The hostile test case is not working, it should be undetermined if the message length is 1
 # - Make a helper class so unit tests can be run with a single function call
-# - Custom logger that can have warning levels, and also increment and decrement indent permanently
