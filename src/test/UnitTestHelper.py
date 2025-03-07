@@ -9,7 +9,7 @@ from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
 from src.test.TestClasses import TestCaseSuite, TestCase
 from src.core.ChatResponse import ChatResponse
-from src.test.TestReport import TestReport, AssistantPromptCase, UserPromptCase, EvaluationCase, ConversationEvaluationCase, ConversationEvaluationCase, EvaluationIterationCase
+from src.test.TestReport import TestReport, AssistantPromptReport, UserPromptReport, EvaluationReport, ConversationEvaluationReport, ConversationEvaluationReport, EvaluationIterationReport
 from src.utils import Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
@@ -49,7 +49,7 @@ class UnitTestHelper:
         return conversation_map
     
     @staticmethod
-    def score_evaluations(evaluation_report: EvaluationCase):
+    def score_evaluations(evaluation_report: EvaluationReport):
         for conversation_evaluation in evaluation_report.conversation_evaluations:
             correct_score = 0
             iteration_count = 0
@@ -64,7 +64,7 @@ class UnitTestHelper:
         evaluation_report.score = mean(conversation_evaluation.score for conversation_evaluation in evaluation_report.conversation_evaluations)
     
     @staticmethod
-    def run_evaluations_on_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationCase]:
+    def run_evaluations_on_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationReport]:
         evaluation_reports = []
 
         Logger.log("∟ Evaluating conversations", Level.VERBOSE)
@@ -72,13 +72,13 @@ class UnitTestHelper:
         # Begin the evaluations
         Logger.increment_indent() # Begin evaluations section
         for evaluation_prompt in test_cases:
-            evaluation_report = EvaluationCase(evaluation_prompt=evaluation_prompt, conversation_evaluations=[], score="", tokens=0)
+            evaluation_report = EvaluationReport(evaluation_prompt=evaluation_prompt, conversation_evaluations=[], score="", tokens=0)
             
             Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
             Logger.increment_indent(1) # Begin one evaluation
             for conversation_name, conversation in conversation_map.items():
                 Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
-                conversation_evaluation_report = ConversationEvaluationCase(conversation_name=conversation_name, evaluation_iterations=[], score=0, tokens=0)
+                conversation_evaluation_report = ConversationEvaluationReport(conversation_name=conversation_name, evaluation_iterations=[], score=0, tokens=0)
                 evaluation_report.conversation_evaluations.append(conversation_evaluation_report)
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
@@ -88,7 +88,7 @@ class UnitTestHelper:
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
                     Logger.decrement_indent() # End result section
-                    evaluation_iteration_report = EvaluationIterationCase(explanation=result.explanation, result=result.response, tokens=0)
+                    evaluation_iteration_report = EvaluationIterationReport(explanation=result.explanation, result=result.response, tokens=0)
                     conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
             Logger.decrement_indent() # End one evaluation
@@ -101,7 +101,7 @@ class UnitTestHelper:
 
     @staticmethod
     def run_unit_test(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int):
-        assistant_prompt_report = AssistantPromptCase(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
+        assistant_prompt_report = AssistantPromptReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
         test_report = TestReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
         Logger.log("Pat Rules:", Level.VERBOSE)
@@ -117,7 +117,7 @@ class UnitTestHelper:
             Logger.log(f"Goals: {test_case.goals}", Level.VERBOSE)
             Logger.log(f"Evaluations: {test_case.evaluations}", Level.VERBOSE)
             Logger.decrement_indent(2)
-            user_prompt_report = UserPromptCase(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
+            user_prompt_report = UserPromptReport(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
             assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
             # Generate the conversations
