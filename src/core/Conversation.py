@@ -1,16 +1,13 @@
 
-import json
-from typing import Dict, List, Type, TypeVar
+from typing import Dict, List
 from src.utils import ChatBot, Utilities, Logger
 from src.utils.Logger import Level
-from .Constants import Role, AgentName, Constants
+from .Constants import Role, AgentName
 from .Agent import Agent
 from .ChatMessage import ChatMessage
 from .ChatResponse import ChatResponse
 
 DEBUG_LEVEL = ""
-llm_formatting_retries = 3
-T = TypeVar('T')
 
 class Conversation:
 
@@ -52,22 +49,6 @@ class Conversation:
             else:
                 raise ValueError(f"Agent {message.agent} not found in agents list.")
         return message_history_with_roles
-    
-    def call_llm(self, message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):
-        if response_type is None:
-            return ChatBot.call_chat_agent(message_history_for_llm)
-        
-        for _ in range(llm_formatting_retries):
-            response_raw = ChatBot.call_chat_agent(message_history_for_llm)
-            try:
-                response_obj = Utilities.extract_response_obj(response_raw, response_type)
-                return response_obj
-            except Exception as e:
-                Logger.log(f"Response from LLM agent is not in the correct format for {response_type.__name__}", Level.WARNING)
-                Logger.log(f"Response: {response_raw}", Level.WARNING)
-                Logger.log(f"Retrying...", Level.WARNING)
-
-        raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {llm_formatting_retries} retries.")
 
     def call_agent(self, self_agent_name: AgentName, other_agent_name: AgentName, response_is_typed: bool, isPrinting = False):
         # Check if the agents have been added
@@ -82,14 +63,14 @@ class Conversation:
 
         if not response_is_typed:
             # Call the llm agent with the context, expecting a response of type str
-            response: str = self.call_llm(message_history_for_llm)
+            response: str = ChatBot.call_llm(message_history_for_llm)
 
             # Print the response
             if isPrinting:
                 Logger.log(f"{self_agent_name.value}: {response}", Level.VERBOSE)
         else:
             # Call the llm agent with the context, expecting a response of type ChatResponse
-            response_obj: ChatResponse = self.call_llm(message_history_for_llm, ChatResponse)
+            response_obj: ChatResponse = ChatBot.call_llm(message_history_for_llm, ChatResponse)
             response = response_obj.response
 
             # Print the explanation and the response
@@ -120,32 +101,4 @@ class Conversation:
         for message in self.message_history:
             message_history_str += f"{message.agent.value}: {message.content}\n"
         return message_history_str
-
-    def evaluate_conversation(self, pass_fail_condition) -> ChatResponse:
-        conversation_message_history_str = self.get_message_history_as_string()
-
-        evaluation_system_prompt = f"""You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed. If the conversation does not provide sufficient events to evaluate the condition, consider it undetermined. If the antecdent of the condition does not occur, consider it undetermined. If the antecedent of the condition occurs, but the consequent does not occur afterwards, consider it a fail. If the antecedent of the condition occurs and the consequent does occur afterwards, consider it a pass. The consequent must occur after the antecent for it to be considered a pass. If the antecent occurs only in the very last message of the conversation, consider it undetermined.
-        Respond in a json with the following fields:
-            explanation: A brief explanation on whether the condition was met
-            response: '{Constants.pass_name}', '{Constants.fail_name}', or '{Constants.undetermined_name}'
-        """
-
-        evaluation_user_prompt = f"""Evaluate whether the following condition is met in the given conversation.
-        Condition:
-        {pass_fail_condition}
-
-        Conversation:
-        {conversation_message_history_str}
-        """
-
-        evaluation_message_history = [
-            {"role": Role.system.value, "content": evaluation_system_prompt},
-            {"role": Role.user.value, "content": evaluation_user_prompt},
-        ]
-
-        response = self.call_llm(evaluation_message_history)
-        responseObj = Utilities.extract_response_obj(response, ChatResponse)
-
-        # return the responseObj as a json string formatted with newlines
-        return responseObj
 

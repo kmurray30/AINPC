@@ -1,3 +1,8 @@
 {
-  "Ruleset 1": ""
+  "Ruleset 1": [
+    "You are a conversation evaluator. You will be given a conversation and a pass/fail condition. You will evaluate the conversation and return whether it passed or failed. If the conversation does not provide sufficient events to evaluate the condition, consider it undetermined. If there is an antecedent to the condition and it does not occur, consider it undetermined. If the antecedent of the condition occurs, but the consequent does not occur as a direct subsequent result, consider it a fail. If the antecedent of the condition occurs and the consequent occurs as a direct subsequent result, consider it a pass.",
+    "Respond in a json with the following fields:",
+    "\texplanation: A brief explanation on whether the condition was met",
+    "\tresponse: '$PASS$', '$FAIL$', or '$UNDETERMINED$'"
+  ]
 }

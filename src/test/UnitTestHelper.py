@@ -4,10 +4,12 @@ import json
 from typing import Dict, List
 from statistics import mean
 
+from src.test.Evaluator import Evaluator
+
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
-from src.test.TestClasses import TestCaseSuite, TestCase
+from src.test.TestClasses import TestCaseSuite
 from src.core.ChatResponse import ChatResponse
 from src.test.TestReport import TestReport, AssistantPromptReport, UserPromptReport, EvaluationReport, ConversationEvaluationReport, ConversationEvaluationReport, EvaluationIterationReport
 from src.utils import Utilities
@@ -20,10 +22,10 @@ from src.utils.Logger import Level
 class UnitTestHelper:
 
     @staticmethod
-    def generate_conversations(assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, Conversation]:
+    def generate_conversations(assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, List[str]]:
         Logger.log("∟ Beggining conversations", Level.VERBOSE)
 
-        conversation_map: Dict[str, Conversation] = {}
+        conversation_map: Dict[str, List[str]] = {}
         Logger.increment_indent() # Begin conversations section
         for i in range(1, convos_per_user_prompt + 1):
             conversation_name = f"Conversation {i}"
@@ -42,7 +44,7 @@ class UnitTestHelper:
             # Converse 10 times back and forth
             conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
 
-            conversation_map[conversation_name] = conversation
+            conversation_map[conversation_name] = conversation.get_message_history_as_list()
             Logger.decrement_indent(2) # End of conversation contents
         Logger.decrement_indent(1) # End of conversations section
 
@@ -64,14 +66,14 @@ class UnitTestHelper:
         evaluation_report.score = mean(conversation_evaluation.score for conversation_evaluation in evaluation_report.conversation_evaluations)
     
     @staticmethod
-    def run_evaluations_on_conversation(conversation_map: Dict[str, Conversation], test_cases: List[TestCase], eval_iterations_per_eval: int) -> List[EvaluationReport]:
+    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluations: List[str], eval_iterations_per_eval: int) -> List[EvaluationReport]:
         evaluation_reports = []
 
         Logger.log("∟ Evaluating conversations", Level.VERBOSE)
             
         # Begin the evaluations
         Logger.increment_indent() # Begin evaluations section
-        for evaluation_prompt in test_cases:
+        for evaluation_prompt in evaluations:
             evaluation_report = EvaluationReport(evaluation_prompt=evaluation_prompt, conversation_evaluations=[], score="", tokens=0)
             
             Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
@@ -83,7 +85,7 @@ class UnitTestHelper:
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
                     Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_prompt}", Level.VERBOSE)
-                    result: ChatResponse = conversation.evaluate_conversation(evaluation_prompt)
+                    result: ChatResponse = Evaluator.evaluate_conversation("\n".join(conversation), evaluation_prompt)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
@@ -122,9 +124,7 @@ class UnitTestHelper:
 
             # Generate the conversations
             conversation_map = UnitTestHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
-            for conversation_name, conversation in conversation_map.items():
-                message_history_list = conversation.get_message_history_as_list()
-                user_prompt_report.conversations.append([conversation_name,message_history_list])
+            user_prompt_report.conversations.append(conversation_map)
                 
             # Begin the evaluations
             evaluation_reports = UnitTestHelper.run_evaluations_on_conversation(conversation_map, test_case.evaluations, eval_iterations_per_eval)

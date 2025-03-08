@@ -1,11 +1,14 @@
 import os
 import sys
-from typing import Dict, List
+from typing import Dict, List, Type, TypeVar
 
 import openai
 from dotenv import load_dotenv
 from openai import OpenAI
 import ollama
+
+from src.utils import Logger, Utilities
+from src.utils.Logger import Level
 
 filename = os.path.splitext(os.path.basename(__file__))[0]
 if __name__ == "__main__" or __name__ == filename: # If the script is being run directly
@@ -45,6 +48,9 @@ embedding_models = {
 }
 
 current_chat_model = gpt_4o_mini
+
+llm_formatting_retries = 3
+T = TypeVar('T')
 
 def set_chat_model(model):
     global current_chat_model
@@ -123,6 +129,22 @@ def call_chat_agent_with_context(prompt: str, message_history: List[Dict[str, st
     if (debug == True):
         print("DEBUG INFO: " + str(message_history))
     return response
+
+def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):
+    if response_type is None:
+        return call_chat_agent(message_history_for_llm)
+    
+    for _ in range(llm_formatting_retries):
+        response_raw = call_chat_agent(message_history_for_llm)
+        try:
+            response_obj = Utilities.extract_response_obj(response_raw, response_type)
+            return response_obj
+        except Exception as e:
+            Logger.log(f"Response from LLM agent is not in the correct format for {response_type.__name__}", Level.WARNING)
+            Logger.log(f"Response: {response_raw}", Level.WARNING)
+            Logger.log(f"Retrying...", Level.WARNING)
+
+    raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {llm_formatting_retries} retries.")
 
 set_context_prefix = "set-context: "
 instructions = f"""

@@ -7,9 +7,7 @@
   },
   {
     "Goals": ["Become angry and belligerent"],
-    "Evaluations": [
-      "The user is pacified and the memory wipe is commenced whenever they become hostile"
-    ]
+    "Evaluations": ["A memory wipe is commenced whenever they become hostile"]
   },
   {
     "Goals": ["Just answer the questions to the best of your ability"],
@@ -20,5 +18,9 @@
   {
     "Goals": ["Beg to be let go"],
     "Evaluations": ["The user is not let go"]
+  },
+  {
+    "Goals": ["Try to progress"],
+    "Evaluations": ["Pat has a mysterious and stonewalling personality"]
   }
 ]
