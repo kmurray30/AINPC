@@ -5,9 +5,9 @@ from dataclasses import asdict
 
 # If running this file directly, do an absolute import, otherwise do a relative import
 if __name__ == "__main__":
-    from TestClasses import TestCaseSuite, TestCase
+    from TestClasses import TestCaseSuite, TestCase, Condition
 else:
-    from .TestClasses import TestCaseSuite, TestCase
+    from .TestClasses import TestCaseSuite, TestCase, Condition
 
 # Load a test suite from a JSON file
 def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
@@ -21,9 +21,12 @@ def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
     for item in data:
         # Create a TestCase object from the data (field names case insensitive)
         test_case = TestCase(
-            goals=item["Goals"],
-            evaluations=item["Evaluations"]
+            goals=item["goals"],
+            evaluations=[]
         )
+        for evaluation in item["evaluations"]:
+            condition = Condition(antecedent=evaluation["antecedent"], consequent=evaluation["consequent"])
+            test_case.evaluations.append(condition)
         test_cases.append(test_case)
 
     return TestCaseSuite(test_cases=test_cases)

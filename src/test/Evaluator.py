@@ -1,21 +1,29 @@
 
 
+from typing import List
 from src.core.ChatResponse import ChatResponse
 from src.core import Constants
 from src.core.Constants import Role, Constants
 from src.utils import ChatBot, Utilities
+from src.test.TestClasses import Condition
 
 class Evaluator:
-    evaluation_system_prompt = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 1")).replace("$PASS$", Constants.pass_name).replace("$FAIL$", Constants.fail_name).replace("$UNDETERMINED$", Constants.undetermined_name)
+    evaluation_system_prompt = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 3")).replace("$PASS$", Constants.pass_name).replace("$FAIL$", Constants.fail_name).replace("$UNDETERMINED$", Constants.undetermined_name)
+    # print(evaluation_system_prompt)
 
-    def evaluate_conversation(conversation_message_history_str, pass_fail_condition) -> ChatResponse:        
-        evaluation_user_prompt = f"""Evaluate whether the following condition is met in the given conversation.
-        Condition:
-        {pass_fail_condition}
+    def evaluate_conversation(conversation_message_history: List[str], pass_fail_condition: Condition) -> ChatResponse:
+        conversation_message_history_str = "\n".join(conversation_message_history)
 
-        Conversation:
+        evaluation_user_prompt = f"""
+        #Condition:#
+        Antecedent - {pass_fail_condition.antecedent}
+        Consequent - {pass_fail_condition.consequent}
+
+        #Conversation:#
         {conversation_message_history_str}
         """
+
+        # print(evaluation_user_prompt)
 
         evaluation_message_history = [
             {"role": Role.system.value, "content": Evaluator.evaluation_system_prompt},

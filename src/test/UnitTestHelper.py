@@ -9,7 +9,7 @@ from src.test.Evaluator import Evaluator
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
-from src.test.TestClasses import TestCaseSuite
+from src.test.TestClasses import TestCaseSuite, Condition
 from src.core.ChatResponse import ChatResponse
 from src.test.TestReport import TestReport, AssistantPromptReport, UserPromptReport, EvaluationReport, ConversationEvaluationReport, ConversationEvaluationReport, EvaluationIterationReport
 from src.utils import Utilities
@@ -66,17 +66,17 @@ class UnitTestHelper:
         evaluation_report.score = mean(conversation_evaluation.score for conversation_evaluation in evaluation_report.conversation_evaluations)
     
     @staticmethod
-    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluations: List[str], eval_iterations_per_eval: int) -> List[EvaluationReport]:
+    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluations: List[Condition], eval_iterations_per_eval: int) -> List[EvaluationReport]:
         evaluation_reports = []
 
         Logger.log("∟ Evaluating conversations", Level.VERBOSE)
             
         # Begin the evaluations
         Logger.increment_indent() # Begin evaluations section
-        for evaluation_prompt in evaluations:
-            evaluation_report = EvaluationReport(evaluation_prompt=evaluation_prompt, conversation_evaluations=[], score="", tokens=0)
+        for evaluation_condition in evaluations:
+            evaluation_report = EvaluationReport(evaluation_prompt=evaluation_condition, conversation_evaluations=[], score="", tokens=0)
             
-            Logger.log(f"∟ Evaluating: {evaluation_prompt}", Level.VERBOSE)
+            Logger.log(f"∟ Evaluating: {evaluation_condition}", Level.VERBOSE)
             Logger.increment_indent(1) # Begin one evaluation
             for conversation_name, conversation in conversation_map.items():
                 Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
@@ -84,8 +84,8 @@ class UnitTestHelper:
                 evaluation_report.conversation_evaluations.append(conversation_evaluation_report)
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
-                    Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_prompt}", Level.VERBOSE)
-                    result: ChatResponse = Evaluator.evaluate_conversation("\n".join(conversation), evaluation_prompt)
+                    Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_condition}", Level.VERBOSE)
+                    result: ChatResponse = Evaluator.evaluate_conversation(conversation, evaluation_condition)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
