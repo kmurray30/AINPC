@@ -8,27 +8,24 @@ from src.utils import ChatBot, Utilities
 from src.test.TestClasses import Condition
 
 class Evaluator:
-    evaluation_system_prompt = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 3")).replace("$PASS$", Constants.pass_name).replace("$FAIL$", Constants.fail_name).replace("$UNDETERMINED$", Constants.undetermined_name)
+    evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 3"))
     # print(evaluation_system_prompt)
 
-    def evaluate_conversation(conversation_message_history: List[str], pass_fail_condition: Condition) -> ChatResponse:
+    def evaluate_conversation(conversation_message_history: List[str], condition: Condition) -> ChatResponse:
+        evaluation_system_prompt = Evaluator.evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, condition.antecedent).replace(Constants.consequent_placeholder, condition.consequent)
         conversation_message_history_str = "\n".join(conversation_message_history)
 
         evaluation_user_prompt = f"""
-        #Condition:#
-        Antecedent - {pass_fail_condition.antecedent}
-        Consequent - {pass_fail_condition.consequent}
-
         #Conversation:#
         {conversation_message_history_str}
         """
 
-        # print(evaluation_user_prompt)
-
         evaluation_message_history = [
-            {"role": Role.system.value, "content": Evaluator.evaluation_system_prompt},
+            {"role": Role.system.value, "content": evaluation_system_prompt},
             {"role": Role.user.value, "content": evaluation_user_prompt},
         ]
+
+        print(f"Evaluation message history: {evaluation_message_history}")
 
         response = ChatBot.call_llm(evaluation_message_history)
         responseObj = Utilities.extract_response_obj(response, ChatResponse)
