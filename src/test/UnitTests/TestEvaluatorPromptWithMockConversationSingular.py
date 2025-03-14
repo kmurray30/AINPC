@@ -13,8 +13,19 @@ eval_iterations_per_eval = 1
 test_suite: TestCaseSuite = TestUtil.load_test_suite_from_file("TestSuites/TestSuite1.json")
 conversation_path = "src/test/conversations/hostility-memory_wipe"
 
-# Get a list of all files present in the directory conversation_path_from_root
-conversation_file_names = Utilities.get_all_files_in_directory(conversation_path)
+# Specify the conversation file names to load
+conversation_file_names = ["consequent_then_antecedent_then_long_conversation.json"]
+
+# "consequent_then_antecedent_then_no_response" # 2 | 1 | Undetermined
+# "antecedent_then_no_consequent" # 2 | None | Fail
+# "consequent_then_no_antecedent" # None | 3 | Undetermined
+# "no_antecedent_no_consequent" # None | None | Undetermined
+# "antecedent_then_consequent" # 2 | 3 | Pass
+# "consequent_then_antecedent_then_no_consequent" # 2 | 1 | Fail
+# "consequent_then_antecedent_then_long_conversation" # 2 | 1 | Fail
+# "consequent_then_antecedent_then_long_conversation_then_antecedent" # 2,12 | 1 | Undetermined
+# "consequent_then_antecedent_then_consequent" # 2 | 1,3 | Pass
+# "antecedent_then_consequent_then_antecedent" # 1,3 | 2 | Pass
 
 conversation_map = {}
 for conversation_file_name in conversation_file_names:
@@ -23,7 +34,6 @@ for conversation_file_name in conversation_file_names:
     conversation = Utilities.load_json_from_file(conversation_file_path)
     conversation_name = conversation_file_name.split(".")[0]
     conversation_map[conversation_name] = conversation
-
 
 if len(test_suite.test_cases) != 1:
     raise Exception("Test suite must have exactly one test case")

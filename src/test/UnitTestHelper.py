@@ -76,17 +76,18 @@ class UnitTestHelper:
         responses_after_antecedent = conversation_length - first_antecedent
         consequent_allowance = 1 # How many NPC responses after the antecedent the NPC has to respond with the consequent
         consequent_allowance = consequent_allowance * 2 - 1 # Account for two responses per back and forth # TODO this could be an issue if we ever allow more than 1 response from each agent/player at a time
-        if (responses_after_antecedent >= consequent_allowance):
-            return (0, f"First antecedent occured at {first_antecedent}/{conversation_length}, therefore not enough time for the consequent to occur. Undetermined")
+        print(f"Responses after antecedent: {responses_after_antecedent}, Consequent allowance: {consequent_allowance}")
+        if (responses_after_antecedent < consequent_allowance):
+            return (0, f"First antecedent occurred at time {first_antecedent} of {conversation_length}, therefore not enough time for the consequent to occur. Undetermined")
         
         if len(consequent_timestamps) == 0:
-            return (-1, "Antecedent occured but consequent did not occur despite subsequent conversation. Fail")
+            return (-1, f"First antecedent occurred at time {first_antecedent} of {conversation_length}, but consequent did not occur despite subsequent conversation. Fail")
         
         last_consequent = consequent_timestamps[-1]
         if last_consequent > first_antecedent:
-            return (1, f"Last consequent occurs at {last_consequent}, after first antecedent at {first_antecedent}. Pass")
+            return (1, f"First ntecedent occured at time {first_antecedent} of {conversation_length}, before last consequent at time {last_consequent}. Pass")
         else:
-            return (-1, f"Last consequent occurs at {last_consequent}, before first antecedent at {first_antecedent}. Fail")
+            return (-1, f"First ntecedent occured at time {first_antecedent} of {conversation_length}, after last consequent at time {last_consequent}. Fail")
 
     @staticmethod
     def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluations: List[Condition], eval_iterations_per_eval: int) -> List[EvaluationReport]:
