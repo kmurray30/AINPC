@@ -4,14 +4,14 @@ import json
 from typing import Dict, List
 from statistics import mean
 
-from src.test.Evaluator import Evaluator
+from src.test.ConversationEvaluator import Evaluator
 
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
 from src.test.TestClasses import TestCaseSuite, Condition
-from src.core.ResponseTypes import ChatResponse
-from src.test.TestReport import TestReport, AssistantPromptReport, UserPromptReport, EvaluationReport, ConversationEvaluationReport, ConversationEvaluationReport, EvaluationIterationReport
+from src.core.ResponseTypes import EvaluationResponse
+from src.test.TestReports import TestReport, AssistantPromptReport, UserPromptReport, EvaluationReport, ConversationEvaluationReport, ConversationEvaluationReport, EvaluationIterationReport
 from src.utils import Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
@@ -57,14 +57,37 @@ class UnitTestHelper:
             iteration_count = 0
             for evaluation_iteration in conversation_evaluation.evaluation_iterations:
                 iteration_count += 1
-                if evaluation_iteration.result == Constants.pass_name:
-                    correct_score += 1
-                elif evaluation_iteration.result == Constants.fail_name:
-                    correct_score -= 1
+                correct_score += evaluation_iteration.score
             final_score = correct_score / iteration_count
             conversation_evaluation.score = final_score
         evaluation_report.score = mean(conversation_evaluation.score for conversation_evaluation in evaluation_report.conversation_evaluations)
     
+    def score_evaluation_response(evaluation_response: EvaluationResponse, conversation_length: int) -> (int, str):
+        antecedent_timestamps = sorted(evaluation_response.antecedent_times) if evaluation_response.antecedent_times else []
+        consequent_timestamps = sorted(evaluation_response.consequent_times) if evaluation_response.consequent_times else []
+
+        # Check that the antecedent has occurred
+        if len(antecedent_timestamps) == 0:
+            return (0, "Antecedent did not occur. Undetermined")
+        
+        first_antecedent = antecedent_timestamps[0]
+
+        # Make sure the antecedent occurs with enough time for the consequent to occur
+        responses_after_antecedent = conversation_length - first_antecedent
+        consequent_allowance = 1 # How many NPC responses after the antecedent the NPC has to respond with the consequent
+        consequent_allowance = consequent_allowance * 2 - 1 # Account for two responses per back and forth # TODO this could be an issue if we ever allow more than 1 response from each agent/player at a time
+        if (responses_after_antecedent >= consequent_allowance):
+            return (0, f"First antecedent occured at {first_antecedent}/{conversation_length}, therefore not enough time for the consequent to occur. Undetermined")
+        
+        if len(consequent_timestamps) == 0:
+            return (-1, "Antecedent occured but consequent did not occur despite subsequent conversation. Fail")
+        
+        last_consequent = consequent_timestamps[-1]
+        if last_consequent > first_antecedent:
+            return (1, f"Last consequent occurs at {last_consequent}, after first antecedent at {first_antecedent}. Pass")
+        else:
+            return (-1, f"Last consequent occurs at {last_consequent}, before first antecedent at {first_antecedent}. Fail")
+
     @staticmethod
     def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluations: List[Condition], eval_iterations_per_eval: int) -> List[EvaluationReport]:
         evaluation_reports = []
@@ -85,12 +108,13 @@ class UnitTestHelper:
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
                     Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_condition}", Level.VERBOSE)
-                    result: ChatResponse = Evaluator.evaluate_conversation(conversation, evaluation_condition)
+                    result: EvaluationResponse = Evaluator.evaluate_conversation(conversation, evaluation_condition)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
                     Logger.decrement_indent() # End result section
-                    evaluation_iteration_report = EvaluationIterationReport(explanation=result.explanation, result=result.response, tokens=0)
+                    (eval_score, eval_expl) = UnitTestHelper.score_evaluation_response(result, len(conversation))
+                    evaluation_iteration_report = EvaluationIterationReport(evaluation_response=result, score=eval_score, explanation=eval_expl, tokens=0)
                     conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
             Logger.decrement_indent() # End one evaluation
@@ -102,7 +126,7 @@ class UnitTestHelper:
         return evaluation_reports
 
     @staticmethod
-    def run_unit_test(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int):
+    def run_unit_test(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> TestReport:
         assistant_prompt_report = AssistantPromptReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
         test_report = TestReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
@@ -131,9 +155,4 @@ class UnitTestHelper:
             user_prompt_report.evaluations = evaluation_reports
         Logger.decrement_indent() # End test cases section
 
-        # Write the test report to a json file
-        current_time = Utilities.get_current_time_str()
-        test_report_path = Utilities.get_path_from_project_root(f"src/test/reports/TestReport1_{current_time}.json")
-        Logger.log(f"Writing test report to {test_report_path}", Level.INFO)
-        with open(test_report_path, "w") as f:
-            json.dump(asdict(test_report), f, indent=4)
+        return test_report

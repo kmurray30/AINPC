@@ -2,8 +2,9 @@ import sys
 
 sys.path.insert(0, "../..")
 # sys.path.insert(0, "./src")
-from src.test.TestClasses import TestCaseSuite
+from src.test.TestClasses import TestCaseSuite, ReportType
 from src.test import TestUtil
+from src.test.TestReports import TestReport
 from src.utils import Utilities
 from src.test.UnitTestHelper import UnitTestHelper
 
@@ -17,4 +18,7 @@ mock_user_base_rules = Utilities.load_rules_from_file("mock_user_prompts.json", 
 
 test_suite: TestCaseSuite = TestUtil.load_test_suite_from_file("TestSuites/TestSuite1.json")
 
-UnitTestHelper.run_unit_test(assistant_rules, mock_user_base_rules, test_suite, convos_per_user_prompt, eval_iterations_per_eval, convo_length)
+test_report: TestReport = UnitTestHelper.run_unit_test(assistant_rules, mock_user_base_rules, test_suite, convos_per_user_prompt, eval_iterations_per_eval, convo_length)
+
+# Write the test report to a file
+TestUtil.write_test_report_to_file(test_report, ReportType.TEST_REPORT)

@@ -1,17 +1,17 @@
 
 
 from typing import List
-from src.core.ResponseTypes import ChatResponse
+from src.core.ResponseTypes import EvaluationResponse
 from src.core import Constants
 from src.core.Constants import Role, Constants
 from src.utils import ChatBot, Utilities
 from src.test.TestClasses import Condition
 
 class Evaluator:
-    evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 4"))
+    evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
     # print(evaluation_system_prompt)
 
-    def evaluate_conversation(conversation_message_history: List[str], condition: Condition) -> ChatResponse:
+    def evaluate_conversation(conversation_message_history: List[str], condition: Condition) -> EvaluationResponse:
         evaluation_system_prompt = Evaluator.evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, condition.antecedent).replace(Constants.consequent_placeholder, condition.consequent)
         conversation_message_history_str = "\n".join(conversation_message_history)
 
@@ -28,7 +28,8 @@ class Evaluator:
         # print(f"Evaluation message history: {evaluation_message_history}")
 
         response = ChatBot.call_llm(evaluation_message_history)
-        responseObj = Utilities.extract_response_obj(response, ChatResponse)
+        # print(f"Evaluation response: {response}")
+        responseObj = Utilities.extract_response_obj(response, EvaluationResponse)
 
         # return the responseObj as a json string formatted with newlines
         return responseObj

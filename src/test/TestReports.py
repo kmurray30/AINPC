@@ -5,8 +5,9 @@ from dataclasses import dataclass
 
 @dataclass
 class EvaluationIterationReport:
+    evaluation_response: str
+    score: str
     explanation: str
-    result: str
     tokens: int
 
 @dataclass
@@ -41,4 +42,12 @@ class AssistantPromptReport:
 class TestReport:
     assistant_prompt_cases: List[AssistantPromptReport]
     takeaways: str
+    tokens: int
+
+# This class is not a part of the TestReport, but used for a separate report that evaluates the evaluator itself
+@dataclass
+class EvaluationEvaluationReport:
+    scenario: str
+    conversations: Dict[str,List[str]]
+    evaluations: List[EvaluationReport]
     tokens: int

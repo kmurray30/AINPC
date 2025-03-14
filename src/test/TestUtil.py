@@ -3,11 +3,9 @@ import json
 from typing import List
 from dataclasses import asdict
 
-# If running this file directly, do an absolute import, otherwise do a relative import
-if __name__ == "__main__":
-    from TestClasses import TestCaseSuite, TestCase, Condition
-else:
-    from .TestClasses import TestCaseSuite, TestCase, Condition
+from src.test.TestReports import TestReport, EvaluationEvaluationReport
+from src.test.TestClasses import TestCaseSuite, TestCase, Condition
+from src.utils import Logger, Utilities
 
 # Load a test suite from a JSON file
 def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
@@ -31,25 +29,18 @@ def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
 
     return TestCaseSuite(test_cases=test_cases)
 
-# Main function that takes in a file path from the command line with the arg "load"
-# Sample command line command: python TestUtil.py load TestSuites/TestSuite1.json
-if __name__ == "__main__":
-    import sys
+def write_test_report_to_file(test_report: TestReport, test_name: str = ""):
+    # Write the test report to a json file
+    current_time = Utilities.get_current_time_str()
+    test_report_path = Utilities.get_path_from_project_root(f"src/test/reports/TestReport_{test_name}_{current_time}.json")
+    Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
+    with open(test_report_path, "w") as f:
+        json.dump(asdict(test_report), f, indent=4)
 
-    if len(sys.argv) < 2:
-        print("Usage: python TestUtil.py <command> [args]")
-        sys.exit(1)
-
-    if (sys.argv[1] == "load"):
-        if len(sys.argv) != 3:
-            print("Usage: python TestUtil.py load <file_path>")
-            sys.exit(1)
-
-        file_path = sys.argv[2]
-        test_suite = load_test_suite_from_file(file_path)
-        
-        # Print the test suite as a pretty json
-        print(json.dumps(asdict(test_suite), indent=4))
-    else:
-        print("Invalid command. Supported commands: load")
-        sys.exit(1)
+def write_eval_report_to_file(eval_report: EvaluationEvaluationReport, test_name: str = ""):
+    # Write the test report to a json file
+    current_time = Utilities.get_current_time_str()
+    test_report_path = Utilities.get_path_from_project_root(f"src/test/reports/EvalReport_{test_name}_{current_time}.json")
+    Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
+    with open(test_report_path, "w") as f:
+        json.dump(asdict(eval_report), f, indent=4)
