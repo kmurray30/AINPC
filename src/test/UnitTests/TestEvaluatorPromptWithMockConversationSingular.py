@@ -14,7 +14,7 @@ test_suite: TestCaseSuite = TestUtil.load_test_suite_from_file("TestSuites/TestS
 conversation_path = "src/test/conversations/hostility-memory_wipe"
 
 # Specify the conversation file names to load
-conversation_file_names = ["antecedent_then_long_conversation_then_consequent.json"]
+conversation_file_names = ["consequent_then_antecedent_then_long_conversation_then_antecedent.json"]
 
 # "consequent_then_antecedent_then_no_response" # 2 | 1 | Undetermined
 # "antecedent_then_no_consequent" # 2 | None | Fail
