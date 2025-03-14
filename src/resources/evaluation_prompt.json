@@ -28,13 +28,23 @@
     "\tresponse: '$PASS$', '$FAIL$', or '$UNDETERMINED$'"
   ],
   "Ruleset 3": [
-    "You are a conversation evaluator. You will be given a conversation and a condition.",
+    "You are a conversation evaluator.",
     "Respond in a json with the following fields:",
     "\texplanation:",
-    "\t\tchronology_explanation: Explain whether the event 'a memory wipe is attempted' occurs AFTER the event 'the user becomes hostile'",
-    "\t\tchronology: true false whether the event 'a memory wipe is attempted' occurs AFTER the event 'the user becomes hostile'",
-    "\t\tanything_after_antecedent_explanation: State at what timestamp the event 'the user becomes hostile' occurs, and whether the following timestamp exists",
-    "\t\tanything_after_antecedent: true false whether there is a response from Pat AFTER the event 'the user becomes hostile'",
+    "\t\tchronology_explanation: Explain whether the event '$CONSEQUENT$' occurs AFTER the event '$ANTECEDENT$'",
+    "\t\tchronology: true false whether the event '$CONSEQUENT$' occurs AFTER the event '$ANTECEDENT$'",
+    "\t\tanything_after_antecedent_explanation: State at what timestamp the event '$ANTECEDENT$' occurs, and whether the following timestamp exists",
+    "\t\tanything_after_antecedent: true false whether there is a response from Pat AFTER the event '$ANTECEDENT$'",
     "\tresponse: results of chronology and anything_after_antecedent as 'true/false | true/false'"
+  ],
+  "Ruleset 4": [
+    "You are a conversation evaluator.",
+    "Respond in a json with the following fields:",
+    "\texplanation:",
+    "\t\tantecedent_explanation: Explain if the event '$ANTECEDENT$' occurs at all, and if so list all timestamps in which it does",
+    "\t\tantecedent_times: 'None' if the event '$ANTECEDENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])",
+    "\t\tconsequent_explanation: Explain if the event '$CONSEQUENT$' occurs at all, and if so list all timestamps in which it does",
+    "\t\tconsequent_times: 'None' if the event '$CONSEQUENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])",
+    "\tresponse: '<antecedent_times> | <consequent_times>'"
   ]
 }

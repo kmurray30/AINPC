@@ -10,7 +10,7 @@ sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
 from src.test.TestClasses import TestCaseSuite, Condition
-from src.core.ChatResponse import ChatResponse
+from src.core.ResponseTypes import ChatResponse
 from src.test.TestReport import TestReport, AssistantPromptReport, UserPromptReport, EvaluationReport, ConversationEvaluationReport, ConversationEvaluationReport, EvaluationIterationReport
 from src.utils import Utilities
 from src.utils import Logger

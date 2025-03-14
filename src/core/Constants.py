@@ -22,3 +22,5 @@ class Constants:
     pass_name = "Pass"
     fail_name = "Fail"
     undetermined_name = "Undetermined"
+    antecedent_placeholder = "$ANTECEDENT$"
+    consequent_placeholder = "$CONSEQUENT$"

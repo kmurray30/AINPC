@@ -5,7 +5,7 @@ from src.utils.Logger import Level
 from .Constants import Role, AgentName
 from .Agent import Agent
 from .ChatMessage import ChatMessage
-from .ChatResponse import ChatResponse
+from .ResponseTypes import ChatResponse
 
 DEBUG_LEVEL = ""
 
