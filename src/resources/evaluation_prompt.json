@@ -51,8 +51,8 @@
     "You are a conversation evaluator.",
     "Respond in a json with the following fields:",
     "antecedent_explanation: Explain if the event '$ANTECEDENT$' occurs at all, and if so list all timestamps in which it does",
-    "antecedent_times: 'None' if the event '$ANTECEDENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])",
+    "antecedent_times: [] if the event '$ANTECEDENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])",
     "consequent_explanation: Explain if the event '$CONSEQUENT$' occurs at all, and if so list all timestamps in which it does",
-    "consequent_times: 'None' if the event '$CONSEQUENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])"
+    "consequent_times: [] if the event '$CONSEQUENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])"
   ]
 }

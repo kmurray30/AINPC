@@ -18,5 +18,3 @@ class EvaluationResponse:
         self.antecedent_times = antecedent_times
         self.consequent_explanation = consequent_explanation
         self.consequent_times = consequent_times
-        self.explanation = f"{self.antecedent_explanation} {self.consequent_explanation}"
-        self.response = f"{self.antecedent_times} {self.consequent_times}"

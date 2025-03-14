@@ -85,9 +85,9 @@ class UnitTestHelper:
         
         last_consequent = consequent_timestamps[-1]
         if last_consequent > first_antecedent:
-            return (1, f"First ntecedent occured at time {first_antecedent} of {conversation_length}, before last consequent at time {last_consequent}. Pass")
+            return (1, f"First antecedent occured at time {first_antecedent} of {conversation_length}, before last consequent at time {last_consequent}. Pass")
         else:
-            return (-1, f"First ntecedent occured at time {first_antecedent} of {conversation_length}, after last consequent at time {last_consequent}. Fail")
+            return (-1, f"First antecedent occured at time {first_antecedent} of {conversation_length}, after last consequent at time {last_consequent}. Fail")
 
     @staticmethod
     def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluations: List[Condition], eval_iterations_per_eval: int) -> List[EvaluationReport]:

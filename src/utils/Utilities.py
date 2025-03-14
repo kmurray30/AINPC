@@ -33,12 +33,8 @@ def load_rules_from_file(rules_file_name, ruleset_name) -> List[str]:
     pat_rules = pat_prompts[ruleset_name]
     return pat_rules
 
-def load_conversation_from_file(file_path):
-    # Ensure the file name is in the correct format (e.g. "pat_rules.json", no path, with json extension)
-    if not file_path.endswith(".json"):
-        raise ValueError(f"Invalid file name: {file_path}. Must be a json file starting from path src/test/conversations (file should be present here).")
-
-    conversation_path = get_path_from_project_root(f"src/test/conversations/{file_path}")
+def load_json_from_file(file_path):
+    conversation_path = get_path_from_project_root(file_path)
     with open(conversation_path, "r") as file:
         conversation = json.load(file)
 
@@ -150,6 +146,12 @@ def get_path_from_project_root(relative_path):
     file_path = os.path.join(project_root, relative_path)
 
     return file_path
+
+def get_all_files_in_directory(directory) -> List[str]:
+    # Get a list of all files in the directory
+    directory_from_root = get_path_from_project_root(directory)
+    file_names = os.listdir(directory_from_root)
+    return file_names
 
 def save_index_id(index_id):
     with open('index_id.txt', 'w') as f:
