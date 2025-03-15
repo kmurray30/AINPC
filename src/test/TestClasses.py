@@ -13,7 +13,7 @@ class Condition:
 @dataclass
 class TestCase:
     goals: List[str]
-    evaluations: List[Condition]
+    conditions: List[Condition]
 
 @dataclass
 class TestCaseSuite:

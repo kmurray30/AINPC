@@ -19,11 +19,11 @@ def load_goals_and_conditions_from_file(file_path: str) -> List[TestCaseSuite]:
         # Create a TestCase object from the data (field names case insensitive)
         test_case = TestCase(
             goals=item["goals"],
-            evaluations=[]
+            conditions=[]
         )
         for evaluation in item["evaluations"]:
             condition = Condition(antecedent=evaluation["antecedent"], consequent=evaluation["consequent"])
-            test_case.evaluations.append(condition)
+            test_case.conditions.append(condition)
         test_cases.append(test_case)
 
     return TestCaseSuite(test_cases=test_cases)
