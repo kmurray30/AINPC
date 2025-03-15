@@ -3,6 +3,7 @@ import json
 from typing import Dict, List
 from dataclasses import asdict
 
+from src.test.TestHelper import TestHelper
 from src.test.EvalTests.ConversationOutcome import ConversationOutcome
 from src.test.EvalTests.EvalReport import EvalReport, EvaluationEvalReport, ConditionEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport, EvaluationResponseEvalReport
 from src.test.TestReports import EvaluationTestReport
@@ -86,3 +87,19 @@ def write_eval_report_to_file(eval_report: EvalReport, test_name: str = ""):
     Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
     with open(test_report_path, "w") as f:
         json.dump(asdict(eval_report), f, indent=4)
+
+def generate_eval_report_and_write_to_file(condition: Condition, conversations_path: str, conversations_and_outcomes: Dict[str, ConversationOutcome], eval_iterations_per_eval: int):
+    conversation_map = {}
+    for conversation_name in conversations_and_outcomes.keys():
+        conversation_file_name = f"{conversation_name}.json"
+        conversation_file_path = Utilities.get_path_from_project_root(f"{conversations_path}/{conversation_file_name}")
+        print(f"Loading {conversation_file_path}")
+        conversation = Utilities.load_json_from_file(conversation_file_path)
+        conversation_map[conversation_name] = conversation
+
+    evaluation_test_reports = TestHelper.run_evaluations_on_conversation(conversation_map, [condition], eval_iterations_per_eval)
+
+    eval_report = generate_eval_report(evaluation_test_reports, conversation_map, conversations_and_outcomes)
+
+    # Write the test report to a file
+    write_eval_report_to_file(eval_report)
