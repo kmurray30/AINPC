@@ -8,8 +8,7 @@ from src.test.TestClasses import TestCaseSuite, TestCase, Condition
 from src.utils import Logger, Utilities
 
 # Load a test suite from a JSON file
-def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
-
+def load_goals_and_conditions_from_file(file_path: str) -> List[TestCaseSuite]:
     # Load the json file, where the file is a list of UserPromptCase objects
     with open(file_path, "r") as f:
         data = json.load(f)
@@ -32,15 +31,7 @@ def load_test_suite_from_file(file_path: str) -> List[TestCaseSuite]:
 def write_test_report_to_file(test_report: TestReport, test_name: str = ""):
     # Write the test report to a json file
     current_time = Utilities.get_current_time_str()
-    test_report_path = Utilities.get_path_from_project_root(f"src/test/reports/TestReport_{test_name}_{current_time}.json")
+    test_report_path = Utilities.get_path_from_project_root(f"src/test/UnitTests/reports/TestReport_{test_name}_{current_time}.json")
     Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
     with open(test_report_path, "w") as f:
         json.dump(asdict(test_report), f, indent=4)
-
-def write_eval_report_to_file(eval_report: EvaluationEvaluationReport, test_name: str = ""):
-    # Write the test report to a json file
-    current_time = Utilities.get_current_time_str()
-    test_report_path = Utilities.get_path_from_project_root(f"src/test/reports/EvalReport_{test_name}_{current_time}.json")
-    Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
-    with open(test_report_path, "w") as f:
-        json.dump(asdict(eval_report), f, indent=4)

@@ -6,4 +6,5 @@ assets/
 TODO.txt
 *__pycache__
 generated/
-src/test/reports/*
+src/test/UnitTests/reports/*
+src/test/EvalTests/reports/*

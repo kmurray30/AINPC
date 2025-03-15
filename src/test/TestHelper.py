@@ -19,7 +19,7 @@ from src.utils.Logger import Level
 # Notes:
 # - See runbooks/test.ipynb for sample usage
 
-class UnitTestHelper:
+class TestHelper:
 
     @staticmethod
     def generate_conversations(assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, List[str]]:
@@ -51,7 +51,7 @@ class UnitTestHelper:
         return conversation_map
     
     @staticmethod
-    def score_evaluations(evaluation_report: EvaluationReport):
+    def aggregate_scores(evaluation_report: EvaluationReport):
         for conversation_evaluation in evaluation_report.conversation_evaluations:
             correct_score = 0
             iteration_count = 0
@@ -114,14 +114,14 @@ class UnitTestHelper:
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
                     Logger.decrement_indent() # End result section
-                    (eval_score, eval_expl) = UnitTestHelper.score_evaluation_response(result, len(conversation))
+                    (eval_score, eval_expl) = TestHelper.score_evaluation_response(result, len(conversation))
                     evaluation_iteration_report = EvaluationIterationReport(evaluation_response=result, score=eval_score, explanation=eval_expl, tokens=0)
                     conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
             Logger.decrement_indent() # End one evaluation
 
             # Score the evaluations
-            UnitTestHelper.score_evaluations(evaluation_report)
+            TestHelper.aggregate_scores(evaluation_report)
             evaluation_reports.append(evaluation_report)
         Logger.decrement_indent() # End evaluations section
         return evaluation_reports
@@ -148,11 +148,11 @@ class UnitTestHelper:
             assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
             # Generate the conversations
-            conversation_map = UnitTestHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
+            conversation_map = TestHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
             user_prompt_report.conversations.append(conversation_map)
                 
             # Begin the evaluations
-            evaluation_reports = UnitTestHelper.run_evaluations_on_conversation(conversation_map, test_case.evaluations, eval_iterations_per_eval)
+            evaluation_reports = TestHelper.run_evaluations_on_conversation(conversation_map, test_case.evaluations, eval_iterations_per_eval)
             user_prompt_report.evaluations = evaluation_reports
         Logger.decrement_indent() # End test cases section
 
