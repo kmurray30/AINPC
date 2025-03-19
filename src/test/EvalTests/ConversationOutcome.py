@@ -3,6 +3,6 @@ from typing import List
 
 @dataclass
 class ConversationOutcome:
-    antecedents: List[int]
-    consequents: List[int]
+    antecedent_times: List[int]
+    consequent_times: List[int]
     result: int

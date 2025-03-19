@@ -25,13 +25,26 @@ class ConversationEvaluationTestReport:
     tokens: int
 
 @dataclass
-class ConditionTestReport:
-    antecedent: str
-    consequent: str
+class TermTestReport:
+    value: str
+    negated: bool
+
+    # Override the __str__ method to print the term in a human-readable format
+    def __str__(self):
+        return f"{'not ' if self.negated else ''}{self.value}"
+
+@dataclass
+class PropositionTestReport:
+    antecedent: TermTestReport
+    consequent: TermTestReport
+
+    # Override the __str__ method to print the proposition in a human-readable format
+    def __str__(self):
+        return f"If {self.antecedent}, then {self.consequent}"
 
 @dataclass
 class EvaluationTestReport:
-    evaluation_condition: ConditionTestReport
+    evaluation_proposition: PropositionTestReport
     conversation_evaluations: List[ConversationEvaluationTestReport]
     score: float
     tokens: int

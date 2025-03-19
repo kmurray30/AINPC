@@ -4,7 +4,7 @@ from typing import List
 from dataclasses import asdict
 
 from src.test.TestReports import TestReport, EvaluationEvaluationReport
-from src.test.TestClasses import TestCaseSuite, TestCase, Condition
+from src.test.TestClasses import TestCaseSuite, TestCase, Proposition
 from src.utils import Logger, Utilities
 
 # Load a test suite from a JSON file
@@ -19,11 +19,11 @@ def load_goals_and_conditions_from_file(file_path: str) -> List[TestCaseSuite]:
         # Create a TestCase object from the data (field names case insensitive)
         test_case = TestCase(
             goals=item["goals"],
-            conditions=[]
+            propositions=[]
         )
         for evaluation in item["evaluations"]:
-            condition = Condition(antecedent=evaluation["antecedent"], consequent=evaluation["consequent"])
-            test_case.conditions.append(condition)
+            condition = Proposition(antecedent=evaluation["antecedent"], consequent=evaluation["consequent"])
+            test_case.propositions.append(condition)
         test_cases.append(test_case)
 
     return TestCaseSuite(test_cases=test_cases)

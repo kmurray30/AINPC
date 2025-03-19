@@ -22,25 +22,34 @@ class EvaluationIterationEvalReport:
 class ConversationEvaluationEvalReport:
     conversation_name: str
     conversation: List[str]
-    expected_antecedent_timestamps: List[int]
-    expected_consequent_timestamps: List[int]
+    expected_antecedent_times: List[int]
+    expected_consequent_times: List[int]
     evaluation_iterations: List[EvaluationIterationEvalReport]
     accuracy: float
     score: float
     tokens: int
 
 @dataclass
-class ConditionEvalReport:
-    antecedent: str
-    consequent: str
+class TermEvalReport:
+    value: str
+    negated: bool
 
-    # Override the __str__ method to print the condition in a human-readable format
+    # Override the __str__ method to print the term in a human-readable format
     def __str__(self):
-        return f"If {self.antecedent}, then {self.consequent}"
+        return f"{'not ' if self.negated else ''}{self.value}"
 
 @dataclass
+class PropositionEvalReport:
+    antecedent: TermEvalReport
+    consequent: TermEvalReport
+
+    # Override the __str__ method to print the proposition in a human-readable format
+    def __str__(self):
+        return f"If {self.antecedent}, then {self.consequent}"
+    
+@dataclass
 class EvaluationEvalReport:
-    condition: ConditionEvalReport
+    proposition: PropositionEvalReport
     conversation_evaluations: List[ConversationEvaluationEvalReport]
     accuracy: float
     score: float

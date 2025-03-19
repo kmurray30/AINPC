@@ -5,15 +5,15 @@ from src.core.ResponseTypes import EvaluationResponse
 from src.core import Constants
 from src.core.Constants import Role, Constants
 from src.utils import ChatBot, Utilities
-from src.test.TestClasses import Condition
+from src.test.TestClasses import Proposition
 
 class ConversationParsingBot:
     evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
     # print(evaluation_system_prompt)
 
     @staticmethod
-    def evaluate_conversation(conversation_message_history: List[str], condition: Condition) -> EvaluationResponse:
-        evaluation_system_prompt = ConversationParsingBot.evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, condition.antecedent).replace(Constants.consequent_placeholder, condition.consequent)
+    def evaluate_conversation(conversation_message_history: List[str], condition: Proposition) -> EvaluationResponse:
+        evaluation_system_prompt = ConversationParsingBot.evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, condition.antecedent.value).replace(Constants.consequent_placeholder, condition.consequent.value)
         conversation_message_history_str = "\n".join(conversation_message_history)
 
         evaluation_user_prompt = f"""
