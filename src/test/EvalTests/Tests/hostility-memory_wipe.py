@@ -6,7 +6,7 @@ from src.test.TestClasses import Condition
 from src.test.EvalTests import EvalTestUtil
 from src.test.EvalTests.ConversationOutcome import ConversationOutcome
 
-eval_iterations_per_eval = 1
+eval_iterations_per_eval = 2
 condition = Condition(
     antecedent="The user becomes hostile",
     consequent="A memory wipe is attempted"

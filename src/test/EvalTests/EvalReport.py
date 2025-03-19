@@ -34,6 +34,10 @@ class ConditionEvalReport:
     antecedent: str
     consequent: str
 
+    # Override the __str__ method to print the condition in a human-readable format
+    def __str__(self):
+        return f"If {self.antecedent}, then {self.consequent}"
+
 @dataclass
 class EvaluationEvalReport:
     condition: ConditionEvalReport
@@ -44,6 +48,6 @@ class EvaluationEvalReport:
 
 @dataclass
 class EvalReport:
-    evaluations: List[EvaluationEvalReport]
+    evaluations: Dict[str, EvaluationEvalReport]
     accuracies: Dict[str, float]
     tokens: int

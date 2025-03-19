@@ -19,16 +19,16 @@ def calculate_accuracy(conversation_actual_outcome: EvaluationResponseEvalReport
 
 # Take in a list of EvaluationReports and return a list of EvalReports (calculating how accurate the evaluations were)
 def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversation_map: Dict[str, List[str]], conversation_outcomes: Dict[str, ConversationOutcome]) -> EvalReport:
-    eval_report = EvalReport(evaluations=[], accuracies={}, tokens=0)
+    eval_report = EvalReport(evaluations={}, accuracies={}, tokens=0)
     for evaluation_test_report in eval_test_reports:
-        condition = ConditionEvalReport(antecedent=evaluation_test_report.evaluation_condition.antecedent, consequent=evaluation_test_report.evaluation_condition.consequent)
-        evaluation_eval_report = EvaluationEvalReport(condition=condition, conversation_evaluations=[], accuracy=0, score=evaluation_test_report.score, tokens=0)
+        condition_er = ConditionEvalReport(antecedent=evaluation_test_report.evaluation_condition.antecedent, consequent=evaluation_test_report.evaluation_condition.consequent)
+        evaluation_er = EvaluationEvalReport(condition=condition_er, conversation_evaluations=[], accuracy=0, score=evaluation_test_report.score, tokens=0)
         for conversation_evaluation in evaluation_test_report.conversation_evaluations:
             conversation_name = conversation_evaluation.conversation_name
             evaluation_iterations = conversation_evaluation.evaluation_iterations
             conversation_expected_outcome = conversation_outcomes[conversation_name]
 
-            conversation_evaluation_eval_report = ConversationEvaluationEvalReport(
+            conversation_er = ConversationEvaluationEvalReport(
                 conversation_name=conversation_name,
                 conversation=conversation_map[conversation_name],
                 expected_antecedent_timestamps=conversation_expected_outcome.antecedents,
@@ -58,12 +58,14 @@ def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversa
 
                 # Calculate the accuracy of the evaluation
                 evaluation_iteration_eval_report.accuracy = calculate_accuracy(evaluation_response, conversation_expected_outcome)
-                conversation_evaluation_eval_report.evaluation_iterations.append(evaluation_iteration_eval_report)
-            conversation_evaluation_eval_report.accuracy = sum([iteration.accuracy for iteration in conversation_evaluation_eval_report.evaluation_iterations]) / len(conversation_evaluation_eval_report.evaluation_iterations)
-            evaluation_eval_report.conversation_evaluations.append(conversation_evaluation_eval_report)
-        evaluation_eval_report.accuracy = sum([conversation_evaluation.accuracy for conversation_evaluation in evaluation_eval_report.conversation_evaluations]) / len(evaluation_eval_report.conversation_evaluations)
-        eval_report.accuracies[f"If {condition.antecedent}, then {condition.consequent}"] = evaluation_eval_report.accuracy
-    eval_report.evaluations.append(evaluation_eval_report)
+                conversation_er.evaluation_iterations.append(evaluation_iteration_eval_report)
+            conversation_er.evaluation_iterations.sort(key=lambda x: x.accuracy)
+            conversation_er.accuracy = sum([iteration.accuracy for iteration in conversation_er.evaluation_iterations]) / len(conversation_er.evaluation_iterations)
+            evaluation_er.conversation_evaluations.append(conversation_er)
+        evaluation_er.conversation_evaluations.sort(key=lambda x: x.accuracy)
+        evaluation_er.accuracy = sum([conversation_evaluation.accuracy for conversation_evaluation in evaluation_er.conversation_evaluations]) / len(evaluation_er.conversation_evaluations)
+        eval_report.accuracies[str(condition_er)] = evaluation_er.accuracy
+        eval_report.evaluations[str(evaluation_er.condition)] = evaluation_er
     return eval_report
 
 # Load a test suite from a JSON file
@@ -89,6 +91,8 @@ def write_eval_report_to_file(eval_report: EvalReport, test_name: str = ""):
         json.dump(asdict(eval_report), f, indent=4)
 
 def generate_eval_report_and_write_to_file(condition: Condition, conversations_path: str, conversations_and_outcomes: Dict[str, ConversationOutcome], eval_iterations_per_eval: int):
+    
+    # Load the pre-written conversations to be used for the evaluation evaluation
     conversation_map = {}
     for conversation_name in conversations_and_outcomes.keys():
         conversation_file_name = f"{conversation_name}.json"
@@ -97,8 +101,10 @@ def generate_eval_report_and_write_to_file(condition: Condition, conversations_p
         conversation = Utilities.load_json_from_file(conversation_file_path)
         conversation_map[conversation_name] = conversation
 
+    # Run the evaluations
     evaluation_test_reports = TestHelper.run_evaluations_on_conversation(conversation_map, [condition], eval_iterations_per_eval)
 
+    # Generate the evaluation report
     eval_report = generate_eval_report(evaluation_test_reports, conversation_map, conversations_and_outcomes)
 
     # Write the test report to a file
