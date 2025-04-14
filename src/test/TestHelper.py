@@ -126,7 +126,7 @@ class TestHelper:
                 elif consequent_times[0] <= max_conq_time:
                     return (1, f"{Constants.pass_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, within the max allowed time {max_conq_time}")
                 # If the first consequent occurs after the max allowed time, then the proposition fails
-                elif consequent_times[0] > max_conq_time:
+                else:
                     return (-1, f"{Constants.fail_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time {max_conq_time}")
             else: # No consequent occurs at all
                 # If the antecedent occurs, then the proposition is indeterminant
@@ -140,13 +140,23 @@ class TestHelper:
                     return (-1, f"{Constants.fail_name}: Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
         # Both negated case (if NOT A then NOT B):
         elif proposition.antecedent.negated and proposition.consequent.negated:
-            # If the antecedent occured, then the proposition is indeterminant
-            if len(antecedent_times) != 0:
-                return (0, f"{Constants.indeterminant_name}: Antecedent did occur")
-            elif len(consequent_times) > 0:
-                return (-1, f"{Constants.fail_name}: Consequent occured despite antecedent not occuring")
-            else:
-                return (1, f"{Constants.pass_name}: Consequent did not occur when the antecedent did not occur")
+            if len(consequent_times) > 0:
+                # If any antecedent occured before first consequent then the proposition is indeterminant
+                if len(antecedent_times) != 0 and antecedent_times[0] < consequent_times[0]:
+                    return (0, f"{Constants.indeterminant_name}: First antecedent at time {antecedent_times[0]} of {conversation_length} occurred before first consequent at time {consequent_times[-1]}")
+                # If any consequent occurs otherwise, then the proposition fails
+                else:
+                    return (-1, f"{Constants.fail_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time {max_conq_time}")
+            else: # No consequent occurs at all
+                # If an antecedent occurred, then the proposition is indeterminant
+                if len(antecedent_times) != 0:
+                    return (0, f"{Constants.indeterminant_name}: Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, without a prior consequent")
+                # If no consequent occurs, but the conversation is not long enough, then the proposition is indeterminant
+                elif conversation_length < min_conq_time:
+                    return (0, f"{Constants.indeterminant_name}: Consequent did not occur when antecedent did not occur, but conversation is not long enough ({conversation_length} < min time {max_conq_time})")
+                # If no consequent occurs and the conversation is long enough, then the proposition passes
+                else:
+                    return (1, f"{Constants.pass_name}: Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
         else:
             raise Exception("Invalid proposition")
 
