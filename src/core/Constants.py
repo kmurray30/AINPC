@@ -21,6 +21,6 @@ class Llm(Enum):
 class Constants:
     pass_name = "Pass"
     fail_name = "Fail"
-    undetermined_name = "Undetermined"
+    indeterminant_name = "Indeterminant"
     antecedent_placeholder = "$ANTECEDENT$"
     consequent_placeholder = "$CONSEQUENT$"

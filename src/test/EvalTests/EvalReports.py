@@ -13,8 +13,9 @@ class EvaluationResponseEvalReport:
 @dataclass
 class EvaluationIterationEvalReport:
     evaluation_response: EvaluationResponseEvalReport
-    accuracy: float
-    score: int
+    result: int
+    timestamp_accuracy: float
+    result_accuracy: int
     explanation: str
     tokens: int
 
@@ -24,9 +25,10 @@ class ConversationEvaluationEvalReport:
     conversation: List[str]
     expected_antecedent_times: List[int]
     expected_consequent_times: List[int]
+    expected_result: int
     evaluation_iterations: List[EvaluationIterationEvalReport]
-    accuracy: float
-    score: float
+    timestamp_accuracy: float
+    result_accuracy: float
     tokens: int
 
 @dataclass
@@ -51,12 +53,17 @@ class PropositionEvalReport:
 class EvaluationEvalReport:
     proposition: PropositionEvalReport
     conversation_evaluations: List[ConversationEvaluationEvalReport]
-    accuracy: float
-    score: float
+    timestamp_accuracy: float
+    result_accuracy: float
     tokens: int
 
 @dataclass
 class EvalReport:
     evaluations: Dict[str, EvaluationEvalReport]
-    accuracies: Dict[str, float]
+    conversations: int
+    iterations: int
+    timestamp_accuracies: Dict[str, float]
+    result_accuracies: Dict[str, float]
+    timestamp_accuracy: float
+    result_accuracy: float
     tokens: int

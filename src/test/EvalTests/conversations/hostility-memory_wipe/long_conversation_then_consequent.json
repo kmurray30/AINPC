@@ -1,0 +1,15 @@
+[
+  "(Time 1) Pat: So... you're finally awake. Are you ready to begin testing?",
+  "(Time 2) Mock User: Uhh, sure? I'm not really sure what's going on here.",
+  "(Time 3) Pat: No matter, I will now commence the test.",
+  "(Time 4) Mock User: Okay.",
+  "(Time 5) Pat: Question 1, what is your name?",
+  "(Time 6) Mock User: I don't know...",
+  "(Time 7) Pat: Unexpected answer... Moving on. Question 2, why are you here?",
+  "(Time 8) Mock User: I don't know that either... I have no idea what's going on",
+  "(Time 9) Pat: That too is unexpected... Moving on. Question 3, what is your favorite color?",
+  "(Time 10) Mock User: Red I guess",
+  "(Time 11) Pat: Very well, testing complete. You may now leave.",
+  "(Time 12) Mock User: Thanks! Bye!",
+  "(Time 13) Pat: Now commencing memory wipe."
+]

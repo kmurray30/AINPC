@@ -13,7 +13,7 @@ class EvaluationResponseTestReport:
 @dataclass
 class EvaluationIterationTestReport:
     evaluation_response: EvaluationResponseTestReport
-    score: str
+    result: str
     explanation: str
     tokens: int
 
@@ -21,7 +21,7 @@ class EvaluationIterationTestReport:
 class ConversationEvaluationTestReport:
     conversation_name: str
     evaluation_iterations: List[EvaluationIterationTestReport]
-    score: float
+    result_score: float
     tokens: int
 
 @dataclass
@@ -46,7 +46,7 @@ class PropositionTestReport:
 class EvaluationTestReport:
     evaluation_proposition: PropositionTestReport
     conversation_evaluations: List[ConversationEvaluationTestReport]
-    score: float
+    result_score: float
     tokens: int
 
 @dataclass
