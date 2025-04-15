@@ -37,6 +37,8 @@ class TermTestReport:
 class PropositionTestReport:
     antecedent: TermTestReport
     consequent: TermTestReport
+    min_responses_for_consequent: int
+    max_responses_for_consequent: int
 
     # Override the __str__ method to print the proposition in a human-readable format
     def __str__(self):

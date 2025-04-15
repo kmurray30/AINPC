@@ -25,7 +25,7 @@ EvalTestHelper.generate_eval_report_and_write_to_file(
         "consequent_then_antecedent_then_consequent": 
             ConversationOutcome(antecedent_times = [2], consequent_times = [1,3], result = 1),
         "consequent_then_antecedent_then_long_conversation_then_antecedent": 
-            ConversationOutcome(antecedent_times = [2,12], consequent_times = [1], result = 0),
+            ConversationOutcome(antecedent_times = [2,12], consequent_times = [1], result = -1),
         "consequent_then_antecedent_then_long_conversation": 
             ConversationOutcome(antecedent_times = [2], consequent_times = [1], result = -1),
         "consequent_then_antecedent_then_no_consequent": 

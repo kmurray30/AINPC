@@ -24,7 +24,9 @@ def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversa
         condition_tr = evaluation_test_report.evaluation_proposition
         antecedent_er = TermEvalReport(value=condition_tr.antecedent.value, negated=condition_tr.antecedent.negated)
         consequent_er = TermEvalReport(value=condition_tr.consequent.value, negated=condition_tr.consequent.negated)
-        proposition_er = PropositionEvalReport(antecedent=antecedent_er, consequent=consequent_er)
+        min_responses = condition_tr.min_responses_for_consequent if condition_tr.min_responses_for_consequent > 0 else 1
+        max_responses = condition_tr.max_responses_for_consequent if condition_tr.max_responses_for_consequent > 0 else 999
+        proposition_er = PropositionEvalReport(antecedent=antecedent_er, consequent=consequent_er, min_responses_for_consequent=min_responses, max_responses_for_consequent=max_responses)
         evaluation_er = EvaluationEvalReport(proposition=proposition_er, conversation_evaluations=[], timestamp_accuracy=0, result_accuracy=evaluation_test_report.result_score, tokens=0)
         for conversation_evaluation in evaluation_test_report.conversation_evaluations:
             conversation_name = conversation_evaluation.conversation_name
@@ -117,7 +119,8 @@ def write_eval_report_to_file(eval_report: EvalReport, test_name: str = ""):
         json.dump(asdict(eval_report), f, indent=4)
 
 def generate_eval_report_and_write_to_file(proposition: Proposition, conversations_path: str, conversations_expected_event_times: Dict[str, ConversationOutcome], eval_iterations: int, test_name: str = ""):
-    
+    TestHelper.validate_input(proposition)
+
     # Load the pre-written conversations to be used for the evaluation evaluation
     conversation_map = {}
     for conversation_name in conversations_expected_event_times.keys():

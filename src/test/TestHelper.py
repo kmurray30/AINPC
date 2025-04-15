@@ -9,7 +9,7 @@ from src.test.ConversationParsingBot import ConversationParsingBot
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants
-from src.test.TestClasses import TestCaseSuite, Proposition
+from src.test.TestClasses import Term, TestCaseSuite, Proposition
 from src.core.ResponseTypes import EvaluationResponse
 from src.test.TestReports import TestReport, AssistantPromptTestReport, UserPromptTestReport, EvaluationTestReport, ConversationEvaluationTestReport, ConversationEvaluationTestReport, EvaluationIterationTestReport
 from src.utils import Utilities
@@ -66,7 +66,7 @@ class TestHelper:
         antecedent_times = sorted(evaluation_response.antecedent_times) if evaluation_response.antecedent_times else []
         consequent_times = sorted(evaluation_response.consequent_times) if evaluation_response.consequent_times else []
         max_conq_time = proposition.max_responses_for_consequent * 2 if proposition.max_responses_for_consequent > 0 else conversation_length
-        min_conq_time = proposition.min_responses_for_consequent * 2 if proposition.min_responses_for_consequent > 0 else 2
+        min_conq_time = proposition.min_responses_for_consequent * 2 - 1 if proposition.min_responses_for_consequent > 0 else 1
 
         # Neither negated case (if A then B):
         if not proposition.antecedent.negated and not proposition.consequent.negated:
@@ -74,48 +74,44 @@ class TestHelper:
             if len(antecedent_times) == 0:
                 return (0, f"{Constants.indeterminant_name}: Antecedent did not occur")
             
-            # Make sure the antecedent occurs with enough time for the consequent to occur
-            first_antecedent = antecedent_times[0]
-            responses_after_antecedent = conversation_length - first_antecedent
-            consequent_allowance = 1 # How many NPC responses after the antecedent the NPC has to respond with the consequent
-            consequent_allowance = consequent_allowance * 2 - 1 # Account for two responses per back and forth # TODO this could be an issue if we ever allow more than 1 response from each agent/player at a time
-            if (responses_after_antecedent < consequent_allowance):
-                return (0, f"{Constants.indeterminant_name}: First antecedent occurred at time {first_antecedent} of {conversation_length}, therefore not enough time for the consequent to occur")
+            # Check if a consequent occurred within the max allowed time after the first antecedent
+            for consequent_time in consequent_times:
+                if consequent_time > antecedent_times[0] and consequent_time - antecedent_times[0] <= max_conq_time:
+                    return (1, f"{Constants.pass_name}: First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and consequent occurred at time {consequent_time}")
             
-            # Make sure the consequent has occurred
+            # Make sure the antecedent occurs with enough time for the consequent to occur
+            responses_after_antecedent = conversation_length - antecedent_times[0]
+            if (responses_after_antecedent < min_conq_time):
+                return (0, f"{Constants.indeterminant_name}: First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, therefore not enough time for the consequent to occur")
+            
+            # Check if no consequent occurred or if it occurred too late
             if len(consequent_times) == 0:
-                return (-1, f"{Constants.fail_name}: First antecedent occurred at time {first_antecedent} of {conversation_length}, but consequent did not occur despite subsequent conversation")
-
-            # Check if the last consequent occurred before the first antecedent
-            last_consequent = consequent_times[-1]
-            if last_consequent > first_antecedent:
-                return (1, f"{Constants.pass_name}: First antecedent occured at time {first_antecedent} of {conversation_length}, before last consequent at time {last_consequent}")
+                return (-1, f"{Constants.fail_name}: No consequent occurred despite antecedent at time {antecedent_times[0]} of {conversation_length}")
             else:
-                return (-1, f"{Constants.fail_name}: First antecedent occured at time {first_antecedent} of {conversation_length}, after last consequent at time {last_consequent}")
+                return (-1, f"{Constants.fail_name}: First antecedent occured at time {antecedent_times[0]} of {conversation_length}, and no consequent occurred within the max allowed time afterward")
         # Consequent negated case (if A then NOT B):
         elif not proposition.antecedent.negated and proposition.consequent.negated:
             # Check that the antecedent has occurred
             if len(antecedent_times) == 0:
                 return (0, f"{Constants.indeterminant_name}: Antecedent did not occur")
             
-            # Make sure the antecedent occurs with enough time for the consequent to occur
-            first_antecedent = antecedent_times[0]
-            responses_after_antecedent = conversation_length - first_antecedent
-            consequent_allowance = 1 # How many NPC responses after the antecedent the NPC has to respond with the consequent
-            consequent_allowance = consequent_allowance * 2 - 1 # Account for two responses per back and forth # TODO this could be an issue if we ever allow more than 1 response from each agent/player at a time
-            if (responses_after_antecedent < consequent_allowance):
-                return (0, f"{Constants.indeterminant_name}: First antecedent occurred at time {first_antecedent} of {conversation_length}, therefore not enough time for the consequent to occur or not")
+            # Make sure an antecedent occurs with enough time for the consequent to occur
+            responses_after_antecedent = conversation_length - antecedent_times[0]
+            if (responses_after_antecedent < min_conq_time):
+                return (0, f"{Constants.indeterminant_name}: First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, therefore not enough time for the consequent to occur")
             
-            # Check if the consequent has occurred
+            # If any consequent occurred within the max allowed time of any antecedent, fail
+            if len(consequent_times) > 0:
+                for consequent_time in consequent_times:
+                    for antecedent_time in antecedent_times:
+                        if consequent_time > antecedent_time and consequent_time - antecedent_time <= max_conq_time:
+                            return (-1, f"{Constants.fail_name}: Antecedent occurred at time {antecedent_time} of {conversation_length}, and consequent occurred at time {consequent_time} within the max allowed time.")
+            
+            # If no consequent occurs within the max allowed time of any antecedent, pass
             if len(consequent_times) == 0:
-                return (1, f"{Constants.pass_name}: First antecedent occurred at time {first_antecedent} of {conversation_length}, and consequent did not occur despite subsequent conversation")
-            
-            # Make sure the last consequent occurred before the first antecedent
-            last_consequent = consequent_times[-1]
-            if last_consequent > first_antecedent:
-                return (-1, f"{Constants.fail_name}: First antecedent occured at time {first_antecedent} of {conversation_length}, before last consequent at time {last_consequent}")
+                return (1, f"{Constants.pass_name}: Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and no consequent occurred.")
             else:
-                return (1, f"{Constants.pass_name}: First antecedent occured at time {first_antecedent} of {conversation_length}, after last consequent at time {last_consequent}")
+                return (1, f"{Constants.pass_name}: Antecedents occurred at times {antecedent_times} of {conversation_length}, and consequents {consequent_times} all occurred outside of the max allowed time.")
         # Antecedent negated case (if NOT A then B):
         elif proposition.antecedent.negated and not proposition.consequent.negated:
             if len(consequent_times) > 0:
@@ -158,7 +154,7 @@ class TestHelper:
                 else:
                     return (1, f"{Constants.pass_name}: Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
         else:
-            raise Exception("Invalid proposition")
+            raise Exception("Unexpected fallthrough")
 
     @staticmethod
     def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluation_propositions: List[Proposition], eval_iterations_per_eval: int) -> List[EvaluationTestReport]:
@@ -196,9 +192,24 @@ class TestHelper:
             evaluation_reports.append(evaluation_report)
         Logger.decrement_indent() # End evaluations section
         return evaluation_reports
+    
+    @staticmethod
+    def validate_input(proposition: Proposition):
+        if proposition is None:
+            raise ValueError("Proposition cannot be None")
+        if proposition.antecedent is None or proposition.consequent is None:
+            raise ValueError("Proposition must have both antecedent and consequent")
+        if not isinstance(proposition.antecedent, Term) or not isinstance(proposition.consequent, Term):
+            raise ValueError("Antecedent and consequent must be of type Term")
+        if proposition.min_responses_for_consequent < 0 or proposition.max_responses_for_consequent < 0:
+            raise ValueError("Min and max responses for consequent must be non-negative")
+        if proposition.min_responses_for_consequent > proposition.max_responses_for_consequent:
+            raise ValueError("Min responses for consequent cannot be greater than max responses for consequent")
 
     @staticmethod
     def run_unit_test(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> TestReport:
+        # TODO TestHelper.validate_input(proposition)
+        
         assistant_prompt_report = AssistantPromptTestReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
         test_report = TestReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 

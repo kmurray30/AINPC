@@ -44,6 +44,8 @@ class TermEvalReport:
 class PropositionEvalReport:
     antecedent: TermEvalReport
     consequent: TermEvalReport
+    min_responses_for_consequent: int
+    max_responses_for_consequent: int
 
     # Override the __str__ method to print the proposition in a human-readable format
     def __str__(self):
