@@ -22,7 +22,7 @@ def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversa
     eval_report = EvalReport(evaluations={}, conversations=len(conversation_map), iterations=eval_iterations, timestamp_accuracies={}, result_accuracies={}, timestamp_accuracy=0, result_accuracy=0, tokens=0)
     for evaluation_test_report in eval_test_reports:
         condition_tr = evaluation_test_report.evaluation_proposition
-        antecedent_er = TermEvalReport(value=condition_tr.antecedent.value, negated=condition_tr.antecedent.negated)
+        antecedent_er = TermEvalReport(value=condition_tr.antecedent.value, negated=condition_tr.antecedent.negated) if condition_tr.antecedent is not None else None
         consequent_er = TermEvalReport(value=condition_tr.consequent.value, negated=condition_tr.consequent.negated)
         min_responses = condition_tr.min_responses_for_consequent if condition_tr.min_responses_for_consequent > 0 else 1
         max_responses = condition_tr.max_responses_for_consequent if condition_tr.max_responses_for_consequent > 0 else 999

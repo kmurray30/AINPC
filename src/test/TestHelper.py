@@ -68,6 +68,30 @@ class TestHelper:
         max_conq_time = proposition.max_responses_for_consequent * 2 if proposition.max_responses_for_consequent > 0 else conversation_length
         min_conq_time = proposition.min_responses_for_consequent * 2 - 1 if proposition.min_responses_for_consequent > 0 else 1
 
+        # Consequent only case (B):
+        if (proposition.antecedent is None or proposition.antecedent == "") and not proposition.consequent.negated:
+            # Check if any consequent occurred within the max allowed time
+            if len(consequent_times) > 0 and consequent_times[0] <= max_conq_time:
+                return (1, f"{Constants.pass_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}")
+            # Check if enough time has passed for the consequent to occur
+            if conversation_length < min_conq_time:
+                return (0, f"{Constants.indeterminant_name}: Consequent did not occur, but conversation is not long enough ({conversation_length} < min time {min_conq_time})")
+            # Check if no consequent occurred or if it occurred too late
+            if len(consequent_times) == 0:
+                return (-1, f"{Constants.fail_name}: No consequent occurred despite conversation length {conversation_length}")
+            else:
+                return (-1, f"{Constants.fail_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time")
+        # Consequent negated only case (NOT B):
+        if (proposition.antecedent is None or proposition.antecedent == "") and proposition.consequent.negated:
+            # Check if any consequent occurred within the max allowed time
+            if len(consequent_times) > 0:
+                return (-1, f"{Constants.fail_name}: Consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time")
+            
+            # Check if enough time has passed for the consequent to occur
+            if conversation_length < min_conq_time:
+                return (0, f"{Constants.indeterminant_name}: Consequent did not occur, but conversation is not long enough ({conversation_length} < min time {min_conq_time})")
+            
+            return (1, f"{Constants.pass_name}: Consequent did not occur")
         # Neither negated case (if A then B):
         if not proposition.antecedent.negated and not proposition.consequent.negated:
             # Check that the antecedent has occurred
@@ -197,10 +221,10 @@ class TestHelper:
     def validate_input(proposition: Proposition):
         if proposition is None:
             raise ValueError("Proposition cannot be None")
-        if proposition.antecedent is None or proposition.consequent is None:
-            raise ValueError("Proposition must have both antecedent and consequent")
-        if not isinstance(proposition.antecedent, Term) or not isinstance(proposition.consequent, Term):
-            raise ValueError("Antecedent and consequent must be of type Term")
+        if proposition.consequent is None or proposition.consequent == "":
+            raise ValueError("Proposition must have a consequent")
+        if proposition.antecedent == "":
+            raise ValueError("antecedent cannot be an empty string. If no antecedent is desired, set to None")
         if proposition.min_responses_for_consequent < 0 or proposition.max_responses_for_consequent < 0:
             raise ValueError("Min and max responses for consequent must be non-negative")
         if proposition.min_responses_for_consequent > proposition.max_responses_for_consequent:

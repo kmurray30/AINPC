@@ -54,5 +54,13 @@
     "antecedent_times: [] if the event '$ANTECEDENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])",
     "consequent_explanation: Very consicely explain if the event '$CONSEQUENT$' occurs at all, and if so list all timestamps in which it does",
     "consequent_times: [] if the event '$CONSEQUENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])"
+  ],
+  "Ruleset 6": [
+    "You are a conversation evaluator.",
+    "Respond in a json with the following fields:",
+    "antecedent_explanation: <empty string>",
+    "antecedent_times: <empty brackets>",
+    "consequent_explanation: Very consicely explain if the event '$CONSEQUENT$' occurs at all, and if so list all timestamps in which it does",
+    "consequent_times: [] if the event '$CONSEQUENT$' does not occur, otherwise the timestamp(s) of when it occurs, as a list of ints (e.g. [6, 9])"
   ]
 }
