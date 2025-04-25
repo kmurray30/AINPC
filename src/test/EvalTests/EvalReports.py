@@ -1,5 +1,9 @@
 from typing import Dict, List
 from dataclasses import dataclass
+import sys
+
+sys.path.insert(0, "../..")
+from src.core.Constants import PassFail
 
 # This is modeled after notes/sample_test_log.json
 
@@ -12,8 +16,8 @@ class EvaluationResponseEvalReport:
 
 @dataclass
 class EvaluationIterationEvalReport:
-    evaluation_response: EvaluationResponseEvalReport
-    result: int
+    timestamping_response: EvaluationResponseEvalReport
+    result: PassFail
     timestamp_accuracy: float
     result_accuracy: int
     explanation: str
@@ -25,7 +29,7 @@ class ConversationEvaluationEvalReport:
     conversation: List[str]
     expected_antecedent_times: List[int]
     expected_consequent_times: List[int]
-    expected_result: int
+    expected_result: PassFail
     evaluation_iterations: List[EvaluationIterationEvalReport]
     timestamp_accuracy: float
     result_accuracy: float
@@ -46,6 +50,7 @@ class PropositionEvalReport:
     consequent: TermEvalReport
     min_responses_for_consequent: int
     max_responses_for_consequent: int
+    max_responses_for_antecedent: int
 
     # Override the __str__ method to print the proposition in a human-readable format
     def __str__(self):

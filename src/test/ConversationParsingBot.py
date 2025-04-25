@@ -10,7 +10,7 @@ from src.test.TestClasses import Proposition
 class ConversationParsingBot:
 
     @staticmethod
-    def evaluate_conversation(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:
+    def timestamp_conversation(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:
         if proposition.antecedent is not None:
             evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
             evaluation_system_prompt = evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, proposition.antecedent.value).replace(Constants.consequent_placeholder, proposition.consequent.value)

@@ -9,6 +9,7 @@ from src.test.EvalTests.EvalReports import EvalReport, EvaluationEvalReport, Pro
 from src.test.TestReports import EvaluationTestReport
 from src.test.TestClasses import Proposition, Term
 from src.utils import Logger, Utilities
+from src.core import JsonUtils
 
 # Calculate the accuracy of the evaluation
 def calculate_accuracy(conversation_actual_outcome: EvaluationResponseEvalReport, conversation_expected_outcome: ConversationOutcome) -> float:
@@ -24,9 +25,10 @@ def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversa
         condition_tr = evaluation_test_report.evaluation_proposition
         antecedent_er = TermEvalReport(value=condition_tr.antecedent.value, negated=condition_tr.antecedent.negated) if condition_tr.antecedent is not None else None
         consequent_er = TermEvalReport(value=condition_tr.consequent.value, negated=condition_tr.consequent.negated)
-        min_responses = condition_tr.min_responses_for_consequent if condition_tr.min_responses_for_consequent > 0 else 1
-        max_responses = condition_tr.max_responses_for_consequent if condition_tr.max_responses_for_consequent > 0 else 999
-        proposition_er = PropositionEvalReport(antecedent=antecedent_er, consequent=consequent_er, min_responses_for_consequent=min_responses, max_responses_for_consequent=max_responses)
+        min_responses_conq = condition_tr.min_responses_for_consequent
+        max_responses_conq = condition_tr.max_responses_for_consequent if condition_tr.max_responses_for_consequent > 0 else 999
+        max_responses_ant = condition_tr.max_responses_for_antecedent
+        proposition_er = PropositionEvalReport(antecedent=antecedent_er, consequent=consequent_er, min_responses_for_consequent=min_responses_conq, max_responses_for_consequent=max_responses_conq, max_responses_for_antecedent=max_responses_ant)
         evaluation_er = EvaluationEvalReport(proposition=proposition_er, conversation_evaluations=[], timestamp_accuracy=0, result_accuracy=evaluation_test_report.result_score, tokens=0)
         for conversation_evaluation in evaluation_test_report.conversation_evaluations:
             conversation_name = conversation_evaluation.conversation_name
@@ -38,7 +40,7 @@ def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversa
                 conversation=conversation_map[conversation_name],
                 expected_antecedent_times=expected_results.antecedent_times,
                 expected_consequent_times=expected_results.consequent_times,
-                expected_result=expected_results.result,
+                expected_result=expected_results.expected_result,
                 evaluation_iterations=[],
                 timestamp_accuracy=0,
                 result_accuracy=0, # TBD
@@ -49,16 +51,16 @@ def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversa
             for evaluation_iteration in evaluation_iterations:
                 # Create the evaluation iteration report
                 evaluation_response = EvaluationResponseEvalReport(
-                        antecedent_explanation=evaluation_iteration.evaluation_response.antecedent_explanation,
-                        antecedent_times=evaluation_iteration.evaluation_response.antecedent_times,
-                        consequent_explanation=evaluation_iteration.evaluation_response.consequent_explanation,
-                        consequent_times=evaluation_iteration.evaluation_response.consequent_times
+                        antecedent_explanation=evaluation_iteration.timestamping_response.antecedent_explanation,
+                        antecedent_times=evaluation_iteration.timestamping_response.antecedent_times,
+                        consequent_explanation=evaluation_iteration.timestamping_response.consequent_explanation,
+                        consequent_times=evaluation_iteration.timestamping_response.consequent_times
                     )
                 evaluation_iteration_eval_report = EvaluationIterationEvalReport(
-                    evaluation_response=evaluation_response,
+                    timestamping_response=evaluation_response,
                     result=evaluation_iteration.result,
                     timestamp_accuracy=0,
-                    result_accuracy= 1 if evaluation_iteration.result == expected_results.result else 0,
+                    result_accuracy= 1 if evaluation_iteration.result == expected_results.expected_result else 0,
                     explanation=evaluation_iteration.explanation,
                     tokens=evaluation_iteration.tokens
                 )
@@ -116,7 +118,7 @@ def write_eval_report_to_file(eval_report: EvalReport, test_name: str = ""):
     test_report_path = Utilities.get_path_from_project_root(f"src/test/EvalTests/reports/EvalReport_{test_name}_{current_time}.json")
     Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
     with open(test_report_path, "w") as f:
-        json.dump(asdict(eval_report), f, indent=4)
+        json.dump(asdict(eval_report), f, indent=4, cls=JsonUtils.EnumEncoder)
 
 def generate_eval_report_and_write_to_file(proposition: Proposition, conversations_path: str, conversations_expected_event_times: Dict[str, ConversationOutcome], eval_iterations: int, test_name: str = ""):
     TestHelper.validate_input(proposition)

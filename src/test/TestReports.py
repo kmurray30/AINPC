@@ -1,5 +1,9 @@
 from typing import Dict, List
 from dataclasses import dataclass
+import sys
+
+sys.path.insert(0, "../..")
+from src.core.Constants import PassFail
 
 # This is modeled after notes/sample_test_log.json
 
@@ -12,8 +16,8 @@ class EvaluationResponseTestReport:
 
 @dataclass
 class EvaluationIterationTestReport:
-    evaluation_response: EvaluationResponseTestReport
-    result: str
+    timestamping_response: EvaluationResponseTestReport
+    result: PassFail
     explanation: str
     tokens: int
 
@@ -39,6 +43,7 @@ class PropositionTestReport:
     consequent: TermTestReport
     min_responses_for_consequent: int
     max_responses_for_consequent: int
+    max_responses_for_antecedent: int
 
     # Override the __str__ method to print the proposition in a human-readable format
     def __str__(self):

@@ -18,6 +18,17 @@ class Llm(Enum):
     o1 = "o1-preview"
     llama3 = "llama3"
 
+class EvaluationError(Enum):
+    ANTECEDENT_UNEXPECTEDLY_OCCURRED = 0
+    ANTECEDENT_UNEXPECTEDLY_DID_NOT_OCCUR = 1
+    CONVERSATION_TOO_SHORT = 2
+    ANTECEDENT_OCCURRED_TOO_LATE = 3
+
+class PassFail(Enum):
+    INDETERMINANT = None
+    FAIL = 0
+    PASS = 1
+
 class Constants:
     pass_name = "Pass"
     fail_name = "Fail"

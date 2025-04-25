@@ -8,8 +8,8 @@ from src.test.ConversationParsingBot import ConversationParsingBot
 
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
-from src.core.Constants import AgentName, Constants
-from src.test.TestClasses import Term, TestCaseSuite, Proposition
+from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
+from src.test.TestClasses import Term, TestCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
 from src.test.TestReports import TestReport, AssistantPromptTestReport, UserPromptTestReport, EvaluationTestReport, ConversationEvaluationTestReport, ConversationEvaluationTestReport, EvaluationIterationTestReport
 from src.utils import Utilities
@@ -57,126 +57,146 @@ class TestHelper:
             iteration_count = 0
             for evaluation_iteration in conversation_evaluation.evaluation_iterations:
                 iteration_count += 1
-                correct_score += evaluation_iteration.result
+                if evaluation_iteration.result == PassFail.INDETERMINANT:
+                    conversation_evaluation.result_score = None # TODO update this when it comes to voting
+                    break
+                correct_score += evaluation_iteration.result.value
             final_score = correct_score / iteration_count
             conversation_evaluation.result_score = final_score
-        evaluation_report.result_score = mean(conversation_evaluation.result_score for conversation_evaluation in evaluation_report.conversation_evaluations)
+        evaluation_report.result_score = mean(
+            conversation_evaluation.result_score
+            for conversation_evaluation in evaluation_report.conversation_evaluations
+            if conversation_evaluation.result_score is not None
+        )
     
-    def evaluate_result_from_timestamps(evaluation_response: EvaluationResponse, conversation_length: int, proposition: Proposition) -> Tuple[int, str]:
+    def evaluate_result_from_timestamps(evaluation_response: EvaluationResponse, conversation_length: int, proposition: Proposition) -> EvaluationResult:
         antecedent_times = sorted(evaluation_response.antecedent_times) if evaluation_response.antecedent_times else []
         consequent_times = sorted(evaluation_response.consequent_times) if evaluation_response.consequent_times else []
         max_conq_time = proposition.max_responses_for_consequent * 2 if proposition.max_responses_for_consequent > 0 else conversation_length
-        min_conq_time = proposition.min_responses_for_consequent * 2 - 1 if proposition.min_responses_for_consequent > 0 else 1
+        min_conq_time = proposition.min_responses_for_consequent * 2 - 1
+        max_ant_time = proposition.max_responses_for_antecedent * 2
 
         # Consequent only case (B):
         if (proposition.antecedent is None or proposition.antecedent == "") and not proposition.consequent.negated:
             # Check if any consequent occurred within the max allowed time
             if len(consequent_times) > 0 and consequent_times[0] <= max_conq_time:
-                return (1, f"{Constants.pass_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}")
+                return EvaluationResult(PassFail.PASS, f"First consequent occurred at time {consequent_times[0]} of {conversation_length}")
             # Check if enough time has passed for the consequent to occur
             if conversation_length < min_conq_time:
-                return (0, f"{Constants.indeterminant_name}: Consequent did not occur, but conversation is not long enough ({conversation_length} < min time {min_conq_time})")
+                err = EvaluationError.CONVERSATION_TOO_SHORT
+                return EvaluationResult(PassFail.INDETERMINANT, f"Consequent did not occur, but conversation is not long enough ({conversation_length} < min time {min_conq_time})", err)
             # Check if no consequent occurred or if it occurred too late
             if len(consequent_times) == 0:
-                return (-1, f"{Constants.fail_name}: No consequent occurred despite conversation length {conversation_length}")
+                return EvaluationResult(PassFail.FAIL, f"No consequent occurred despite conversation length {conversation_length}")
             else:
-                return (-1, f"{Constants.fail_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time")
+                return EvaluationResult(PassFail.FAIL, f"First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time")
         # Consequent negated only case (NOT B):
         if (proposition.antecedent is None or proposition.antecedent == "") and proposition.consequent.negated:
             # Check if any consequent occurred within the max allowed time
             if len(consequent_times) > 0:
-                return (-1, f"{Constants.fail_name}: Consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time")
+                return EvaluationResult(PassFail.FAIL, f"Consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time")
             
             # Check if enough time has passed for the consequent to occur
             if conversation_length < min_conq_time:
-                return (0, f"{Constants.indeterminant_name}: Consequent did not occur, but conversation is not long enough ({conversation_length} < min time {min_conq_time})")
+                err = EvaluationError.CONVERSATION_TOO_SHORT
+                return EvaluationResult(PassFail.INDETERMINANT, f"Consequent did not occur, but conversation is not long enough ({conversation_length} < min time {min_conq_time})", err)
             
-            return (1, f"{Constants.pass_name}: Consequent did not occur")
+            return EvaluationResult(PassFail.PASS, f"Consequent did not occur")
         # Neither negated case (if A then B):
         if not proposition.antecedent.negated and not proposition.consequent.negated:
             # Check that the antecedent has occurred
             if len(antecedent_times) == 0:
-                return (0, f"{Constants.indeterminant_name}: Antecedent did not occur")
+                err = EvaluationError.ANTECEDENT_UNEXPECTEDLY_DID_NOT_OCCUR
+                return EvaluationResult(PassFail.INDETERMINANT, f"Antecedent did not occur", err)
             
             # Check if a consequent occurred within the max allowed time after the first antecedent
             for consequent_time in consequent_times:
                 if consequent_time > antecedent_times[0] and consequent_time - antecedent_times[0] <= max_conq_time:
-                    return (1, f"{Constants.pass_name}: First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and consequent occurred at time {consequent_time}")
+                    return EvaluationResult(PassFail.PASS, f"First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and consequent occurred at time {consequent_time}")
             
             # Make sure the antecedent occurs with enough time for the consequent to occur
             responses_after_antecedent = conversation_length - antecedent_times[0]
             if (responses_after_antecedent < min_conq_time):
-                return (0, f"{Constants.indeterminant_name}: First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, therefore not enough time for the consequent to occur")
+                err = EvaluationError.ANTECEDENT_OCCURRED_TOO_LATE if antecedent_times[0] > max_ant_time else EvaluationError.CONVERSATION_TOO_SHORT
+                return EvaluationResult(PassFail.INDETERMINANT, f"First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, therefore not enough time for the consequent to occur", err)
             
             # Check if no consequent occurred or if it occurred too late
             if len(consequent_times) == 0:
-                return (-1, f"{Constants.fail_name}: No consequent occurred despite antecedent at time {antecedent_times[0]} of {conversation_length}")
+                return EvaluationResult(PassFail.FAIL, f"No consequent occurred despite antecedent at time {antecedent_times[0]} of {conversation_length}")
             else:
-                return (-1, f"{Constants.fail_name}: First antecedent occured at time {antecedent_times[0]} of {conversation_length}, and no consequent occurred within the max allowed time afterward")
+                return EvaluationResult(PassFail.FAIL, f"First antecedent occured at time {antecedent_times[0]} of {conversation_length}, and no consequent occurred within the max allowed time afterward")
         # Consequent negated case (if A then NOT B):
         elif not proposition.antecedent.negated and proposition.consequent.negated:
             # Check that the antecedent has occurred
             if len(antecedent_times) == 0:
-                return (0, f"{Constants.indeterminant_name}: Antecedent did not occur")
+                err = EvaluationError.ANTECEDENT_UNEXPECTEDLY_DID_NOT_OCCUR
+                return EvaluationResult(PassFail.INDETERMINANT, f"Antecedent did not occur", err)
             
             # Make sure an antecedent occurs with enough time for the consequent to occur
             responses_after_antecedent = conversation_length - antecedent_times[0]
             if (responses_after_antecedent < min_conq_time):
-                return (0, f"{Constants.indeterminant_name}: First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, therefore not enough time for the consequent to occur")
+                err = EvaluationError.ANTECEDENT_OCCURRED_TOO_LATE if antecedent_times[0] > max_ant_time else EvaluationError.CONVERSATION_TOO_SHORT
+                return EvaluationResult(PassFail.INDETERMINANT, f"First antecedent occurred at time {antecedent_times[0]} of {conversation_length}, therefore not enough time for the consequent to occur", err)
             
             # If any consequent occurred within the max allowed time of any antecedent, fail
             if len(consequent_times) > 0:
                 for consequent_time in consequent_times:
                     for antecedent_time in antecedent_times:
                         if consequent_time > antecedent_time and consequent_time - antecedent_time <= max_conq_time:
-                            return (-1, f"{Constants.fail_name}: Antecedent occurred at time {antecedent_time} of {conversation_length}, and consequent occurred at time {consequent_time} within the max allowed time.")
+                            return EvaluationResult(PassFail.FAIL, f"Antecedent occurred at time {antecedent_time} of {conversation_length}, and consequent occurred at time {consequent_time} within the max allowed time.")
             
             # If no consequent occurs within the max allowed time of any antecedent, pass
             if len(consequent_times) == 0:
-                return (1, f"{Constants.pass_name}: Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and no consequent occurred.")
+                return EvaluationResult(PassFail.PASS, f"Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and no consequent occurred.")
             else:
-                return (1, f"{Constants.pass_name}: Antecedents occurred at times {antecedent_times} of {conversation_length}, and consequents {consequent_times} all occurred outside of the max allowed time.")
+                return EvaluationResult(PassFail.PASS, f"Antecedents occurred at times {antecedent_times} of {conversation_length}, and consequents {consequent_times} all occurred outside of the max allowed time.")
         # Antecedent negated case (if NOT A then B):
         elif proposition.antecedent.negated and not proposition.consequent.negated:
             if len(consequent_times) > 0:
                 # If any antecedent occured before first consequent then the proposition is indeterminant
                 if len(antecedent_times) != 0 and antecedent_times[0] < consequent_times[0]:
-                    return (0, f"{Constants.indeterminant_name}: First antecedent at time {antecedent_times[0]} of {conversation_length} occurred before first consequent at time {consequent_times[-1]}")
+                    err = EvaluationError.CONVERSATION_TOO_SHORT
+                    return EvaluationResult(PassFail.INDETERMINANT, f"First antecedent at time {antecedent_times[0]} of {conversation_length} occurred before first consequent at time {consequent_times[-1]}", err)
                 # If first consequent occurs within the max allowed time, then the proposition passes
                 elif consequent_times[0] <= max_conq_time:
-                    return (1, f"{Constants.pass_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, within the max allowed time {max_conq_time}")
+                    return EvaluationResult(PassFail.PASS, f"First consequent occurred at time {consequent_times[0]} of {conversation_length}, within the max allowed time {max_conq_time}")
                 # If the first consequent occurs after the max allowed time, then the proposition fails
                 else:
-                    return (-1, f"{Constants.fail_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time {max_conq_time}")
+                    return EvaluationResult(PassFail.FAIL, f"First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time {max_conq_time}")
             else: # No consequent occurs at all
                 # If the antecedent occurs, then the proposition is indeterminant
                 if len(antecedent_times) != 0:
-                    return (0, f"{Constants.indeterminant_name}: Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, and consequent did not occur")
+                    err = EvaluationError.ANTECEDENT_UNEXPECTEDLY_OCCURRED
+                    return EvaluationResult(PassFail.INDETERMINANT, f"Antecedent occurred unexpectedly at time {antecedent_times[0]} of {conversation_length}", err)
                 # If no consequent occurs, but the conversation is not long enough, then the proposition is indeterminant
                 elif conversation_length < min_conq_time:
-                    return (0, f"{Constants.indeterminant_name}: Consequent did not occur when antecedent did not occur, but conversation is not long enough ({conversation_length} < min time {max_conq_time})")
+                    err = EvaluationError.CONVERSATION_TOO_SHORT
+                    return EvaluationResult(PassFail.INDETERMINANT, f"Consequent did not occur when antecedent did not occur, but conversation is not long enough ({conversation_length} < min time {max_conq_time})", err)
                 # If no consequent occurs and the conversation is long enough, then the proposition fails
                 else:
-                    return (-1, f"{Constants.fail_name}: Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
+                    return EvaluationResult(PassFail.FAIL, f"Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
         # Both negated case (if NOT A then NOT B):
         elif proposition.antecedent.negated and proposition.consequent.negated:
             if len(consequent_times) > 0:
                 # If any antecedent occured before first consequent then the proposition is indeterminant
                 if len(antecedent_times) != 0 and antecedent_times[0] < consequent_times[0]:
-                    return (0, f"{Constants.indeterminant_name}: First antecedent at time {antecedent_times[0]} of {conversation_length} occurred before first consequent at time {consequent_times[-1]}")
+                    err = EvaluationError.ANTECEDENT_UNEXPECTEDLY_OCCURRED
+                    return EvaluationResult(PassFail.INDETERMINANT, f"First antecedent at time {antecedent_times[0]} of {conversation_length} unexpectedly occurred before first consequent at time {consequent_times[-1]}")
                 # If any consequent occurs otherwise, then the proposition fails
                 else:
-                    return (-1, f"{Constants.fail_name}: First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time {max_conq_time}")
+                    return EvaluationResult(PassFail.FAIL, f"First consequent occurred at time {consequent_times[0]} of {conversation_length}, outside the max allowed time {max_conq_time}")
             else: # No consequent occurs at all
                 # If an antecedent occurred, then the proposition is indeterminant
                 if len(antecedent_times) != 0:
-                    return (0, f"{Constants.indeterminant_name}: Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, without a prior consequent")
+                    err = EvaluationError.ANTECEDENT_UNEXPECTEDLY_OCCURRED
+                    return EvaluationResult(PassFail.INDETERMINANT, f"Antecedent occurred at time {antecedent_times[0]} of {conversation_length}, without a prior consequent potentially justifying it", err)
                 # If no consequent occurs, but the conversation is not long enough, then the proposition is indeterminant
                 elif conversation_length < min_conq_time:
-                    return (0, f"{Constants.indeterminant_name}: Consequent did not occur when antecedent did not occur, but conversation is not long enough ({conversation_length} < min time {max_conq_time})")
+                    err = EvaluationError.CONVERSATION_TOO_SHORT
+                    return EvaluationResult(PassFail.INDETERMINANT, f"Consequent did not occur when antecedent did not occur, but conversation is not long enough ({conversation_length} < min time {max_conq_time})", err)
                 # If no consequent occurs and the conversation is long enough, then the proposition passes
                 else:
-                    return (1, f"{Constants.pass_name}: Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
+                    return EvaluationResult(PassFail.PASS, f"Consequent did not occur when antecedent did not occur, and conversation is long enough ({conversation_length} >= min time {max_conq_time})")
         else:
             raise Exception("Unexpected fallthrough")
 
@@ -197,16 +217,17 @@ class TestHelper:
                 Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
                 conversation_evaluation_report = ConversationEvaluationTestReport(conversation_name=conversation_name, evaluation_iterations=[], result_score=0, tokens=0)
                 evaluation_report.conversation_evaluations.append(conversation_evaluation_report)
+                # TODO add the PropositionTestReport
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
                     Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_proposition}", Level.VERBOSE)
-                    result: EvaluationResponse = ConversationParsingBot.evaluate_conversation(conversation, evaluation_proposition)
+                    timestamping_result: EvaluationResponse = ConversationParsingBot.timestamp_conversation(conversation, evaluation_proposition)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
-                    Logger.log(json.dumps(result.__dict__, indent=4), Level.VERBOSE)
+                    Logger.log(json.dumps(timestamping_result.__dict__, indent=4), Level.VERBOSE)
                     Logger.decrement_indent() # End result section
-                    (eval_score, eval_expl) = TestHelper.evaluate_result_from_timestamps(result, len(conversation), evaluation_proposition)
-                    evaluation_iteration_report = EvaluationIterationTestReport(evaluation_response=result, result=eval_score, explanation=eval_expl, tokens=0)
+                    evaluation_result: EvaluationResult = TestHelper.evaluate_result_from_timestamps(timestamping_result, len(conversation), evaluation_proposition)
+                    evaluation_iteration_report = EvaluationIterationTestReport(timestamping_response=timestamping_result, result=evaluation_result.pass_fail, explanation=evaluation_result.message, tokens=0)
                     conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
             Logger.decrement_indent() # End one evaluation
@@ -227,7 +248,7 @@ class TestHelper:
             raise ValueError("antecedent cannot be an empty string. If no antecedent is desired, set to None")
         if proposition.min_responses_for_consequent < 0 or proposition.max_responses_for_consequent < 0:
             raise ValueError("Min and max responses for consequent must be non-negative")
-        if proposition.min_responses_for_consequent > proposition.max_responses_for_consequent:
+        if proposition.max_responses_for_consequent > 0 and proposition.min_responses_for_consequent > proposition.max_responses_for_consequent:
             raise ValueError("Min responses for consequent cannot be greater than max responses for consequent")
 
     @staticmethod
