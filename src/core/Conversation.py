@@ -90,10 +90,13 @@ class Conversation:
             # Call the second agent
             self.call_agent(second_agent, first_agent, response_is_typed, isPrinting = isPrinting)
 
-    def get_message_history_as_list(self) -> List[ChatMessage]:
+    def get_message_history_as_list(self, timestamped = False) -> List[ChatMessage]:
         message_history_list = []
+        timestamp = 1
         for message in self.message_history:
-            message_history_list += [f"{message.agent.value}: {Utilities.decode(message.content)}"]
+            timestamp_str = f"(Time {timestamp}) " if timestamped else ""
+            message_history_list += [f"{timestamp_str}{message.agent.value}: {Utilities.decode(message.content)}"]
+            timestamp += 1
         return message_history_list
 
     def get_message_history_as_string(self) -> str:

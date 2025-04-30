@@ -3,7 +3,8 @@ import json
 from typing import List
 from dataclasses import asdict
 
-from src.test.TestReports import TestReport, EvaluationEvaluationReport
+from src.core import JsonUtils
+from src.test.TestReports import TestReport
 from src.test.TestClasses import TestCaseSuite, TestCase, Proposition
 from src.utils import Logger, Utilities
 
@@ -34,4 +35,4 @@ def write_test_report_to_file(test_report: TestReport, test_name: str = ""):
     test_report_path = Utilities.get_path_from_project_root(f"src/test/UnitTests/reports/TestReport_{test_name}_{current_time}.json")
     Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
     with open(test_report_path, "w") as f:
-        json.dump(asdict(test_report), f, indent=4)
+        json.dump(asdict(test_report), f, indent=4, cls=JsonUtils.EnumEncoder)

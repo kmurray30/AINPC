@@ -44,7 +44,7 @@ class TestHelper:
             # Converse 10 times back and forth
             conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
 
-            conversation_map[conversation_name] = conversation.get_message_history_as_list()
+            conversation_map[conversation_name] = conversation.get_message_history_as_list(timestamped=True)
             Logger.decrement_indent(2) # End of conversation contents
         Logger.decrement_indent(1) # End of conversations section
 
