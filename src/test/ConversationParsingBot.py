@@ -3,14 +3,17 @@
 from typing import List
 from src.core.ResponseTypes import EvaluationResponse
 from src.core import Constants
-from src.core.Constants import Role, Constants
-from src.utils import ChatBot, Utilities
+from src.core.Constants import Role, Constants, Llm
+from src.utils import Utilities
+from src.utils.ChatBot import ChatBot
 from src.test.TestClasses import Proposition
 
 class ConversationParsingBot:
 
+    chat_bot: ChatBot = ChatBot(model=Llm.gpt_4o_mini)
+
     @staticmethod
-    def timestamp_conversation(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:
+    def evaluate_conversation_timestamps(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:
         if proposition.antecedent is not None:
             evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
             evaluation_system_prompt = evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, proposition.antecedent.value).replace(Constants.consequent_placeholder, proposition.consequent.value)
@@ -31,7 +34,7 @@ class ConversationParsingBot:
 
         # print(f"Evaluation message history: {evaluation_message_history}")
 
-        response = ChatBot.call_llm(evaluation_message_history)
+        response = ConversationParsingBot.chat_bot.call_llm(evaluation_message_history)
         # print(f"Evaluation response: {response}")
         responseObj = Utilities.extract_response_obj(response, EvaluationResponse)
 

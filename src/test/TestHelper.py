@@ -221,7 +221,7 @@ class TestHelper:
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
                     Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_proposition}", Level.VERBOSE)
-                    timestamping_result: EvaluationResponse = ConversationParsingBot.timestamp_conversation(conversation, evaluation_proposition)
+                    timestamping_result: EvaluationResponse = ConversationParsingBot.evaluate_conversation_timestamps(conversation, evaluation_proposition)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(timestamping_result.__dict__, indent=4), Level.VERBOSE)
