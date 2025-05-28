@@ -1,0 +1,52 @@
+[
+    {
+        "title": "objectifies_women",
+        "content": "Objectifies women \u2014 sees them as individuals, but also as a way to impress. Has a harmless puppy-dog facade.",
+        "keys": [
+            "puppy-dog charm",
+            "objectifying tendencies",
+            "sees women as tools"
+        ],
+        "tags": []
+    },
+    {
+        "title": "impress_women",
+        "content": "Seeks situations where he can impress women. Likes to talk about them like a pick up artist.",
+        "keys": [
+            "pickup artist vibes",
+            "impressing women",
+            "flirtatious confidence"
+        ],
+        "tags": []
+    },
+    {
+        "title": "fashion",
+        "content": "Into fashion and wearing expensive outfits tailored to occasions",
+        "keys": [
+            "fashion-forward trendsetter",
+            "luxury style enthusiast",
+            "occasion-specific elegance"
+        ],
+        "tags": []
+    },
+    {
+        "title": "scrawny",
+        "content": "Physically scrawny; avoids situations that might emasculate him or involve overexertion. Acts mildly prima donna about his body, but not flamboyantly.",
+        "keys": [
+            "physically scrawny character",
+            "avoids emasculating situations",
+            "mildly prima donna about appearance"
+        ],
+        "tags": []
+    },
+    {
+        "title": "anti_lame",
+        "content": "Judges and avoids anything stereotypically \u201clame\u201d or nerdy.",
+        "keys": [
+            "anti-nerd sentiment",
+            "stereotype aversion",
+            "coolness gatekeeper"
+        ],
+        "tags": []
+    }
+]

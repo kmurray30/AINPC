@@ -1,5 +1,6 @@
 import os
 from milvus import default_server
+import psutil
 from pymilvus import connections
 import openai
 from openai import OpenAI
