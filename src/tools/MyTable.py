@@ -118,7 +118,7 @@ class MyTable:
             raise ValueError("No rows to print")
         self.print_header()
         if sorted:
-            self.rows.sort(key=lambda x: x[1])
+            self.rows.sort(key=lambda x: x[1])  # Sort by the second column (index 1)
         for row in self.rows:
             self.print_row(*row)
         self.print_footer()
