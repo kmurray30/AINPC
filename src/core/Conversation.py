@@ -5,7 +5,7 @@ from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level
 from .Constants import Role, AgentName
 from .Agent import Agent
-from .ChatMessage import ChatMessage
+from .ChatMessage import ChatMessageAgnostic
 from .ResponseTypes import ChatResponse
 from src.core.Constants import Llm
 
@@ -15,7 +15,7 @@ class Conversation:
 
     # Store the message history with the agent name and the message content
     # This history cannot be passed directly to the chat agent, it needs to be formatted to replace the agent names with the roles
-    message_history: List[ChatMessage]
+    message_history: List[ChatMessageAgnostic]
 
     agents: Dict[AgentName, Agent]
 
@@ -41,12 +41,12 @@ class Conversation:
         self.agents[agent_name].rules += "\n" + rule
 
     # Convert all chats from the self agent to the assistant role and all chats from the other agent to the user role so that the LLM can understand its role in the conversation
-    def convert_message_history(self, self_agent_name: AgentName, other_agent_name: AgentName) -> List[Dict[str, str]]:
+    def assign_perspective_to_message_history(self, first_perspective: AgentName, third_perspective: AgentName) -> List[Dict[str, str]]:
         message_history_with_roles = []
         for message in self.message_history:
-            if message.agent == self_agent_name:
+            if message.agent == first_perspective:
                 message_history_with_roles.append({"role": Role.assistant.value, "content": message.content})
-            elif message.agent == other_agent_name:
+            elif message.agent == third_perspective:
                 message_history_with_roles.append({"role": Role.user.value, "content": message.content})
             elif message.agent is None:
                 raise ValueError(f"Agent name is None for message: {message.content}")
@@ -59,7 +59,7 @@ class Conversation:
         if self_agent_name not in self.agents:
             raise ValueError(f"Agent {self_agent_name} not found in agents list.")
 
-        message_history_for_llm = self.convert_message_history(self_agent_name, other_agent_name)
+        message_history_for_llm = self.assign_perspective_to_message_history(self_agent_name, other_agent_name)
         
         # Prepend the role rules to the message history
         self_agent = self.agents[self_agent_name]
@@ -80,10 +80,10 @@ class Conversation:
             # Print the explanation and the response
             if isPrinting:
                 Logger.log(f"{self_agent_name.value}:", Level.VERBOSE)
-                Logger.log(f"\tExplanation: {response_obj.explanation}", Level.VERBOSE)
+                Logger.log(f"\tExplanation: {response_obj.hidden_thought_process}", Level.VERBOSE)
                 Logger.log(f"\tResponse: {response}", Level.VERBOSE)
         
-        self.message_history.append(ChatMessage(self_agent_name, response))
+        self.message_history.append(ChatMessageAgnostic(self_agent_name, response))
 
     def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False):
         if DEBUG_LEVEL == "WARNING":
@@ -94,7 +94,7 @@ class Conversation:
             # Call the second agent
             self.call_agent(second_agent, first_agent, response_is_typed, isPrinting = isPrinting)
 
-    def get_message_history_as_list(self, timestamped = False) -> List[ChatMessage]:
+    def get_message_history_as_list(self, timestamped = False) -> List[ChatMessageAgnostic]:
         message_history_list = []
         timestamp = 1
         for message in self.message_history:

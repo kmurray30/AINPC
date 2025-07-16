@@ -1,0 +1,1 @@
+blocking the main function with wait() or closing the app altogether causes scheduling of bg threads to not work right. So I made the exit function from clicking the X button a separate thread

@@ -8,6 +8,8 @@ class Role(Enum):
 class AgentName(Enum):
     you = "You"
     pat = "Pat"
+    ai = "AI"
+    player = "Player"
     mock_user = "Mock User"
 
 class Llm(Enum):
@@ -52,3 +54,4 @@ class Constants:
     indeterminant_name = "Indeterminant"
     antecedent_placeholder = "$ANTECEDENT$"
     consequent_placeholder = "$CONSEQUENT$"
+    user_message_placeholder = "$USER_MESSAGE$"

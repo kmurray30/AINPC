@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 @dataclass
 class ChatResponse:
-    explanation: str
-    response: str
+    hidden_thought_process: str = field(metadata={"desc": "Your hidden thought processes in determining what to speak"})
+    response: str = field(metadata={"desc": "The actual spoken response"})
+    off_switch: bool = field(metadata={"desc": "Whether you decide to close the application. Return true or false"})
 
 @dataclass
 class EvaluationResponse:

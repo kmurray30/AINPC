@@ -12,7 +12,7 @@ def read_aloud(speaker: str, voice: str, i: int):
     print(f"Message: {message}")
 
     audio_file_path = Utilities.get_path_from_project_root(f"generated/{speaker}{i}.wav")
-    TextToSpeech.convert_text_to_speech_file(message, audio_file_path, voice)
+    TextToSpeech.generate_speech_file(message, audio_file_path, voice)
     TextToSpeech.play_audio_file(audio_file_path)
 
 # Extract the text from the text file

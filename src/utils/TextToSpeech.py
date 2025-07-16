@@ -42,7 +42,7 @@ def delete_audio_file(file_path):
     else:
         print("The file does not exist")
 
-def convert_text_to_speech_file(prompt, file_path, voice = "echo"):
+def generate_speech_file(prompt, file_path, voice = "echo"):
     with (client.audio.speech.with_streaming_response.create(
       model="tts-1",
       voice=voice,

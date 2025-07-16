@@ -118,7 +118,7 @@ class ChatBot:
                 Logger.log(f"Response: {response_raw}", Level.WARNING)
                 Logger.log(f"Retrying...", Level.WARNING)
 
-        raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {llm_formatting_retries} retries.")
+        raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {self.llm_formatting_retries} retries.")
 
 
 def get_default_rules():

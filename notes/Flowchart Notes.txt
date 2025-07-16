@@ -1,0 +1,298 @@
+Questions:
+	what comes first, the feeling of dissapointment or the PE of your hope of what could have been?
+	dissapointment and anger are feelings, but aren't they just reactions to PE?
+	Could model it two ways, looping back to same problem, or coming back to similar worry but as a new thing
+	How to deal with interrelated thoughts.
+		e.g. Are we still good? and Was my last text lame? Both might be top of mind, but the former could still lead to the same text worry
+	In a person, thoughts tend to spin and repeat. In our model that could be wasteful
+	How is "she hasn't texted back yet" processed? Does concern even cross your mind after 5 min?
+		I think it's about how you go into it. When the thought crosses your mind to check your phone, it comes with "I hope she's already texted back" or "Has she texted back yet" or "Has she still not texted back yet?"
+*	Do actions happen as a trail of context, or does context trigger actions but then outcomes link back to context if and when relevant
+	Attachments are engaged with when insecure, but even when secure they can be engaged with for escape from other pains. The provide sources of ethereal relief
+*	What is "boredom"? Is it an attachment? A prediction error?
+		It is unresolved prediction error. Frustrated at friction / lack of progress, feeling like you're doing "nothing" at home when you should be doing "something"
+	Does a PE alwasy precede planning? If I like a girl, do I really have to think "without a date it won't happen, therefore I should plan a date"? It's more just like "I want to continue this, therefore I know I gotta plan a date". It's more about fulfulling the simulation, but the simulation isn't necessarily caused by a PE.
+	If I'm mentally exhausted, do I associate it with the work I'm doing implicitly, or do I go "I'm exhausted and I've been working on this for 3 hours therefore I'm exhausted from this". If the latter, it seems it'd be easy to trick oneself to push through
+
+Notes:
+	Believability score is important, to not just pick the happiest delusion at any step
+	PE isn't just about surprises to your beliefs, it's also about beliefs that are already unstable/conditional and you're actively monitoring for their confirmation/failure
+	New thoughts do not happen in a vaccuum. They follow premade patterns and caches.
+		e.g. You already were worried your last text was lame, so her not texting back immediately affirms that rather than you coming up with that theory from scratch
+		Therefore - I have background goals, having background monitoring for met conditions is also useful
+	Actions happen within one or more contexts. e.g. checking phone for girl text but also for distraction, news, etc. and can also be surprised by something not in any of your contexts
+	Attachments should have a measure of security. If insecure, you're actively monitoring, building, and protecting them. If secure, they exist in the background, to be threatened only if incoming info does so
+	Attachments have value because of the fantasy you create with them, and that fantasy is given value by it's use as an escape from other pain. It's all so interconnected
+	Simulation itself is escape. Why is that not always enough though? When does fantasy turn into action? I think the reality component is important. Fantasy is never enough, we must always work towards it
+	Responses to attachments include: planning and evidence gathering
+	Simulations are trying to reduce PE. But they are also trying to reduce uncertainty. This comes back to believability in a way.
+		We are wired to minimize surprise and prevent future PE as well
+	All planning is to reduce present or future PE. The difference with habits is that they are cached solutions
+
+Flowchart todo:
+	What else is attachment related to? You fantasize because you're unsatisfied with something already
+	Split up the seeking sections?
+	Goal setting
+	Attachment security
+	Attachments as escapes from other pains
+	States and activity should have different shaped nodes
+
+
+Flows:
+-	Information processing
+		Contextualize info, which creates new insight/info, while also querying memory. This creates many pings of contextualization which each potentially trigger updates to goal mechanisms
+*	Attachment formation
+		Do positive experiences inherently form new attachments? No but I do think they can form attachments in a different way than just experiences that satisfy other attachments. e.g. Had fun with a cute girl, attachment forms around simply having more fun times with her, but also around satisfying desire for a partner
+			Should they be stored as one, or separate? Many people date people where there's no future bc the fun is enough. Often times they lie to themselves though and hope the other will turn around. This is a nice conflict. It's like the primary attachment is influencing the secondary attachment to persist despite counter evidence
+				I do think they should be separate. You think of X, and you feel all the fun you have with them. Then you think of future, and you get sad. You try to resolve the sadness through self delusion.
+		Example stories:
+			Cute person at party
+			Dating someone you enjoy but who tells you there's no future, or with whom you don't see a future
+			Person you're dating satisfies a lot of qualities, but not perfectly. Tension to "find the best person" vs someone good enough
+			Relief of it being the wrong person, because the attachment and fears of failure were so scary
+*	Attachment->goals
+		Mechanism that strengthens the attachment or fulfillment plan
+		Difference between object of attachment (crush) and the underlying attachment (love)
+		Need to factor in likelihood as a score, or security
+		Strats:
+			Affirm: This is what it could look like
+			Validate: Does she like me back? Do I really like her? Any red flags?
+				Is this likely to work out
+				Are the fantasies even accurate
+			Defend: What could prevent this?
+	To include
+		Multi-threaded competition
+		Memory
+		Cached responses
+		Sense processing
+		Attachments influencing each other and conflicting (see attachment formation story above)
+		Actions
+
+Attachment object - fields or traits that need to be reflected in system somehow
+	What you want
+	How good it will make you feel
+	How much you already rely on it / expect it
+	Likelihood
+	Underlying attachment link
+	Possible ways to fulfill
+		Relevance (how much it's on your mind lately) (possibly emergent from other factors)
+		Uncertainty
+		Fulfillment amount
+		Dependent attachment link
+
+Expectation-Openness Cycle:
+1. Feeling of openness after a crash has settled makes new experiences feel full and welcome
+2. Expectation begins to rise as you depend on these experiences to feel good
+3. With heightened expectations, inevitable impermanence of all things makes the thing you're relying on unreliable, giving shaky ground to your new higher foundation
+4. You crash as you realize your new expectations can never reliable
+
+
+Attachment activity
+	Yearning triggers evaluation
+		Recent positive memory comes up in brain unprompted and makes you want more
+			Even if perfectly content, every experience is unique and offers another sliver of infinity
+	Inception should also trigger evaluation, but often happens in reflection?
+	Yearning comes from a separate desire to elevate current state, either because of underlying attachment pain, or just bc fantasizing feels good (more on this...)
+		Why do we yearn for more even when content?
+			Instead of attachments only existing to satisfy current perceived negative states, they can also project future, more positive states
+	-
+	Does attachment story content update happen on attachment CRUD or async?
+		I think it happens along with evaluation, not 
+	Does attachment evaluation happen on attachment crud or async?
+		I think evaluation is tied to the creation of an attachment. You can't really get attached without at least affirmation
+	Order of affirm/validate/defend?
+		At the start, there is a desire to create a PE, that is the driving factor. You want to maximize PE (weirdly).
+	Maximize "wellbeing" or minimizing PE?
+		If all we did was minimize PE, we'd do nothing. There has to be a push and pull. That can be created by valence, or pleasure maximization (PM).
+		So then is all activity PM, or is it one or the other?
+			Remember my philosophy was that they are one in the same. You don't yearn for a cigarette then relieve yourself. The yearning is also relief and the smoking is also yearning. Well even if that's true, you have to admit the directions are different. You fantasize about the ciggy, then seek it out. Maybe dukkha is the scalar, but the direction still matters
+	Difference between PEM and PM moods? I'm sitting and thinking about crush, I can either fantasize to build up the perceived payoff (and feel temporarily good)
+		Fantasizing gives a sort of temporary, addictive satisfaction. The act of fantasizing is itself pleasurable, but then also increases expectations
+			I need a sort of dopamine/serotonin reward system
+	For a more manic-depressive person, I wonder if there should be presets for expectations for any attachment or story? In a top of the world mood, all your fantasies feel closer. In a depressive mood, you feel unworthy to even hope for what you want.
+	Baseline always seems to restabilize around expectations
+	I'm thinking mood and neurotransmitters could determine what activity people partake in, and if there's more dimensions than just PM and PEM.
+	There's a difference between Loving Kindness Mediation and attached fantasies. LKM doesn't make you cling to outcomes, yet is a form of fantasizing. Need a framework that differentiates these. Unless I can prove LKM is still a form of attachment. I think it is actually... it's just selfless attachment and feels good bc more harmonious with others / less conflict
+	Possible mood dimensions
+		valence vs arousal
+		reward seeking vs threat detection and avoidance
+		progress towards goal vs not
+	What if PE can be negative or positive? Negative means perception is actually greater than expected. If so then PE and PEM could be unified. But then you'd always be trying to lower expectation and improve reality.
+	New paradigm: expansion vs correction
+		expansion widens the gap between expectation and perception
+			Increasing expectation feels good
+			Lowering perception (they didn't mean that as a compliment) is protective from future dissapointment
+		correction closes the gap
+			Increasing perception feels protective, constructive
+			Lowering expectation occurs when PE persists without a way out. Feels like defeat, dissapointment.
+		PE arises with a gap and feels unsettling. simulated gap shortenings can give peace. Is this the same as correction though?
+		Perception changes can be both 
+		Baseline shift is emergent
+		All scenarios
+				Increase expectation via fantasizing (increases gap) (feels good)
+				Plan to increase/defend perception via planning, rationalization, self-delusion
+				Expected positive perception (lowers gap or sustains small gap) (feels neutral/good)
+				Unexpected positive perception (lowers gap) (feels good)
+				Unexpected negative perception (increases gap) (feels bad)
+				Giving up on expectation in defeat/dissapointment due to evidence (decreases gap)
+				Influencing ones own perception to minimize it (increases gap) (not sure of any examples of this)
+			Note:
+				I'm not sure positive perception actually feels good. What feels good is the validation of the expectation. Laughter feels good, love feels good. These are simple, original dopamine hits. Maybe we're looking at perception wrong. Maybe what we want to measure is simply the confidence in the expectation...
+	New paradigm: attachment - confidence model
+		Pleasurable experiences create new expectations
+		The confidence in the expectation is what creates tension
+		States
+			Strong attachment + strong confidence = security, peace
+			Strong attachment + medium confidence = very active, sweet spot of human drive
+			Strong attachment + weak confidence = anxiety, destabilization
+			Weak attachment + strong confidence = openness, confident pursuit, peace
+			Weak attachment + weak confidence = curiosity, apathy, peace
+		Activity
+			Formations of attachment feel good, because we simulate the good feelings
+			Holding to attachment feels either anxious or driven
+			Disillusionment of attachment feels bad
+			Letting go of attachment feels like mourning, then peace
+		Questions:
+			*What determines when you shift from fantasizing to action?
+				does the attachment formation step occur before confidence even enters the picture? Or is there a sort of honeymoon confidence that exists before scrutiny can occur?
+					Former, since otherwise honeymoon attachments would look no different than achieved, latent attachments, but we need honeymoon to be more active
+			Still unsure what makes fantasizing rewarding. Is it just imagined dopamine hits plus increasing confidences of other attachments (which means the leaf of every tree should be base dopamine hits, or fear reduction)
+			Need to model confidence levels in my flow chart
+			Need to differentiate between future confidence and current attainment? Or are they even different. I don't think so actually.
+			Need to model PE in flow chart - will use confidence
+			Need the dopamine hit of fantasizing to diminish over time, otherwise you'd just fantasize all day. How to model this?
+			Need to model survival as well as dopamine. Love feels good, but pain feels bad.
+			Daydreaming is still fun when you have 0 confidence in them. Accepting they won't happen isn't that sad. Although if you're attached to it then yeah it can be (eg get any woman, have enough money to retire)
+				It's because it's low attachment
+			What constitutes a base positive or negative experience? Pain sure. Laughter sure. But what about insults? compliments? new friends? These are technically abstractions of other attachments
+				There should be a reward that takes place with any increase in confidence with an existing attachment that creates a primary positive feeling / dopamine hit I'm thinking.
+					Compliments feel immediately good, but a potential partner feels stressful - comes down to confidence (only genuine compliments feel good)
+						Valence should be byproduct of: senses, memories, and attachment processing
+			Are emotional states implicit in semantics or explicit in scores?
+				How to update present context to reflect a different mood
+
+*To do / figure out in flowchart
+	Attachment formation
+		Based on primary feeling and context
+?		Based on a complex of existing attachments? Not sure if separate or complex
+	Somatic and motor responses
+		Valence should trigger somatic responses, which feed back in as new info
+		Limbic level memories should trigger somatic responses
+	Affirmation, validation, defense feel good mechanism
+		Simulation
+	Positive experience vs information and how each is processed with attachments
+	Simulated vs real context
+	Emotion/valence score
+?		How to score 
+?		Constantly reframing everything as emotions change? Or more discreet changes?
+		How to store memories? Multiple versions with different frames? Last should be the most potent (like Pedrum shroom trip, end of high school, or Oxford trip)
+	Caching of feelings/reactions
+	Emotional hierarchies
+		Interconnection between (valence as interface? linked attachments as interface?)
+		Modeling nonverbal language, how someone can make you let your guard down with their vibes. This should probably go in gut
+	Memory
+	Thought threads, like how what someone is thinking could come back to you, branching convos, etc
+	Self awareness
+	Empathy, abstract simulations like putting self in others' shoes
+
+To test:
+	Compliments
+	Insults
+	Cute girl also bikes
+
+Manifest:
+	Valence is a byproduct of: senses, memories, and attachment processing
+
+
+Reward center
+	Seek good
+		Primary experiences like laughter feel good
+		Secondary experiences like fantasizing and increasing confidence in attachment feel good
+	Avoid bad
+		Defend from dissapointment by bringing up confidence to match attachment, or if can't then giving up on attachment
+			Validation
+			Defense
+
+
+
+
+Levers:
+	Expectation
+	Perception
+	PE
+	Pleasure
+	Belief
+
+Work exhaustion flow
+	Implicitly tagging/associating work as exhausting
+	Explicitly contextualizing the work as exhausting
+	Accidentally associating with other things?
+	Seeking information vs. information coming in
+	How to use negative association with work to update rewards
+		Mood?
+		temporary association with the work?
+		long term association with the work?
+	Are senses and raw experiences inherently enjoyable, like laughing and love?
+
+Ghosting
+	These are the following reactions I'd have
+		Immediate worry about my last text
+		More long term concern that she's ghosting me
+		How long has it been?
+
+Ghosting2
+	You do a few things:
+		fantasize about things going well - rewarding and also acts as escape
+			plan according to fantasies
+			create attachment which causes insecurity
+				worry about threats
+					seek evidence to confirm or deny threats/fantasies
+						simulate possibilities
+							plan according to fears
+
+E
+	Attachment - Want to feel a certain way
+		Look for evidence whether I'm getting that
+			PE
+				Fix
+					Figure out what's wrong with h
+				Cope/Escape/Fantasize
+					About others
+
+
+Thought processes:
+	getting ghosted
+	ghoster responds
+	excited to get home and unwind
+	Cheated, someone said something like they’re catching on
+	Friend jabs at your masculinity 
+	Skyelar drama
+	Girl drama (Lexie)
+	Some simpler ones too
+	Being humbled
+	*Getting irritated at your partner for not living up to expectations
+
+Welcome to Flowchart Fun
+  Begin your journey
+    Add some steps
+      Step 1: Write like an outline
+      Step 2: Each line becomes a node
+      Step 3: Indent to connect nodes
+    Style with classes
+      Green? .color_green
+      Or maybe blue! .color_blue
+    Wrap text in parentheses to connect to any node
+      Link back: (Begin your journey)
+  Time to decide: What's next?
+    Explore more: Right-click nodes for options
+    Try AI: Paste a document to convert it
+    Keep practicing: You're doing great!
+      Now you're thinking with flowcharts!
+
+Flowchart feedback:
+	Limited colors (brown and pink at least, like notion. white and black, light blue/green)
+	Chaotic chart unless freeze is used. Don't like how updates bulldoze over my orientation
+		Thankfully Layout Frozen works well, but is limiting
+	Link backs overlap text if both edges have labels. No way to move edges, must place horizontally
+	Arrows with no head or tail node
+	Select 

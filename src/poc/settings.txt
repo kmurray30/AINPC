@@ -1,0 +1,3 @@
+text_stream_speed=0.1
+system_prompt=
+initial_response=
