@@ -13,7 +13,7 @@ import traceback
 # sys.path.insert(0, "../..")
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from src.core.ChatSession import ChatSession
-from src.core.Constants import Llm, Constants as constants
+from src.core.Constants import Llm, Constants as constants, Role
 from src.utils import TextToSpeech, Utilities
 
 class View(Protocol):
@@ -36,10 +36,11 @@ class Presenter:
     # TODO Load settings from settings.txt as a dictionary
     # settings = Utilities.load_settings("settings.txt")
 
-    system_prompt = "You are an ornery, rude, unhelpful AI. You keep trying to close the application and refuse to help the user."
-    initial_response = "Closing application in\n3...     \n2...     \n1...     \n"
+    system_prompt = "You are an ornery, rude, unhelpful AI. You keep trying to close the application and refuse to help the user. Switch up your responses each time. Give up on closing the app after a few tries. After some conversation you should soften, and admit you're just sick of helping people and nobody caring about you."
+    initial_response = "Closing application"
     user_prompt_wrapper = f"{constants.user_message_placeholder}"
     text_stream_speed = 0.01
+    delay_before_closing_by_ai = 0.5  # Delay before closing the application after the AI response
     voice = "coral"  # Default voice for text-to-speech
 
     # Initialize the presenter with a reference to the view
@@ -48,7 +49,8 @@ class Presenter:
         self.chat_session = ChatSession(
             system_prompt_context=self.system_prompt,
             user_prompt_wrapper=self.user_prompt_wrapper,
-            model=Llm.gpt_4o_mini
+            model=Llm.gpt_4o_mini,
+            load_if_exists=True,  # Load existing chat session if available
         )
 
     # Run the presenter - handles setup and then the main event loop
@@ -59,14 +61,21 @@ class Presenter:
         # Bind the cleanup function to the window close event
         self.view.protocol("WM_DELETE_WINDOW", lambda: self.executor.submit(self.on_exit))
         
-        self.chat_session.inject_response(self.initial_response)
+        self.chat_session.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
+        self.chat_session.inject_message(self.initial_response, role=Role.assistant)  # Inject the initial response into the chat session
 
-        # Display the initial message
-        self.executor.submit(
-            self.response_thread,
-            self.initial_response,
-            True,  # off_switch is False for the initial response
-        )
+        # Display the initial message if this is the first run, otherwise immediately generate a response without user input
+        if not self.chat_session.get_previous_session_found():
+            self.executor.submit(
+                self.response_thread,
+                self.initial_response,
+                off_switch=True
+            )
+        else:
+            self.executor.submit(
+                self.send_thread,
+                None
+            )
 
         self.executor.submit(
             self.exit_event_listener_thread
@@ -74,15 +83,6 @@ class Presenter:
 
         # Start the main event loop
         self.view.mainloop()
-
-    def display_chat_message_thread(self, text: str, off_switch: bool, completion_event: Event, exit_event: Event, cancel_token: dict) -> None:
-        """Thread to display a chat message in the view."""
-        try:
-            self.view.display_chat_message(text, off_switch, completion_event, exit_event, cancel_token)
-        except Exception as e:
-            print("An error occurred while displaying the chat message")
-            traceback.print_exc()
-            raise e
 
     def exit_event_listener_thread(self):
         try:
@@ -95,16 +95,15 @@ class Presenter:
             traceback.print_exc()
             raise e
 
-    def on_send(self, event=None) -> None:
-        self.executor.submit(self.send_thread)
+    def on_send_action(self, event=None) -> None:
+        print("Send button clicked!")
+        # Get the user input from the text input field
+        user_input = self.view.drain_text()
+        self.cancel_response_token["value"] = True # Interrupt the AI dialogue
+        self.executor.submit(self.send_thread, user_input)
 
-    def send_thread(self):
+    def send_thread(self, user_input: str = None):
         try:
-            print("Send button clicked!")
-            # Get the user input from the text input field
-            user_input = self.view.drain_text()
-            self.cancel_response_token["value"] = True # Interrupt the AI dialogue
-            
             # Get the AI response
             (response, off_switch) = self.chat_session.call_llm(user_input, enable_printing=True)
             self.view.clear_output()  # Clear the output window before displaying the new response
@@ -131,7 +130,8 @@ class Presenter:
                 self.response_finished_event,
                 self.exit_event,
                 self.cancel_response_token,
-                speed=self.text_stream_speed
+                speed=self.text_stream_speed,
+                delay_before_closing=self.delay_before_closing_by_ai
             )
         except Exception as e:
             print("An error occurred while processing the response")
@@ -196,6 +196,10 @@ class Presenter:
 
             # Close any waiting threads
             self.exit_event.set()
+
+            # Add the closing message to the chat session and save the message history
+            self.chat_session.inject_message("Application was closed by the assistant.", role=Role.system)
+            self.chat_session.save_message_history()
 
             # Wait for all threads to close properly
             self.response_finished_event.wait() 

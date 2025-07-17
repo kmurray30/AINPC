@@ -61,7 +61,8 @@
 					<key>COMMAND_STRING</key>
 					<string>cd ~/Repos/AINPC
 source .venv/bin/activate
-python3 src/poc/main.py</string>
+cd src/poc
+python3 main.py</string>
 					<key>CheckedForUserDefaultShell</key>
 					<true/>
 					<key>inputMethod</key>
@@ -171,8 +172,6 @@ python3 src/poc/main.py</string>
 						<string>4</string>
 					</dict>
 				</dict>
-				<key>conversionLabel</key>
-				<integer>0</integer>
 				<key>isViewVisible</key>
 				<integer>1</integer>
 				<key>location</key>
