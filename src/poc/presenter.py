@@ -28,10 +28,11 @@ class Presenter:
     response_finished_event = Event()
     audio_generated_event = Event()
     audio_finished_event = Event()
-    exit_event = Event()
+    exit_by_assistant_event = Event()
     executor = futures.ThreadPoolExecutor()
     chat_session: ChatSession
     exiting = False
+    closed_by: Role = None
 
     # TODO Load settings from settings.txt as a dictionary
     # settings = Utilities.load_settings("settings.txt")
@@ -59,7 +60,7 @@ class Presenter:
         self.view.create_ui(self)
 
         # Bind the cleanup function to the window close event
-        self.view.protocol("WM_DELETE_WINDOW", lambda: self.executor.submit(self.on_exit))
+        self.view.protocol("WM_DELETE_WINDOW", lambda: self.executor.submit(self.on_exit_button_action))
         
         self.chat_session.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
         self.chat_session.inject_message(self.initial_response, role=Role.assistant)  # Inject the initial response into the chat session
@@ -86,16 +87,25 @@ class Presenter:
 
     def exit_event_listener_thread(self):
         try:
-            self.exit_event.wait()
+            self.exit_by_assistant_event.wait()
             if not self.exiting:
+                self.exiting = True
+                self.closed_by = Role.assistant
                 print("Narration finished, exiting application.")
                 self.on_exit()
         except Exception as e:
             print("An error occurred while responding to the exit event")
             traceback.print_exc()
             raise e
+        
+    def on_exit_button_action(self) -> None:
+        print("Exit button clicked!")
+        if not self.exiting:
+            self.exiting = True
+            self.closed_by = Role.user
+            self.executor.submit(self.on_exit)
 
-    def on_send_action(self, event=None) -> None:
+    def on_send_action(self) -> None:
         print("Send button clicked!")
         # Get the user input from the text input field
         user_input = self.view.drain_text()
@@ -128,7 +138,7 @@ class Presenter:
                 response,
                 off_switch,
                 self.response_finished_event,
-                self.exit_event,
+                self.exit_by_assistant_event,
                 self.cancel_response_token,
                 speed=self.text_stream_speed,
                 delay_before_closing=self.delay_before_closing_by_ai
@@ -195,10 +205,13 @@ class Presenter:
             self.cancel_response_token["value"] = True
 
             # Close any waiting threads
-            self.exit_event.set()
+            self.exit_by_assistant_event.set()
 
             # Add the closing message to the chat session and save the message history
-            self.chat_session.inject_message("Application was closed by the assistant.", role=Role.system)
+            if self.closed_by is not None:
+                self.chat_session.inject_message(f"Application was closed by the {self.closed_by.value}.", role=self.closed_by)
+            else:
+                self.chat_session.inject_message("Application crashed unexpectedly.", role=Role.system)
             self.chat_session.save_message_history()
 
             # Wait for all threads to close properly
