@@ -111,7 +111,7 @@ class ChatBot:
         for _ in range(self.llm_formatting_retries):
             response_raw = self.call_chat_agent(message_history_for_llm)
             try:
-                response_obj = Utilities.extract_response_obj(response_raw, response_type)
+                response_obj = Utilities.extract_obj_from_str(response_raw, response_type, trim=True)
                 return response_obj
             except Exception as e:
                 Logger.log(f"Response from LLM agent is not in the correct format for {response_type.__name__}", Level.WARNING)

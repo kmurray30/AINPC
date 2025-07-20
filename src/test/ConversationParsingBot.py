@@ -36,7 +36,7 @@ class ConversationParsingBot:
 
         response = ConversationParsingBot.chat_bot.call_llm(evaluation_message_history)
         # print(f"Evaluation response: {response}")
-        responseObj = Utilities.extract_response_obj(response, EvaluationResponse)
+        responseObj = Utilities.extract_obj_from_str(response, EvaluationResponse, trim=True)
 
         # return the responseObj as a json string formatted with newlines
         return responseObj

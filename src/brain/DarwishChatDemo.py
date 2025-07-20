@@ -192,7 +192,7 @@ while True:
     messages.append({"role": "user", "content": player_message})
     messages.append({"role": "assistant", "content": response_raw})
 
-    response_obj: Response = Utilities.extract_response_obj(response_raw, Response)
+    response_obj: Response = Utilities.extract_obj_from_str(response_raw, Response, trim=True)
     response_message = response_obj.response
     print("\nRaj: " + response_message + "\n")
 

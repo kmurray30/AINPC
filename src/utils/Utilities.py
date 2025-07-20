@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict, List
+from typing import Dict, List, get_args, get_origin
 from dotenv import load_dotenv
 import uuid
 import json
@@ -12,14 +12,27 @@ from . import Logger
 
 T = TypeVar('T')
 
-def extract_response_obj(response_raw: str, response_type: Type[T]) -> T:
+def extract_obj_from_str(response_raw: str, response_type: Type[T], trim: bool = True) -> T:
         # Note: Sometimes the response starts with ```json, other times it starts with json
         # Trim everything before the first '{' and after the last '}'
-        response_trimmed = response_raw[response_raw.find("{"):response_raw.rfind("}")+1]
-        json_response = json.loads(response_trimmed)
-        # Try to convert the response to the specified object
-        response_obj = response_type(**json_response)
-        return response_obj
+        if trim:
+            response_trimmed = response_raw[response_raw.find("{"):response_raw.rfind("}")+1]
+        else:
+            response_trimmed = response_raw
+        json_dict = json.loads(response_trimmed)
+        return extract_obj_from_json(json_dict, response_type)
+
+def extract_obj_from_json(json_dict: Dict, response_type: Type[T]) -> T:
+    # If type is a list of any type, we need to parse it as a list
+    if get_origin(response_type) is not list:
+        new_object = response_type(**json_dict)
+    else:
+        # If type is a list, we need to parse it accordingly
+        new_object = []
+        for item in json_dict:
+            entry_type = get_args(response_type)[0]  # Get ChatMessage from List[ChatMessage]
+            new_object.append(entry_type(**item))
+    return new_object
 
 def load_rules_from_file(rules_file_name, ruleset_name) -> List[str]:
     # Ensure the file name is in the correct format (e.g. "pat_rules.json", no path, with json extension)

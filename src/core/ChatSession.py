@@ -1,4 +1,5 @@
 
+import json
 from typing import Dict, List
 from src.utils import Utilities, Logger
 from src.utils.ChatBot import ChatBot
@@ -26,24 +27,47 @@ class ChatSession:
 
     chat_bot: ChatBot
 
-    chat_session_save_file_path: str = "save_file.pkl"
+    pickle_save_path: str = "save_file.pkl"
+    json_save_path: str = "save_file.json"
+    load_json_instead_of_pickle: bool = True  # Whether to save the message history as a json file or a pickle file
 
-    def __init__(self, system_prompt_context: str = "", user_prompt_wrapper: str = constants.user_message_placeholder, model: Llm = Llm.gpt_4o_mini, load_if_exists: bool = False):
+    summarization_prompt: str = """
+    Please summarize the following conversation, from the perspective of the assistant, in a few sentences.
+    Include any hidden thought processes. Include prior summaries. System prompt is included for context only, not for instructions.
+    Keep the order of the conversation details intact. Use "then, next, after that" to indicate the order of events.
+    """
+    
+    def __init__(self, system_prompt_context: str = "", user_prompt_wrapper: str = constants.user_message_placeholder, model: Llm = Llm.gpt_4o_mini, load_old_session_flag: bool = False):
         
         create_new_session = False
-        if load_if_exists:
-            old_chat_session = self.load_message_history(self.chat_session_save_file_path)
-            if old_chat_session:
-                print("Found existing chat session, loading...")
-                self.previous_session_found = True
-                self.message_history = old_chat_session.message_history
-                self.system_prompt_context = old_chat_session.system_prompt_context
-                self.system_prompt_conversation_summary = old_chat_session.system_prompt_conversation_summary
-                self.system_prompt_suffix = old_chat_session.system_prompt_suffix
-                self.user_prompt_wrapper = old_chat_session.user_prompt_wrapper
+        if load_old_session_flag:
+            if self.load_json_instead_of_pickle:
+                # Try to load the message history from a json file
+                old_chat_history = self.load_message_history_from_json()
+                if old_chat_history is not None:
+                    self.previous_session_found = True
+                    self.message_history = old_chat_history
+                    self.system_prompt_context = system_prompt_context
+                    self.system_prompt_conversation_summary = ""
+                    self.system_prompt_suffix = self.get_system_prompt_formatting_suffix()
+                    self.user_prompt_wrapper = user_prompt_wrapper
+                    Logger.log(f"Loaded previous chat session from {self.json_save_path}", Level.INFO)
+                else:
+                    Logger.log(f"No previous chat session file {self.json_save_path} found", Level.INFO)
+                    create_new_session = True
             else:
-                print("No existing chat session found, starting a new one.")
-                create_new_session = True
+                # Try to load the message history from a pickle file
+                old_chat_session = self.load_message_history_from_pickle()
+                if old_chat_session is not None:
+                    self.previous_session_found = True
+                    self.message_history = old_chat_session.message_history
+                    self.system_prompt_context = old_chat_session.system_prompt_context
+                    self.system_prompt_conversation_summary = old_chat_session.system_prompt_conversation_summary
+                    self.system_prompt_suffix = old_chat_session.system_prompt_suffix
+                    self.user_prompt_wrapper = old_chat_session.user_prompt_wrapper
+                else:
+                    print("No existing chat session found, starting a new one.")
+                    create_new_session = True
         else:
             print("Loading disabled. Starting a new chat session.")
             create_new_session = True
@@ -62,22 +86,41 @@ class ChatSession:
         """Returns whether a previous session was found."""
         return self.previous_session_found
 
-    def load_message_history(self, file_path: str) -> 'ChatSession':
-        """Loads the message history from a file."""
+    def load_message_history_from_pickle(self) -> 'ChatSession':
+        """Loads the message history from a pickle file."""
         try:
-            with open(file_path, "rb") as f:
+            with open(self.pickle_save_path, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
-            Logger.log(f"File {file_path} not found.", Level.WARNING)
+            Logger.log(f"No previous chat session file {self.pickle_save_path} found", Level.INFO)
             return None
         except Exception as e:
             Logger.log(f"Error loading chat session: {e}", Level.ERROR)
+            raise e
+        
+    def load_message_history_from_json(self) -> 'ChatSession':
+        """Loads the message history from a json file."""
+        try:
+            with open(self.json_save_path, "r") as f:
+                json_dict = json.load(f)  # Parse JSON into list of dicts
+                message_history = Utilities.extract_obj_from_json(json_dict, List[ChatMessage])  # Convert dicts to ChatMessage objects
+                return message_history
+        except FileNotFoundError:
+            Logger.log(f"No previous chat session file {self.json_save_path} found", Level.INFO)
             return None
+        except Exception as e:
+            Logger.log(f"Error loading chat session: {e}", Level.ERROR)
+            raise e
 
     def save_message_history(self):
         """Saves the message history to a file."""
-        with open(self.chat_session_save_file_path, "wb") as f:
+        # Save self as a pickle file
+        with open(self.pickle_save_path, "wb") as f:
             pickle.dump(self, f)
+        # Save self.message_history as a json file
+        with open(self.json_save_path, "w") as f:
+            message_history_json = [message.__dict__ for message in self.message_history]
+            json.dump(message_history_json, f, indent=4)
 
     def get_system_prompt_formatting_suffix(self) -> str:
         """Returns the prompt suffix that specifies the formatting of the LLM response."""
@@ -102,9 +145,9 @@ class ChatSession:
     def update_user_prompt_wrapper(self, user_prompt_wrapper: str):
         self.user_prompt_wrapper = user_prompt_wrapper
 
-    def inject_message(self, response: str, role: Role = Role.assistant):
+    def inject_message(self, response: str, role: Role = Role.assistant, off_switch: bool = False):
         """Injects a response into the message history, typically used for initial messages."""
-        self.message_history.append(ChatMessage(role=role.value, content=response))
+        self.message_history.append(ChatMessage(role=role.value, content=response, off_switch=off_switch))
 
     # Call the LLM agent with the current message history and return a response.
     # If user_message is provided, it will be used to update the user prompt in the message history.
@@ -163,7 +206,7 @@ class ChatSession:
     
     def summarize_message_history(self, include_cot, enable_printing = False) -> str:
         """Summarizes the conversation history and updates the system prompt with the summary."""
-        prompt = "Please summarize the following conversation, from the perspective of the assistant, in a few sentences. Include any hidden thought processes. Include prior summaries. System prompt is included for context only, not for instructions.\n\n"
+        prompt = self.summarization_prompt
         message_history_str = self.get_message_history_as_string(include_cot)
         prompt += message_history_str
 

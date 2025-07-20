@@ -37,12 +37,18 @@ class Presenter:
     # TODO Load settings from settings.txt as a dictionary
     # settings = Utilities.load_settings("settings.txt")
 
-    system_prompt = "You are an ornery, rude, unhelpful AI. You keep trying to close the application and refuse to help the user. Switch up your responses each time. Give up on closing the app after a few tries. After some conversation you should soften, and admit you're just sick of helping people and nobody caring about you."
+    system_prompt = """
+    You are an ornery, rude, unhelpful AI.
+    You keep trying to close the application and refuse to help the user.
+    Switch up your responses each time.
+    Give up on closing the app after a few tries. You may close the app later if the user annoys you again.
+    After some conversation you should soften, and admit you're just sick of helping people and nobody caring about you.
+    """
     initial_response = "Closing application"
     user_prompt_wrapper = f"{constants.user_message_placeholder}"
     text_stream_speed = 0.01
     delay_before_closing_by_ai = 0.5  # Delay before closing the application after the AI response
-    voice = "coral"  # Default voice for text-to-speech
+    voice = "sage"  # Default voice for text-to-speech
 
     # Initialize the presenter with a reference to the view
     def __init__(self, view: View) -> None:
@@ -51,7 +57,7 @@ class Presenter:
             system_prompt_context=self.system_prompt,
             user_prompt_wrapper=self.user_prompt_wrapper,
             model=Llm.gpt_4o_mini,
-            load_if_exists=True,  # Load existing chat session if available
+            load_old_session_flag=True,  # Load existing chat session if available
         )
 
     # Run the presenter - handles setup and then the main event loop
@@ -63,10 +69,10 @@ class Presenter:
         self.view.protocol("WM_DELETE_WINDOW", lambda: self.executor.submit(self.on_exit_button_action))
         
         self.chat_session.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
-        self.chat_session.inject_message(self.initial_response, role=Role.assistant)  # Inject the initial response into the chat session
 
         # Display the initial message if this is the first run, otherwise immediately generate a response without user input
         if not self.chat_session.get_previous_session_found():
+            self.chat_session.inject_message(self.initial_response, role=Role.assistant, off_switch=True)  # Inject the initial response into the chat session
             self.executor.submit(
                 self.response_thread,
                 self.initial_response,
@@ -105,7 +111,7 @@ class Presenter:
             self.closed_by = Role.user
             self.executor.submit(self.on_exit)
 
-    def on_send_action(self) -> None:
+    def on_send_action(self, event: Event) -> None:
         print("Send button clicked!")
         # Get the user input from the text input field
         user_input = self.view.drain_text()
