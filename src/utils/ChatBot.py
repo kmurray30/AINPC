@@ -104,22 +104,20 @@ class ChatBot:
             print("DEBUG INFO: " + str(message_history))
         return response
 
-    def call_llm(self, message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):
+    def call_llm(self, message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):        
         if response_type is None:
             return self.call_chat_agent(message_history_for_llm)
-        
-        for _ in range(self.llm_formatting_retries):
-            response_raw = self.call_chat_agent(message_history_for_llm)
-            try:
-                response_obj = Utilities.extract_obj_from_str(response_raw, response_type, trim=True)
-                return response_obj
-            except Exception as e:
-                Logger.log(f"Response from LLM agent is not in the correct format for {response_type.__name__}", Level.WARNING)
-                Logger.log(f"Response: {response_raw}", Level.WARNING)
-                Logger.log(f"Retrying...", Level.WARNING)
-
-        raise ValueError(f"Failed to retrieve a valid response from the LLM agent after {self.llm_formatting_retries} retries.")
-
+        else:
+            for _ in range(self.llm_formatting_retries):
+                try:
+                    response_raw = self.call_chat_agent(message_history_for_llm)
+                    if response_raw.strip() == "":
+                        raise ValueError("Response is empty")
+                    # Extract the object from the response
+                    return Utilities.extract_obj_from_llm_response(response_raw, response_type)
+                except Exception as e:
+                    Logger.log(f"Error extracting object from LLM response: {e}", Level.ERROR)
+        return None
 
 def get_default_rules():
     return [

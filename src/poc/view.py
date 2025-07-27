@@ -53,9 +53,8 @@ class View(tk.Tk):
         self.input_text_window.delete(0, tk.END) # Clear the input field
         return user_prompt
 
-    def stream_text(self, text_widget: tk.Text, text: str, off_switch: bool, completion_event: Event, exit_event: Event, cancel_token: dict, speed=0.05, delay_before_closing=0):
+    def stream_text(self, text_widget: tk.Text, text: str, cancel_token: dict, speed=0.05, delay_before_closing=0):
         cancel_token["value"] = False  # Reset the cancel token for this thread, so it can only be turned on outside this thread
-        # off_switch = False # DEBUG
         spaces_for_delay = int(delay_before_closing // speed)
         text += " " * spaces_for_delay  # Add spaces to the end of the text for delay
         for c in text:
@@ -65,12 +64,10 @@ class View(tk.Tk):
             text_widget.insert(tk.END, c)
             text_widget.see(tk.END)
             time.sleep(speed)
-        if off_switch:
-            exit_event.set()
 
     def clear_output(self):
         self.output_text_window.delete("1.0", tk.END)
 
-    def display_chat_message(self, text: str, off_switch: bool, completion_event: Event, exit_event: Event, cancel_token: dict, speed=0.05, delay_before_closing=0) -> None:
-        self.stream_text(self.output_text_window, text, off_switch, completion_event, exit_event, cancel_token, speed=speed, delay_before_closing=delay_before_closing)
+    def display_chat_message(self, text: str, completion_event: Event, cancel_token: dict, speed=0.05, delay_before_closing=0) -> None:
+        self.stream_text(self.output_text_window, text, cancel_token, speed=speed, delay_before_closing=delay_before_closing)
         completion_event.set()

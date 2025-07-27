@@ -1,17 +1,13 @@
-
+from typing import Optional
 from .Constants import AgentName, Role
+from dataclasses import dataclass
 
+@dataclass
 class ChatMessage:
     role: Role
-    cot: str
-    content: str
-    off_switch: bool
-
-    def __init__(self, role: Role, cot: str = None, content: str = None, off_switch: bool = False):
-        self.role = role
-        self.cot = cot
-        self.content = content
-        self.off_switch = off_switch
+    cot: Optional[str]
+    content: Optional[str]
+    off_switch: Optional[bool]
 
 class ChatMessageAgnostic:
     agent: AgentName

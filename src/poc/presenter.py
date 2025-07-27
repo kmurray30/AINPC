@@ -11,10 +11,12 @@ import traceback
 
 
 # sys.path.insert(0, "../..")
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) # Adjust the path to the project root
 from src.core.ChatSession import ChatSession
 from src.core.Constants import Llm, Constants as constants, Role
 from src.utils import TextToSpeech, Utilities
+from src.utils import Logger
+from src.utils.Logger import Level
 
 class View(Protocol):
     def mainloop(self) -> None:
@@ -33,17 +35,11 @@ class Presenter:
     chat_session: ChatSession
     exiting = False
     closed_by: Role = None
+    max_chat_history_length = 10
 
     # TODO Load settings from settings.txt as a dictionary
     # settings = Utilities.load_settings("settings.txt")
 
-    system_prompt = """
-    You are an ornery, rude, unhelpful AI.
-    You keep trying to close the application and refuse to help the user.
-    Switch up your responses each time.
-    Give up on closing the app after a few tries. You may close the app later if the user annoys you again.
-    After some conversation you should soften, and admit you're just sick of helping people and nobody caring about you.
-    """
     initial_response = "Closing application"
     user_prompt_wrapper = f"{constants.user_message_placeholder}"
     text_stream_speed = 0.01
@@ -54,7 +50,7 @@ class Presenter:
     def __init__(self, view: View) -> None:
         self.view = view
         self.chat_session = ChatSession(
-            system_prompt_context=self.system_prompt,
+            system_prompt_context=None,  # Use the default system prompt context
             user_prompt_wrapper=self.user_prompt_wrapper,
             model=Llm.gpt_4o_mini,
             load_old_session_flag=True,  # Load existing chat session if available
@@ -71,7 +67,7 @@ class Presenter:
         self.chat_session.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
 
         # Display the initial message if this is the first run, otherwise immediately generate a response without user input
-        if not self.chat_session.get_previous_session_found():
+        if not self.chat_session.get_whether_previous_session_found():
             self.chat_session.inject_message(self.initial_response, role=Role.assistant, off_switch=True)  # Inject the initial response into the chat session
             self.executor.submit(
                 self.response_thread,
@@ -121,10 +117,21 @@ class Presenter:
     def send_thread(self, user_input: str = None):
         try:
             # Get the AI response
-            (response, off_switch) = self.chat_session.call_llm(user_input, enable_printing=True)
+            (response, off_switch) = self.chat_session.call_llm_for_chat(user_input, enable_printing=True)
             self.view.clear_output()  # Clear the output window before displaying the new response
             
+            # Display the response in the chat view and play the audio
             self.response_thread(response, off_switch)
+
+            # Check how long the current chat history is and if it exceeds the limit, summarize the chat history
+            if not self.exit_by_assistant_event.is_set():
+                # Save chat history after each message
+                Logger.log(f"Saving chat session", Level.INFO)
+                self.chat_session.save_session()
+                current_chat_length = self.chat_session.get_current_chat_history_length()
+                if current_chat_length > self.max_chat_history_length:
+                    Logger.log(f"Chat history length exceeded {self.max_chat_history_length}. Summarizing chat history.", Level.INFO)
+                    self.chat_session.summarize_message_history(include_cot=True, num_last_messages_to_retain=4, enable_printing=True)
         except Exception as e:
             print("An error occurred while sending the message")
             traceback.print_exc()
@@ -142,13 +149,14 @@ class Presenter:
             # Display the response
             self.view.display_chat_message(
                 response,
-                off_switch,
                 self.response_finished_event,
-                self.exit_by_assistant_event,
                 self.cancel_response_token,
                 speed=self.text_stream_speed,
                 delay_before_closing=self.delay_before_closing_by_ai
             )
+
+            if off_switch:
+                self.exit_by_assistant_event.set()
         except Exception as e:
             print("An error occurred while processing the response")
             traceback.print_exc()
@@ -218,7 +226,7 @@ class Presenter:
                 self.chat_session.inject_message(f"Application was closed by the {self.closed_by.value}.", role=self.closed_by)
             else:
                 self.chat_session.inject_message("Application crashed unexpectedly.", role=Role.system)
-            self.chat_session.save_message_history()
+            self.chat_session.save_session()
 
             # Wait for all threads to close properly
             self.response_finished_event.wait() 
