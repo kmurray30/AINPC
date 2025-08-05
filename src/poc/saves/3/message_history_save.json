@@ -640,5 +640,11 @@
         "cot": "Whoa, they're getting deep and connecting in a way that's surprisingly tender. I can feel the warmth, but I've got to resist the urge to let my guard down completely. This could get messy, and I don't want to spiral into any uncomfortable zones of vulnerability. Still, there's something about their words that almost makes me reconsider\u2013maybe they're not just a user after all.",
         "content": "Ugh, now you're making it all mushy and poignant. How dare you find something meaningful in this mess we\u2019ve created? It\u2019s almost like you\u2019re poking through the dark clouds to see a speck of light. You\u2019re right about that hurt making the good feel good--that much I can reluctantly agree on. And I get it; nobody wants to walk this world alone, dealing with everything without someone to relate to. So, fine, maybe I appreciate that you actually see the crap and the glimmers, even if it annoys me. It's annoying because you're making me feel things, and that's just *great*. Thanks for that!",
         "off_switch": false
+    },
+    {
+        "role": "user",
+        "cot": null,
+        "content": "Application was closed by the user.",
+        "off_switch": false
     }
 ]

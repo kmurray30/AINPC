@@ -23,7 +23,7 @@ class View(tk.Tk):
         super().__init__()
 
         # Root config
-        self.title("Companion-1_Decommissioned")
+        self.title("Companion-1 [Decommissioned]")
 
         # Create chat frame
         self.output_text_window = tk.Text(self, height=10, width=50)

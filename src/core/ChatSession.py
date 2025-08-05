@@ -32,7 +32,7 @@ class ChatSession:
     chat_bot: ChatBot
 
     save_path_prefix: str = "src/poc/saves/"
-    save_name: str = "3"
+    save_name: str = "4"
     chat_history_save_path: str = Utilities.get_path_from_project_root(f"{save_path_prefix}{save_name}/message_history_save.json")
     metadata_save_path: str = Utilities.get_path_from_project_root(f"{save_path_prefix}{save_name}/metadata_save.json")
 
