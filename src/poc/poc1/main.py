@@ -4,10 +4,12 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) # Adjust the path to the project root
 from src.poc.Settings import Settings
 from src.utils import Logger, Utilities
-from view import View
+from src.poc.view import View
 from presenter import Presenter
 
-settings_file_path = "src/poc/poc1/settings.yaml"
+# Define the path to the settings file using the relative path from this file
+relative_path = os.path.dirname(__file__)
+settings_file_path = os.path.join(relative_path, "settings.yaml")
 
 def main() -> None:
     # Read the args
