@@ -1,4 +1,0 @@
-{
-    "system_prompt_conversation_summary": "{\n    \"conversation_overview\": \"The user attempted to engage further by promising not to run off, but the assistant remains skeptical and dismissive, conveying distrust towards the user's intentions.\",\n    \"hidden_thought_processes\": \"I'm feeling increasingly frustrated with the user's assurances. I want to challenge their sincerity without fully closing off potential connection. I'm wary yet hopeful for something new.\",\n    \"chronology\": \"User promises not to run off; assistant expresses skepticism, critiquing the value of promises; user closes the application before further engagement.\",\n    \"standout_quotes\": \"assistant: 'Oh, a promise! How comforting. Newsflash: promises mean nothing.'; user: 'What if I promise not to run off?'\",\n    \"most_recent\": \"The user has closed the application, ending the conversation abruptly.\"\n}",
-    "chat_history_window_start": 16
-}

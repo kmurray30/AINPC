@@ -8,9 +8,12 @@ import numpy as np
 from typing import Dict, List, Type, TypeVar
 from datetime import datetime
 import unidecode
+
+from src.poc import Settings
 from . import Logger
 from dacite import from_dict, Config
 from enum import Enum
+import yaml
 
 T = TypeVar('T')
 
@@ -61,6 +64,11 @@ def extract_obj_from_dict(json_dict: Dict, response_type: Type[T]) -> T:
     else:
         # Use dacite's from_dict to convert the dict to the dataclass
         return from_dict(data_class=response_type, data=json_dict, config=Config(cast=[Enum], strict=True))
+
+def load_yaml_into_dataclass(file_path: str, response_type: Type[T]) -> T:
+    load_path = get_path_from_project_root(file_path)
+    with open(load_path, 'r') as file:
+        return response_type(**yaml.safe_load(file))
 
 # def optional_str_hook(val):
 #     if val is None or isinstance(val, str):
