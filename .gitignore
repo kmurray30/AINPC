@@ -8,3 +8,5 @@ TODO.txt
 generated/
 src/test/UnitTests/reports/*
 src/test/EvalTests/reports/*
+src/poc/*/saves/
+*.app
