@@ -6,7 +6,7 @@ sys.path.insert(0, "../..")
 from src.test.TestClasses import Proposition, Term, TestCase, TestCaseSuite
 from src.test.UnitTests import UnitTestUtil
 from src.test.TestReports import TestReport
-from src.utils import Utilities
+from src.utils import io_utils
 from src.test.TestHelper import TestHelper
 
 # Unit Test: Test the efficacy of Pat in the initial phase of the game
@@ -14,8 +14,8 @@ convos_per_user_prompt = 1
 eval_iterations_per_eval = 1
 convo_length = 1
 
-assistant_rules = Utilities.load_rules_from_file("pat_prompts.json", "Ruleset 1")
-mock_user_base_rules = Utilities.load_rules_from_file("mock_user_prompts.json", "Beginning state")
+assistant_rules = io_utils.load_rules_from_file("pat_prompts.json", "Ruleset 1")
+mock_user_base_rules = io_utils.load_rules_from_file("mock_user_prompts.json", "Beginning state")
 
 # test_suite: TestCaseSuite = UnitTestUtil.load_goals_and_conditions_from_file("UnitTests/TestConditions/TestSuite1.json")
 test_suite = TestCaseSuite(

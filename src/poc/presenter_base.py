@@ -1,18 +1,21 @@
+import os
 import random
-from typing import Protocol
+from typing import List, Protocol
 import time
 import traceback
 from threading import Event
 import simpleaudio as sa
 from concurrent import futures
 import traceback
+from pathlib import Path
 
-from src.core.ChatSession import ChatSession
-from src.core.Constants import Llm, Constants as constants, Role
-from src.utils import TextToSpeech, Utilities
-from src.utils import Logger
-from src.utils.Logger import Level
-from src.poc.Settings import Settings
+from src.core.ChatMessage import ChatMessage
+from src.core.NPC import NPC
+from src.core.Constants import Constants as constants, Role
+from src.poc import proj_paths, proj_settings
+from src.utils import TextToSpeech, io_utils
+from src.core.Schemas import GameSettings
+from src.poc.proj_paths import SavePaths
 
 class View(Protocol):
     def mainloop(self) -> None:
@@ -28,42 +31,42 @@ class PresenterBase:
     audio_finished_event = Event()
     exit_by_assistant_event = Event()
     executor = futures.ThreadPoolExecutor()
-    chat_session: ChatSession
+    npc: NPC
     exiting = False
     closed_by: Role = None
-    max_chat_history_length = 10
+    max_convo_mem_length: int
 
-    settings: Settings
+    message_history: List[ChatMessage] = []
+    chat_log_path: str
+    npc_save_state_path: str
+
+    game_settings: GameSettings
+    save_paths: SavePaths
 
     # TODO Load settings from settings.txt as a dictionary
     # settings = Utilities.load_settings("settings.txt")
 
-    initial_response = "Closing application"
     user_prompt_wrapper = f"{constants.user_message_placeholder}"
     delay_before_closing_by_ai = 0.5  # Delay before closing the application after the AI response
     voice = "sage"  # Default voice for text-to-speech
 
-    save_path_prefix: str = "src/poc/poc1/saves"
+    save_path_prefix: str
 
     # Initialize the presenter with a reference to the view
-    def __init__(self, view: View, settings: Settings) -> None:
+    def __init__(self, view: View, save_path_prefix: str) -> None:
         self.view = view
+        self.game_settings = proj_settings.get_settings().game_settings
+        self.save_paths = proj_paths.get_paths()
+        self.max_convo_mem_length = self.game_settings.max_convo_mem_length
 
-        # Load settings from the Settings dataclass
-        self.settings = settings
+        # Check if the save path exists, if not create it and flag that this is a new game
+        if not os.path.exists(self.save_paths.save_root):
+            os.makedirs(self.save_paths.save_root)
+            self.is_new_game = True
+        else:
+            self.is_new_game = False
 
-        chat_history_save_path: str = Utilities.get_path_from_project_root(f"{self.save_path_prefix}/{settings.save_name}/message_history_save.json")
-        metadata_save_path: str = Utilities.get_path_from_project_root(f"{self.save_path_prefix}/{settings.save_name}/metadata_save.json")
-
-        self.chat_session = ChatSession(
-            system_prompt_context=settings.system_prompt_context,
-            chat_history_save_path=chat_history_save_path,
-            metadata_save_path=metadata_save_path,
-            summarization_prompt=settings.summarization_prompt,
-            user_prompt_wrapper=self.user_prompt_wrapper,
-            model=Llm.gpt_4o_mini,
-            load_old_session_flag=True,  # Load existing chat session if available
-        )
+        self.npc = NPC(is_new_game=self.is_new_game)
 
     # Run the presenter - handles setup and then the main event loop
     def run(self) -> None:
@@ -73,14 +76,15 @@ class PresenterBase:
         # Bind the cleanup function to the window close event
         self.view.protocol("WM_DELETE_WINDOW", lambda: self.executor.submit(self.on_exit_button_action))
         
-        self.chat_session.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
+        self.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
 
         # Display the initial message if this is the first run, otherwise immediately generate a response without user input
-        if not self.chat_session.get_whether_previous_session_found():
-            self.chat_session.inject_message(self.initial_response, role=Role.assistant, off_switch=True)  # Inject the initial response into the chat session
+        initial_response = self.game_settings.initial_response
+        if self.is_new_game and initial_response:
+            self.npc.inject_message(initial_response, role=Role.assistant, off_switch=True)  # Inject the initial response into the chat session
             self.executor.submit(
                 self.response_thread,
-                self.initial_response,
+                initial_response,
                 off_switch=True
             )
         else:
@@ -125,22 +129,33 @@ class PresenterBase:
 
     def send_thread(self, user_input: str = None):
         try:
+            # Append the user input to the chat logs
+            if user_input is not None:
+                self.append_chat_logs(
+                    role=Role.user,
+                    content=user_input
+                )
+
             # Get the AI response
-            (response, off_switch) = self.chat_session.call_llm_for_chat(user_input, enable_printing=True)
+            chat_response = self.npc.call_llm_for_chat(user_input, enable_printing=True)
+
+            # Append the response to the chat logs
+            self.append_chat_logs(
+                role=Role.assistant,
+                content=chat_response.response,
+                cot=chat_response.hidden_thought_process,
+                off_switch=chat_response.off_switch
+            )
+
             self.view.clear_output()  # Clear the output window before displaying the new response
             
             # Display the response in the chat view and play the audio
-            self.response_thread(response, off_switch)
+            self.response_thread(chat_response.response, chat_response.off_switch)
 
             # Check how long the current chat history is and if it exceeds the limit, summarize the chat history
             if not self.exit_by_assistant_event.is_set():
-                # Save chat history after each message
-                Logger.log(f"Saving chat session", Level.INFO)
-                self.chat_session.save_session()
-                current_chat_length = self.chat_session.get_current_chat_history_length()
-                if current_chat_length > self.max_chat_history_length:
-                    Logger.log(f"Chat history length exceeded {self.max_chat_history_length}. Summarizing chat history.", Level.INFO)
-                    self.chat_session.summarize_message_history(include_cot=True, num_last_messages_to_retain=4, enable_printing=True)
+                # Run any NPC maintenance tasks
+                self.npc.maintain()
         except Exception as e:
             print("An error occurred while sending the message")
             traceback.print_exc()
@@ -160,11 +175,11 @@ class PresenterBase:
                 response,
                 self.response_finished_event,
                 self.cancel_response_token,
-                speed=self.settings.text_stream_speed,
+                speed=self.game_settings.text_stream_speed,
                 delay_before_closing=self.delay_before_closing_by_ai
             )
 
-            if off_switch and self.settings.closing_enabled:
+            if off_switch and self.game_settings.closing_enabled:
                 self.exit_by_assistant_event.set()
         except Exception as e:
             print("An error occurred while processing the response")
@@ -182,11 +197,11 @@ class PresenterBase:
             raise e
 
     def generate_audio(self, text: str, voice: str = "fable") -> str:
-        audio_file_path = Utilities.get_path_from_project_root(f"generated/poc-voice-temp_{random.randint(1000, 9999)}.wav")
+        audio_file_path: Path = self.save_paths.audio_dir / f"npc-voice-temp_{random.randint(1000, 9999)}.wav"
         TextToSpeech.generate_speech_file(text, audio_file_path, voice=voice)
         return audio_file_path
 
-    def play_audio(self, file_path, cancel_token, audio_finished_event, delay=0):
+    def play_audio(self, file_path: Path, cancel_token, audio_finished_event, delay=0):
         try:
             if (file_path == None):
                 raise ValueError("The file path provided is None")
@@ -195,11 +210,11 @@ class PresenterBase:
 
             # Load the audio file from the provided path
             print(f"Loading audio file from: {file_path}")
-            wave_obj = sa.WaveObject.from_wave_file(file_path)
+            wave_obj = sa.WaveObject.from_wave_file(str(file_path))
             print("Loaded audio file")
             
             # Play the audio
-            file_name = file_path.split("/")[-1]
+            file_name = file_path.name
             print(f"Playing audio {file_name}")
             play_obj = wave_obj.play()
             
@@ -218,6 +233,32 @@ class PresenterBase:
             print(f"An error occurred while playing the audio file: {file_path}")
             traceback.print_exc()
             raise(e)
+        
+    def inject_message(self, message: str, role: Role = Role.user, cot: str = None, off_switch: bool = False) -> None:
+        try:
+            self.npc.inject_message(message, role=role, cot=cot, off_switch=off_switch)
+            self.append_chat_logs(role=role, content=message, cot=cot, off_switch=off_switch)
+        except Exception as e:
+            print("An error occurred while injecting the message")
+            traceback.print_exc()
+            raise e
+        
+    def append_chat_logs(self, role: Role, content: str, cot: str = None, off_switch: bool = False) -> None:
+        try:
+            message = ChatMessage(
+                role=role,
+                content=content,
+                cot=cot,
+                off_switch=off_switch
+            )
+            
+            # Append to the chat_log.yaml file
+            io_utils.append_to_yaml_file(message, self.save_paths.chat_log)
+
+        except Exception as e:
+            print("An error occurred while appending the chat logs")
+            traceback.print_exc()
+            raise e
 
     def on_exit(self) -> None:
         try:
@@ -232,10 +273,10 @@ class PresenterBase:
 
             # Add the closing message to the chat session and save the message history
             if self.closed_by is not None:
-                self.chat_session.inject_message(f"Application was closed by the {self.closed_by.value}.", role=self.closed_by)
+                self.inject_message(f"Application was closed by the {self.closed_by.value}.", role=self.closed_by)
             else:
-                self.chat_session.inject_message("Application crashed unexpectedly.", role=Role.system)
-            self.chat_session.save_session()
+                self.inject_message("Application crashed unexpectedly.", role=Role.system)
+            self.npc.save_state()
 
             # Wait for all threads to close properly
             self.response_finished_event.wait() 
@@ -247,4 +288,3 @@ class PresenterBase:
         except Exception as e:
             print("An error occurred while exiting the application")
             traceback.print_exc()
-            raise e

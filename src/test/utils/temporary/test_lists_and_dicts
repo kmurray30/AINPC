@@ -1,0 +1,8 @@
+field1: value2
+field2:
+  - 1
+  - 2
+  - 3
+field3:
+  key1: value1
+  key2: value2

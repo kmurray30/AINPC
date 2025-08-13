@@ -1,6 +1,6 @@
 
 from typing import Dict, List
-from src.utils import Utilities, Logger
+from src.utils import Utilities, Logger, io_utils
 from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level
 from .Constants import Role, AgentName
@@ -26,7 +26,7 @@ class Conversation:
         self.agents = {}
 
     def add_agent(self, name: AgentName, rules_file_name: str, ruleset_name: str) -> Agent:
-        agent_rules = Utilities.load_rules_from_file(rules_file_name, ruleset_name)
+        agent_rules = io_utils.load_rules_from_file(rules_file_name, ruleset_name)
 
         # Create the agent
         self.add_agent(name, agent_rules)

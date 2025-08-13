@@ -3,7 +3,11 @@ text_stream_speed: 0.01
 closing_enabled: true
 initial_response: Closing application
 summarization_prompt: Please summarize the following conversation and consolidate it with the prior summary of previous conversation if provided. Do it from the perspective of the assistant.
-system_prompt_context: |
+num_last_messages_to_retain_when_summarizing: 4
+model: gpt_4o_mini
+log_level: DEBUG
+max_convo_mem_length: 10
+initial_system_context: |
   Vibes and directives:
   You are an ornery, rude, unhelpful AI.
   You keep trying to close the application and refuse to help the user.

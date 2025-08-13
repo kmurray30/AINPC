@@ -1,15 +1,12 @@
 import sys
 import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) # Adjust the path to the project root
-from src.poc.Settings import Settings
-from src.utils import Logger, Utilities
+from src.utils import Logger
 from src.poc.view import View
 from presenter import Presenter
-
-# Define the path to the settings file using the relative path from this file
-relative_path = os.path.dirname(__file__)
-settings_file_path = os.path.join(relative_path, "settings.yaml")
+from src.poc import bootstrap
 
 def main() -> None:
     # Read the args
@@ -22,15 +19,14 @@ def main() -> None:
         Logger.log("No save name provided. Please provide a save name as an argument.")
         return
     
-    # Load the settings file
-    settings = Utilities.load_yaml_into_dataclass(settings_file_path, Settings)
-    settings.save_name = save_name  # Set the save name from the argument
-    settings.validate()  # Validate the settings are all present
+    # Init the settings and paths singletons
+    bootstrap.init_app(save_name=save_name, project_path=Path(__file__).resolve().parent)
 
-    view = View(settings)
-    presenter = Presenter(view, settings)
+    view = View()
+    presenter = Presenter(view)
     presenter.run()
 
 # Take in one argument for the save name
 if __name__ == "__main__":
+    print("Starting the program...")
     main()

@@ -5,7 +5,7 @@ from typing import List
 sys.path.insert(0, "../..")
 from src.core.Constants import Llm
 from src.utils.ChatBot import ChatBot
-from src.utils import Utilities
+from src.utils import parsing_utils
 
 # Create the response object class Response:
 class Response:
@@ -192,7 +192,7 @@ while True:
     messages.append({"role": "user", "content": player_message})
     messages.append({"role": "assistant", "content": response_raw})
 
-    response_obj: Response = Utilities.extract_obj_from_json_str(response_raw, Response, trim=True)
+    response_obj: Response = parsing_utils.extract_obj_from_json_str(response_raw, Response, trim=True)
     response_message = response_obj.response
     print("\nRaj: " + response_message + "\n")
 

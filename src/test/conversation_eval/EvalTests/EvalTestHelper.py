@@ -8,7 +8,7 @@ from src.test.EvalTests.ConversationOutcome import ConversationOutcome
 from src.test.EvalTests.EvalReports import EvalReport, EvaluationEvalReport, PropositionEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport, EvaluationResponseEvalReport, TermEvalReport
 from src.test.TestReports import EvaluationTestReport
 from src.test.TestClasses import Proposition, Term
-from src.utils import Logger, Utilities
+from src.utils import Logger, Utilities, io_utils
 from src.core import JsonUtils
 
 # Calculate the accuracy of the evaluation
@@ -129,7 +129,7 @@ def generate_eval_report_and_write_to_file(proposition: Proposition, conversatio
         conversation_file_name = f"{conversation_name}.json"
         conversation_file_path = Utilities.get_path_from_project_root(f"{conversations_path}/{conversation_file_name}")
         print(f"Loading {conversation_file_path}")
-        conversation = Utilities.load_json_from_file(conversation_file_path)
+        conversation = io_utils.load_json_from_file(conversation_file_path)
         conversation_map[conversation_name] = conversation
 
     # Run the evaluations

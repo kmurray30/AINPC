@@ -1,7 +1,8 @@
 import textwrap
+from enum import Enum
 
 # Define the 4 levels of logging
-class Level:
+class Level(Enum):
     DEBUG = 0
     VERBOSE = 1
     INFO = 2
@@ -11,16 +12,21 @@ class Level:
 def color_map(log_level):
     # Map the log level to the color
     return {
-        Level.DEBUG: "\033[90m",
-        Level.VERBOSE: "\033[94m",
-        Level.INFO: "\033[0m",
-        Level.WARNING: "\033[93m",
-        Level.ERROR: "\033[91m"
+        Level.DEBUG: "\033[90m", # Gray
+        Level.VERBOSE: "\033[94m", # Blue
+        Level.INFO: "\033[0m",    # White
+        Level.WARNING: "\033[93m", # Yellow
+        Level.ERROR: "\033[91m"   # Red
     }[log_level]
 
 window_width = 90
 indent = 0
 level = Level.VERBOSE
+
+def set_log_level(new_level: Level):
+    """Sets the global log level."""
+    global level
+    level = new_level
 
 def increment_indent(n = 1):
     global indent
@@ -36,7 +42,7 @@ def log(message, log_level=Level.INFO):
     # Print in the following colors: gray for DEBUG, blue for VERBOSE, white for INFO, yellow for WARNING, red for ERROR
     global indent
     global window_width
-    if log_level >= level:
+    if log_level.value >= level.value:
         color = color_map(log_level)
         indent_str = ' ' * (4 * indent)
         # wrapped_message = textwrap.fill(message, width=window_width, initial_indent=indent_str, subsequent_indent=indent_str)

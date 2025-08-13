@@ -1,12 +1,12 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.utils import ChatBot, Utilities
+from src.utils import ChatBot, io_utils
 from src.utils import ChatBot
 
 message_history = []
 
-rules = Utilities.load_rules_from_file("pat_prompts.json", "Ruleset 1", as_one_string = False)
+rules = io_utils.load_rules_from_file("pat_prompts.json", "Ruleset 1", as_one_string = False)
 
 # Create the loop in the terminal
 prompt = ""

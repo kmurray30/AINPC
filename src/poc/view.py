@@ -3,7 +3,8 @@ import tkinter as tk
 from typing import Protocol, Callable
 from threading import Event
 
-from src.poc.Settings import Settings
+from src.core.Schemas import GameSettings
+from src.poc import proj_settings
 
 class Presenter(Protocol):
     ...
@@ -18,18 +19,18 @@ class View(tk.Tk):
     # Presenter functions needed for toggling the send button
     send_function: Callable[[], None]
 
-    settings: Settings
+    settings: GameSettings
 
     # Initialize the view
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self) -> None:
 
         # Initialize the parent class
         super().__init__()
 
-        self.settings = settings
+        self.settings = proj_settings.get_settings().game_settings
 
         # Root config
-        self.title(settings.game_title)
+        self.title(self.settings.game_title)
 
         # Create chat frame
         self.output_text_window = tk.Text(self, height=10, width=50)

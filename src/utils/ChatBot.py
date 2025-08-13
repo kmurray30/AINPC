@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import ollama
 
-from src.utils import Logger, Utilities
+from src.utils import Logger, llm_utils
 from src.utils.Logger import Level
 from src.core.Constants import embedding_models, Llm, Platform
 
@@ -21,7 +21,7 @@ T = TypeVar('T')
 
 class ChatBot:
 
-    current_chat_model = Llm.gpt_4o_mini
+    default_chat_model: Llm = Llm.gpt_4o_mini
     llm_formatting_retries = 3
 
     # Load the OpenAI API key from the .env file and initialize the OpenAI client
@@ -29,48 +29,44 @@ class ChatBot:
     openai.api_key = os.getenv("OPENAI_API_KEY")
     chatGptClient = OpenAI()
 
-    def __init__(self, model=None):
-        if model:
-            self.current_chat_model = model
+    def set_chat_model(model: Llm):
+        ChatBot.default_chat_model = model
 
-    def set_chat_model(self, model):
-        self.current_chat_model = model
-
-    def get_platform_of_model(self, model):
+    def get_platform_of_model(model: Llm):
         for platform, models in embedding_models.items():
             if model in models:
                 return platform
         return None
 
     # Function to call the OpenAI API
-    def call_chat_agent(self, chatGptMessages):
-        platform = self.get_platform_of_model(self.current_chat_model)
+    def call_chat_agent(chatGptMessages):
+        platform = ChatBot.get_platform_of_model(ChatBot.default_chat_model)
         if platform == Platform.open_ai:
-            completion = self.chatGptClient.chat.completions.create(
-                model=self.current_chat_model.value,
+            completion = ChatBot.chatGptClient.chat.completions.create(
+                model=ChatBot.default_chat_model.value,
                 messages=chatGptMessages
             )
             response = completion.choices[0].message.content
             return response
         elif platform == Platform.ollama:
-            response = ollama.chat(messages = chatGptMessages, model=self.current_chat_model)
+            response = ollama.chat(messages = chatGptMessages, model=ChatBot.default_chat_model)
             return response
         else:
-            raise Exception(f"ChatGPT model {self.current_chat_model} not supported")
+            raise Exception(f"ChatGPT model {ChatBot.default_chat_model} not supported")
 
-    def call_chat_agent_and_update_message_history(self, prompt, chat_messages):
+    def call_chat_agent_and_update_message_history(prompt, chat_messages):
         chat_messages.append({"role": "user", "content": prompt})
-        response = self.call_chat_agent(chat_messages)
+        response = ChatBot.call_chat_agent(chat_messages)
         chat_messages.append({"role": "assistant", "content": response})
         return response
 
-    def call_chat_agent_with_custom_context(self, prompt, custom_system_context = "You are a helpful assistant."):
+    def call_chat_agent_with_custom_context(prompt, custom_system_context = "You are a helpful assistant."):
         chatGptMessages = [
             {"role": "system", "content": custom_system_context}
         ]
-        return self.call_chat_agent_and_update_message_history(prompt, chatGptMessages)
+        return ChatBot.call_chat_agent_and_update_message_history(prompt, chatGptMessages)
 
-    def call_chat_agent_with_context(self, prompt: str, message_history: List[Dict[str, str]], rules: List[str], debug: bool = False, persist = True):
+    def call_chat_agent_with_context(prompt: str, message_history: List[Dict[str, str]], rules: List[str], debug: bool = False, persist = True):
         # Create the full context for the ChatGPT - this includes the rules, message history, and latest user prompt
         full_context_for_chatagent = [
             {"role": "system", "content": "".join(rules)}
@@ -88,7 +84,7 @@ class ChatBot:
         # full_context_for_chatagent.append({"role": "user", "content": prompt})
 
         # Call ChatGPT with the full context
-        response = self.call_chat_agent(full_context_for_chatagent)
+        response = ChatBot.call_chat_agent(full_context_for_chatagent)
 
         # print("***DEBUG***")
         # for message in full_context_for_chatagent:
@@ -104,20 +100,23 @@ class ChatBot:
             print("DEBUG INFO: " + str(message_history))
         return response
 
-    def call_llm(self, message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):        
+    def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):        
         if response_type is None:
-            return self.call_chat_agent(message_history_for_llm)
+            return ChatBot.call_chat_agent(message_history_for_llm)
         else:
-            for _ in range(self.llm_formatting_retries):
+            exception = None
+            for _ in range(ChatBot.llm_formatting_retries):
                 try:
-                    response_raw = self.call_chat_agent(message_history_for_llm)
+                    response_raw = ChatBot.call_chat_agent(message_history_for_llm)
+                    Logger.log(f"Raw response from LLM: {response_raw}", Level.DEBUG)
                     if response_raw.strip() == "":
                         raise ValueError("Response is empty")
                     # Extract the object from the response
-                    return Utilities.extract_obj_from_llm_response(response_raw, response_type)
+                    return llm_utils.extract_obj_from_llm_response(response_raw, response_type)
                 except Exception as e:
-                    Logger.log(f"Error extracting object from LLM response: {e}", Level.ERROR)
-        return None
+                    Logger.log(f"Error extracting object from LLM response {response_raw}:\n{e}", Level.ERROR)
+                    exception = e
+            raise(exception)
 
 def get_default_rules():
     return [

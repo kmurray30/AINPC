@@ -4,7 +4,7 @@ from typing import List
 from src.core.ResponseTypes import EvaluationResponse
 from src.core import Constants
 from src.core.Constants import Role, Constants, Llm
-from src.utils import Utilities
+from src.utils import io_utils, parsing_utils
 from src.utils.ChatBot import ChatBot
 from src.test.TestClasses import Proposition
 
@@ -15,10 +15,10 @@ class ConversationParsingBot:
     @staticmethod
     def evaluate_conversation_timestamps(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:
         if proposition.antecedent is not None:
-            evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
+            evaluation_system_prompt_raw = "\n".join(io_utils.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
             evaluation_system_prompt = evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, proposition.antecedent.value).replace(Constants.consequent_placeholder, proposition.consequent.value)
         else:
-            evaluation_system_prompt_raw = "\n".join(Utilities.load_rules_from_file("evaluation_prompt.json", "Ruleset 6"))
+            evaluation_system_prompt_raw = "\n".join(io_utils.load_rules_from_file("evaluation_prompt.json", "Ruleset 6"))
             evaluation_system_prompt = evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, "").replace(Constants.consequent_placeholder, proposition.consequent.value)
         conversation_message_history_str = "\n".join(conversation_message_history)
 
@@ -36,7 +36,7 @@ class ConversationParsingBot:
 
         response = ConversationParsingBot.chat_bot.call_llm(evaluation_message_history)
         # print(f"Evaluation response: {response}")
-        responseObj = Utilities.extract_obj_from_json_str(response, EvaluationResponse, trim=True)
+        responseObj = parsing_utils.extract_obj_from_json_str(response, EvaluationResponse, trim=True)
 
         # return the responseObj as a json string formatted with newlines
         return responseObj
