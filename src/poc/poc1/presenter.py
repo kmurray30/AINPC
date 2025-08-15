@@ -96,6 +96,7 @@ class Presenter:
         initial_response = self.npc.get_initial_response()
         if self.is_new_game and initial_response:
             self.npc.inject_message(initial_response, role=Role.assistant, off_switch=True)  # Inject the initial response into the chat session
+            self.append_chat_logs(role=Role.assistant, content=initial_response, off_switch=True)
             self.executor.submit(
                 self.response_thread,
                 initial_response,

@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 from typing import List, Protocol
 import time
 import traceback
@@ -18,7 +19,15 @@ from src.core.Schemas import GameSettings
 from src.poc.proj_paths import SavePaths
 
 class View(Protocol):
+    def create_ui(self, presenter: "Presenter") -> None:
+        ...
     def mainloop(self) -> None:
+        ...
+    def drain_text(self) -> str:
+        ...
+    def clear_output(self) -> None:
+        ...
+    def display_chat_message(self, text: str, completion_event: Event, cancel_token: dict, speed=0.05, delay_before_closing=0) -> None:
         ...
 
 class Presenter:
@@ -40,7 +49,7 @@ class Presenter:
     chat_log_path: str
 
     game_settings: GameSettings
-    save_paths: SavePaths
+    project_paths: SavePaths
 
     # TODO Load settings from settings.txt as a dictionary
     # settings = Utilities.load_settings("settings.txt")
@@ -49,23 +58,29 @@ class Presenter:
     delay_before_closing_by_ai = 0.5  # Delay before closing the application after the AI response
     voice = "sage"  # Default voice for text-to-speech
 
-    save_path_prefix: str
-
     # Initialize the presenter with a reference to the view
-    def __init__(self, view: View, save_path_prefix: str) -> None:
+    def __init__(self, view: View, force_new_game: bool = False) -> None:
         self.view = view
         self.game_settings = proj_settings.get_settings().game_settings
-        self.save_paths = proj_paths.get_paths()
+        self.project_paths = proj_paths.get_paths()
         self.max_convo_mem_length = self.game_settings.max_convo_mem_length
 
         # Check if the NPC save path exists, if not create it and flag that this is a new game
-        if not os.path.exists(self.save_paths.npc_save):
-            os.makedirs(self.save_paths.npc_save, exist_ok=True)
+        npc_names = self.project_paths.get_npc_names
+        if len(npc_names) != 1:
+            raise ValueError("There must be exactly one npc in the save directory for this game.")
+
+        if force_new_game or not os.path.exists(self.project_paths.save_root):
+            if os.path.exists(self.project_paths.save_root):
+                shutil.rmtree(self.project_paths.save_root)
+            os.makedirs(self.project_paths.save_root, exist_ok=True)
+            for npc_name in npc_names:
+                os.makedirs(self.project_paths.npc_save(npc_name), exist_ok=True)
             self.is_new_game = True
         else:
             self.is_new_game = False
 
-        self.npc = NPC(is_new_game=self.is_new_game)
+        self.npc = NPC(is_new_game=self.is_new_game, npc_name=npc_names[0])
 
     # Run the presenter - handles setup and then the main event loop
     def run(self) -> None:
@@ -197,7 +212,7 @@ class Presenter:
             raise e
 
     def generate_audio(self, text: str, voice: str = "fable") -> str:
-        audio_file_path: Path = self.save_paths.audio_dir / f"npc-voice-temp_{random.randint(1000, 9999)}.wav"
+        audio_file_path: Path = self.project_paths.audio_dir(self.npc.npc_name) / f"npc-voice-temp.wav"
         TextToSpeech.generate_speech_file(text, audio_file_path, voice=voice)
         return audio_file_path
 
@@ -253,7 +268,7 @@ class Presenter:
             )
             
             # Append to the chat_log.yaml file
-            io_utils.append_to_yaml_file(message, self.save_paths.chat_log)
+            io_utils.append_to_yaml_file(message, self.project_paths.chat_log(self.npc.npc_name))
 
         except Exception as e:
             print("An error occurred while appending the chat logs")
