@@ -117,7 +117,7 @@ class ConversationMemory:
         user_message_content += "Instructions:\n" + instructions + "\n\n"
         # Second, add the previous conversation summary if it exists
         if self.conversation_summary:
-            user_message_content += "Previous Conversation Summary:\n" + self.conversation_summary + "\n\n"
+            user_message_content += "Previous Conversation Summary:\n" + str(self.conversation_summary) + "\n\n"
         # Third add the chat history as a string
         chat_history_str = self.get_chat_memory_as_string(include_cot)
         user_message_content += "Chat History:\n" + chat_history_str + "\n\n\n"

@@ -7,7 +7,8 @@ from src.core.Schemas import GameSettings
 from src.poc import proj_settings
 
 class Presenter(Protocol):
-    ...
+    def on_send_action(self, event: Event) -> None:
+        ...
 
 # Make View a subclass of Tkinter's Tk class
 class View(tk.Tk):

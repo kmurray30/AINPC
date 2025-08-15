@@ -1,16 +1,26 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 from pathlib import Path
 
 @dataclass (frozen=True)
 class SavePaths:
     project_path: Path
     save_name: str
-    npc_name: str
 
     @property
     def game_settings(self) -> Path:
         return self.project_path / "game_settings.yaml"
+
+    @property
+    def templates_root(self) -> Path:
+        return self.project_path / "templates"
+
+    @property
+    def npc_templates_root(self) -> Path:
+        return self.templates_root / "npcs"
+
+    def npc_template(self, npc_name: str) -> Path:
+        return self.npc_templates_root / npc_name / "template.yaml"
 
     @property
     def save_root(self) -> Path:
@@ -18,33 +28,33 @@ class SavePaths:
 
     @property
     def npc_save_root(self) -> Path:
-        return self.save_root / "npcs" / self.npc_name
+        return self.save_root / "npcs"
+
+    def npc_save(self, npc_name: str) -> Path:
+        return self.npc_save_root / npc_name
+
+    def audio_dir(self, npc_name: str) -> Path:
+        return self.npc_save(npc_name) / "audio"
+
+    def npc_save_state(self, npc_name: str) -> Path:
+        return self.npc_save(npc_name) / "npc_save_state.yaml"
+
+    def chat_log(self, npc_name: str) -> Path:
+        return self.npc_save(npc_name) / "chat_log.yaml"
 
     @property
-    def audio_dir(self) -> Path:
-        return self.npc_save_root / "audio"
-
-    @property
-    def npc_save_state(self) -> Path:
-        return self.npc_save_root / "npc_save_state.yaml"
-
-    @property
-    def chat_log(self) -> Path:
-        return self.npc_save_root / "chat_log.yaml"
-
-    @property
-    def npc_template(self) -> Path:
-        return self.project_path / "npcs" / self.npc_name / "template.yaml"
+    def get_npc_names(self) -> List[str]:
+        return [path.name for path in self.npc_templates_root.iterdir() if path.is_dir()]
 
 # Singleton instance
 _paths: Optional[SavePaths] = None
 _frozen: bool = False
 
-def set_paths(project_path: Path, save_name: str, npc_name: str) -> None:
+def set_paths(project_path: Path, save_name: str) -> None:
     global _paths, _frozen
     if _frozen:
         raise RuntimeError("Paths have already been initialized and cannot be modified.")
-    _paths = SavePaths(project_path=project_path, save_name=save_name, npc_name=npc_name)
+    _paths = SavePaths(project_path=project_path, save_name=save_name)
     _frozen = True
 
 def get_paths() -> SavePaths:

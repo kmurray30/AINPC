@@ -15,6 +15,10 @@ class ChatSummary:
     standout_quotes: str = field(metadata={"desc": "A short list of evocative quotes from the conversation and who spoke them, as '<speaker>: <quote>'. Keep it to 1-4 items max."})
     most_recent: str = field(metadata={"desc": "The most recent thing happening in the conversation/interaction. Keep it concise."})
 
+    # to string override
+    def __str__(self) -> str:
+        return f"Conversation Overview: {self.conversation_overview}\nHidden Thought Processes: {self.hidden_thought_processes}\nChronology: {self.chronology}\nStandout Quotes: {self.standout_quotes}\nMost Recent: {self.most_recent}"
+
 @dataclass
 class EvaluationResponse:
     antecedent_explanation: str

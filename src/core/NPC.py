@@ -36,20 +36,21 @@ class NPC:
     system_context: str
     user_prompt_wrapper: str = constants.user_message_placeholder # TODO ignoring this for now
 
-    # TODO Keep as class variable, move everything else to init if not already there
     is_new_game: bool
+    npc_name: str
 
     game_settings: GameSettings
     save_paths: proj_paths.SavePaths
 
-    def __init__(self, is_new_game: bool):
+    def __init__(self, is_new_game: bool, npc_name: str):
         self.game_settings = proj_settings.get_settings().game_settings
         self.save_paths = proj_paths.get_paths()
 
         self.is_new_game = is_new_game
+        self.npc_name = npc_name
 
         # Load the template once
-        self.template = self._load_template()
+        self.template = self._load_template(self.npc_name)
 
         # Load the state and initialize the conversation memory
         if not is_new_game:
@@ -118,14 +119,14 @@ class NPC:
 
         return response_obj
     
-    def _load_template(self) -> NPCTemplate:
+    def _load_template(self, npc_name: str) -> NPCTemplate:
         """Loads the NPC template from the template file."""
         try:
-            template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template, NPCTemplate)
+            template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
             return template
         except FileNotFoundError:
-            Logger.log(f"NPC template file not found: {self.save_paths.npc_template}", Level.ERROR)
-            raise FileNotFoundError(f"NPC template file not found: {self.save_paths.npc_template}")
+            Logger.log(f"NPC template file not found: {self.save_paths.npc_template(npc_name)}", Level.ERROR)
+            raise FileNotFoundError(f"NPC template file not found: {self.save_paths.npc_template(npc_name)}")
         except Exception as e:
             Logger.log(f"Error loading NPC template: {e}", Level.ERROR)
             raise e
@@ -149,7 +150,7 @@ class NPC:
     
     def load_state(self) -> None:
         try:
-            prior_npc_state: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state, NPCState)
+            prior_npc_state: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
             self.conversation_memory = ConversationMemory.from_state(prior_npc_state.conversation_memory)
             self.system_context = prior_npc_state.system_context
             self.user_prompt_wrapper = prior_npc_state.user_prompt_wrapper
@@ -165,9 +166,9 @@ class NPC:
         """Saves the message history and metadata to files."""
 
         # Ensure the directory exists
-        os.makedirs(self.save_paths.npc_save_root, exist_ok=True)
+        os.makedirs(self.save_paths.npc_save(self.npc_name), exist_ok=True)
 
-        save_path = self.save_paths.npc_save_state
+        save_path = self.save_paths.npc_save_state(self.npc_name)
 
         # Create backup files in case the save fails
         backup_npc_state_path = save_path.with_suffix('.bak')

@@ -21,7 +21,7 @@ class View(Protocol):
     def mainloop(self) -> None:
         ...
 
-class PresenterBase:
+class Presenter:
     # Define the fields of this class
     view: View
     cancel_response_token = {"value": False}
@@ -59,8 +59,8 @@ class PresenterBase:
         self.max_convo_mem_length = self.game_settings.max_convo_mem_length
 
         # Check if the NPC save path exists, if not create it and flag that this is a new game
-        if not os.path.exists(self.save_paths.npc_save_root):
-            os.makedirs(self.save_paths.npc_save_root, exist_ok=True)
+        if not os.path.exists(self.save_paths.npc_save):
+            os.makedirs(self.save_paths.npc_save, exist_ok=True)
             self.is_new_game = True
         else:
             self.is_new_game = False
