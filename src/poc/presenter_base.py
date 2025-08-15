@@ -38,7 +38,6 @@ class PresenterBase:
 
     message_history: List[ChatMessage] = []
     chat_log_path: str
-    npc_save_state_path: str
 
     game_settings: GameSettings
     save_paths: SavePaths
@@ -59,9 +58,9 @@ class PresenterBase:
         self.save_paths = proj_paths.get_paths()
         self.max_convo_mem_length = self.game_settings.max_convo_mem_length
 
-        # Check if the save path exists, if not create it and flag that this is a new game
-        if not os.path.exists(self.save_paths.save_root):
-            os.makedirs(self.save_paths.save_root)
+        # Check if the NPC save path exists, if not create it and flag that this is a new game
+        if not os.path.exists(self.save_paths.npc_save_root):
+            os.makedirs(self.save_paths.npc_save_root, exist_ok=True)
             self.is_new_game = True
         else:
             self.is_new_game = False
@@ -79,7 +78,7 @@ class PresenterBase:
         self.inject_message("The user has opened the application", role=Role.system)  # Inject the system prompt into the chat session
 
         # Display the initial message if this is the first run, otherwise immediately generate a response without user input
-        initial_response = self.game_settings.initial_response
+        initial_response = self.npc.get_initial_response()
         if self.is_new_game and initial_response:
             self.npc.inject_message(initial_response, role=Role.assistant, off_switch=True)  # Inject the initial response into the chat session
             self.executor.submit(
@@ -191,6 +190,7 @@ class PresenterBase:
             audio_file_path = self.generate_audio(text, voice)
             audio_generated_event.set()  # Signal that the audio has been generated
             self.play_audio(audio_file_path, cancel_token, audio_finished_event, delay)
+            os.remove(audio_file_path) # Remove the audio file after it has been played
         except Exception as e:
             print("An error occurred while playing the audio")
             traceback.print_exc()

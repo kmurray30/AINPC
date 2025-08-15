@@ -6,6 +6,7 @@ from pathlib import Path
 class SavePaths:
     project_path: Path
     save_name: str
+    npc_name: str
 
     @property
     def game_settings(self) -> Path:
@@ -16,26 +17,34 @@ class SavePaths:
         return self.project_path / "saves" / self.save_name
 
     @property
+    def npc_save_root(self) -> Path:
+        return self.save_root / "npcs" / self.npc_name
+
+    @property
     def audio_dir(self) -> Path:
-        return self.save_root / "audio"
+        return self.npc_save_root / "audio"
 
     @property
     def npc_save_state(self) -> Path:
-        return self.save_root / "npc_save_state.yaml"
+        return self.npc_save_root / "npc_save_state.yaml"
 
     @property
     def chat_log(self) -> Path:
-        return self.save_root / "chat_log.yaml"
+        return self.npc_save_root / "chat_log.yaml"
+
+    @property
+    def npc_template(self) -> Path:
+        return self.project_path / "npcs" / self.npc_name / "template.yaml"
 
 # Singleton instance
 _paths: Optional[SavePaths] = None
 _frozen: bool = False
 
-def set_paths(project_path: Path, save_name: str) -> None:
+def set_paths(project_path: Path, save_name: str, npc_name: str) -> None:
     global _paths, _frozen
     if _frozen:
         raise RuntimeError("Paths have already been initialized and cannot be modified.")
-    _paths = SavePaths(project_path=project_path, save_name=save_name)
+    _paths = SavePaths(project_path=project_path, save_name=save_name, npc_name=npc_name)
     _frozen = True
 
 def get_paths() -> SavePaths:

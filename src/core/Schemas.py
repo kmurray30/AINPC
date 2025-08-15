@@ -9,8 +9,6 @@ class GameSettings:
     text_stream_speed: float
     summarization_prompt: str
     num_last_messages_to_retain_when_summarizing: int
-    initial_system_context: str
-    initial_response: str
     closing_enabled: bool
     model: Llm
     log_level: Logger.Level

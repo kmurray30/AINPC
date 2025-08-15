@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import os
-from typing import Dict, List, Type, TypeVar
+from typing import Dict, List, Type, TypeVar, Optional
 from src.core.Schemas import GameSettings
 from src.utils import Logger
 from src.utils.ChatBot import ChatBot
@@ -14,6 +14,11 @@ from src.poc import proj_paths, proj_settings
 
 DEBUG_LEVEL = ""
 T = TypeVar('T')
+
+@dataclass
+class NPCTemplate:
+    initial_system_context: str
+    initial_response: Optional[str] = None
 
 @dataclass
 class NPCState:
@@ -42,6 +47,9 @@ class NPC:
         self.save_paths = proj_paths.get_paths()
 
         self.is_new_game = is_new_game
+
+        # Load the template once
+        self.template = self._load_template()
 
         # Load the state and initialize the conversation memory
         if not is_new_game:
@@ -109,6 +117,22 @@ class NPC:
         self.conversation_memory.append_chat(response, role=Role.assistant, off_switch=off_switch, cot=cot)
 
         return response_obj
+    
+    def _load_template(self) -> NPCTemplate:
+        """Loads the NPC template from the template file."""
+        try:
+            template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template, NPCTemplate)
+            return template
+        except FileNotFoundError:
+            Logger.log(f"NPC template file not found: {self.save_paths.npc_template}", Level.ERROR)
+            raise FileNotFoundError(f"NPC template file not found: {self.save_paths.npc_template}")
+        except Exception as e:
+            Logger.log(f"Error loading NPC template: {e}", Level.ERROR)
+            raise e
+    
+    def get_initial_response(self) -> str:
+        """Gets the initial response from the NPC template."""
+        return self.template.initial_response or ""
         
     def get_state(self) -> NPCState:
         """Returns the current state of the NPC."""
@@ -121,7 +145,7 @@ class NPC:
     def init_state(self) -> None:
         """Initializes the NPC state for a new game."""
         self.conversation_memory = ConversationMemory.new_game()
-        self.system_context = self.game_settings.initial_system_context
+        self.system_context = self.template.initial_system_context
     
     def load_state(self) -> None:
         try:
@@ -141,7 +165,7 @@ class NPC:
         """Saves the message history and metadata to files."""
 
         # Ensure the directory exists
-        os.makedirs(self.save_paths.save_root, exist_ok=True)
+        os.makedirs(self.save_paths.npc_save_root, exist_ok=True)
 
         save_path = self.save_paths.npc_save_state
 

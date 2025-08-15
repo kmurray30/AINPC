@@ -12,7 +12,11 @@ def main() -> None:
     # Read the args
     if len(sys.argv) == 2:
         save_name = sys.argv[1]
-    elif len(sys.argv) > 2:
+        npc_name = "companion"  # Default NPC
+    elif len(sys.argv) == 3:
+        save_name = sys.argv[1]
+        npc_name = sys.argv[2]
+    elif len(sys.argv) > 3:
         Logger.log("Too many arguments provided.")
         return
     else:
@@ -20,7 +24,7 @@ def main() -> None:
         return
     
     # Init the settings and paths singletons
-    bootstrap.init_app(save_name=save_name, project_path=Path(__file__).resolve().parent)
+    bootstrap.init_app(save_name=save_name, project_path=Path(__file__).resolve().parent, npc_name=npc_name)
 
     view = View()
     presenter = Presenter(view)
