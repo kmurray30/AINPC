@@ -2,9 +2,14 @@ import os
 from milvus import default_server
 import psutil
 from pymilvus import connections
+from pymilvus import FieldSchema, CollectionSchema, DataType, Collection, utility
 import openai
 from openai import OpenAI
 import ollama
+from typing import List, Dict, Optional, Type, get_origin, get_args, Union, TypeVar
+from dataclasses import fields as dc_fields, is_dataclass, asdict
+from pathlib import Path
+import yaml
 
 filename = os.path.splitext(os.path.basename(__file__))[0]
 if __name__ == "__main__" or __name__ == filename: # If the script is being run directly
@@ -91,7 +96,9 @@ def find_milvus_proc(port):
     for proc in psutil.process_iter(['pid', 'name']):
         last_proc = proc
         try:
-            for conn in proc.connections(kind='inet'):
+            # Use net_connections (connections is deprecated in newer psutil)
+            get_conns = getattr(proc, 'net_connections', None) or getattr(proc, 'connections', None)
+            for conn in get_conns(kind='inet'):
                 if conn.laddr.port == port:
                     print(f"Found running process {proc.info['name']} on port {port}")
                     if 'milvus' in proc.info['name']:
@@ -117,6 +124,11 @@ def find_milvus_proc(port):
     return milvus_proc
 
 def initialize_server(milvus_port=19530, restart_milvus_server=False):
+    # Clear any existing connections
+    connections.disconnect("default")
+    connections.disconnect("milvus")
+    connections.disconnect("local")
+
     # Check if the Milvus server is already running
     running_milvus_proc = find_milvus_proc(milvus_port)
 
@@ -145,3 +157,298 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
             port=milvus_port
         )
         print(f"Milvus server initialized on port {default_server.listen_port}\n")
+
+
+# ---------------------- Generic VDB Helpers ----------------------
+
+def drop_collection_if_exists(name: str):
+    try:
+        if utility.has_collection(name):
+            utility.drop_collection(name)
+    except Exception:
+        raise Exception(f"Failed to drop collection {name}")
+
+def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: bool = True) -> Collection:
+    # Create schema from model_cls
+    if not is_dataclass(model_cls):
+        raise TypeError("model_cls must be a dataclass type")
+    field_schemas: List[FieldSchema] = []
+    for f in dc_fields(model_cls):
+        fs = _py_type_to_field_schema(f.name, f.type, dim, auto_id=auto_id)
+        field_schemas.append(fs)
+    schema = CollectionSchema(fields=field_schemas, description=f"Collection for {model_cls.__name__}")
+
+    # Validate there is a valid embedding and id field
+    if not any(field.name == "embedding" and field.dtype == DataType.FLOAT_VECTOR for field in field_schemas):
+        raise ValueError(f"No embedding field found in schema for {model_cls.__name__}. Must have an embedding field with type FLOAT_VECTOR.")
+    if not any(field.name == "id" and field.dtype == DataType.INT64 for field in field_schemas):
+        raise ValueError(f"No id field found in schema for {model_cls.__name__}. Must have an id field with type INT64.")
+    
+    # Check if the collection already exists, validate schema, and load/return if it does
+    if utility.has_collection(name):
+        # Validate compatibility with existing schema
+        collection = Collection(name)
+        existing_schema = collection.schema
+        if existing_schema != schema:
+            raise ValueError(f"Collection {name} already exists with different schema")
+        # Ensure there is an embedding field
+        if not any(field.name == "embedding" and field.dtype == DataType.FLOAT_VECTOR for field in existing_schema.fields):
+            raise ValueError(f"No embedding field found in schema for {model_cls.__name__}. Must have an embedding field with type FLOAT_VECTOR.")
+        collection.load()
+        return collection
+
+    # Create collection if it doesn't exist
+    return _create_collection(name, schema)
+
+
+def _create_collection(name: str, schema: CollectionSchema) -> Collection:
+    collection = Collection(name=name, schema=schema)
+    collection.create_index(
+            field_name="embedding",
+            index_params={
+                "index_type": "HNSW",
+                "metric_type": "COSINE",
+                "params": {"M": 16, "efConstruction": 200},
+            },
+        )
+    # Ensure collection is loaded for immediate search/query
+    collection.load()
+    return collection
+    
+
+def _unwrap_optional(py_type):
+    origin = get_origin(py_type)
+    args = get_args(py_type)
+    if origin is Union and type(None) in args and len(args) == 2:
+        # typing.Optional[T] is Union[T, NoneType]
+        return args[0] if args[1] is type(None) else args[1]
+    return py_type
+
+
+def _py_type_to_field_schema(field_name: str, py_type, vector_dim: int, auto_id: bool = True) -> FieldSchema:
+    py_type = _unwrap_optional(py_type)
+    origin = get_origin(py_type)
+    args = get_args(py_type)
+
+    if field_name == "id":
+        if py_type is not int:
+            raise ValueError(f"id field must be of type int, got {py_type}")
+        return FieldSchema(name=field_name, dtype=DataType.INT64, is_primary=True, auto_id=auto_id)
+    
+    if field_name == "embedding":
+        if origin not in (list, List) or args[0] is not float:
+            raise ValueError(f"embedding field must be of type list of floats, got {py_type}")
+        return FieldSchema(name=field_name, dtype=DataType.FLOAT_VECTOR, dim=vector_dim)
+
+    if py_type is str:
+        return FieldSchema(name=field_name, dtype=DataType.VARCHAR, max_length=4096)
+    if py_type is int:
+        return FieldSchema(name=field_name, dtype=DataType.INT64)
+    if py_type is float:
+        return FieldSchema(name=field_name, dtype=DataType.DOUBLE)
+    if py_type is bool:
+        return FieldSchema(name=field_name, dtype=DataType.BOOL)
+    if origin in (list, List) and args and args[0] is str:
+        # store CSV in VARCHAR
+        return FieldSchema(name=field_name, dtype=DataType.VARCHAR, max_length=4096)
+    if origin in (list, List) and args and args[0] is float:
+        return FieldSchema(name=field_name, dtype=DataType.FLOAT_VECTOR, dim=vector_dim)
+
+    # Fallback
+    return FieldSchema(name=field_name, dtype=DataType.VARCHAR, max_length=4096)
+
+
+T = TypeVar("T")
+
+def _to_column_value(value, field_schema: FieldSchema):
+    # Convert Python value to what Milvus expects based on schema dtype
+    if field_schema.dtype == DataType.VARCHAR:
+        # If value is a list (e.g., tags), store as CSV
+        if isinstance(value, list):
+            return ",".join(value)
+        return "" if value is None else str(value)
+    if field_schema.dtype == DataType.FLOAT_VECTOR:
+        # Expected to be a list[float]
+        return value or []
+    # Primitive mappings
+    if field_schema.dtype == DataType.INT64:
+        return None if value is None else int(value)
+    if field_schema.dtype == DataType.DOUBLE:
+        return None if value is None else float(value)
+    if field_schema.dtype == DataType.BOOL:
+        return None if value is None else bool(value)
+    return value
+
+
+def insert_dataclasses(
+    collection: Collection,
+    records: List[T],
+    *,
+    embed_model: str = text_embedding_3_small,
+    embed_text_attr: str = "key",
+):
+    if not records:
+        return
+
+    # Ensure records are dataclass instances
+    if not all(is_dataclass(r) for r in records):
+        raise ValueError("All records must be dataclass instances")
+    
+    # Ensure all records have an embedding
+    if not all(hasattr(r, "embedding") for r in records):
+        raise ValueError("All records must have an embedding field, even if empty")
+
+    # Ensure all records have an id IF auto_id is false
+    is_auto_id = collection.schema.auto_id
+    if not is_auto_id:
+        if not all(hasattr(r, "id") and r.id is not None for r in records):
+            raise ValueError("All records must have an id field")
+    
+    # Embed text
+    for r in records:
+        if not getattr(r, "embedding"):
+            text = getattr(r, embed_text_attr, None)
+            if text is None:
+                raise ValueError(f"Record {r} {embed_text_attr} field is empty. Needed for embedding.")
+            embedding = get_embedding(text, model=embed_model)
+            setattr(r, "embedding", embedding)
+    
+    # Build column arrays matching collection schema (skip auto-id primary)
+    columns: List[List] = []
+    for f in collection.schema.fields:
+        if f.is_primary and getattr(f, "auto_id", False): # Skip auto-id primary
+            continue
+        col_vals: List = []
+        for _, r in enumerate(records):
+            value = getattr(r, f.name, None)
+            col_vals.append(_to_column_value(value, f))
+        columns.append(col_vals)
+    collection.insert(columns)
+
+
+def export_dataclasses(collection: Collection, model_cls: Type[T], limit: int = 100000) -> List[T]:
+    # Ensure T is a dataclass
+    if not is_dataclass(model_cls):
+        raise ValueError("model_cls must be a dataclass type")
+
+    # Ensure loaded
+    if not collection.is_loaded:
+        collection.load()
+    
+    # Prepare fields to fetch (exclude embedding; Milvus may not return vectors via query)
+    fetch_fields = [f.name for f in collection.schema.fields]
+    # Milvus has a max query window; cap to safe value
+    MAX_WINDOW = 16384
+    eff_limit = min(limit, MAX_WINDOW)
+    try:
+        results = collection.query(expr="id >= 0", output_fields=fetch_fields, limit=eff_limit)
+    except Exception:
+        results = []
+    out: List[T] = []
+    for r in results:
+        out.append(model_cls(**r))
+    return out
+
+
+def search_relevant_records(
+    collection: Collection,
+    queries_embeddings: List[List[float]],
+    *,
+    model_cls: Type[T],
+    topk: int = 5,
+    metric: str = "COSINE",
+) -> List[T]:
+    if not queries_embeddings:
+        return []
+    # Ensure loaded
+    try:
+        collection.load()
+    except Exception:
+        pass
+    # Build output fields for dataclass (exclude embedding)
+    out_fields = [f.name for f in dc_fields(model_cls) if f.name != "embedding"]
+    list_str_field_names = {f.name for f in dc_fields(model_cls) if get_origin(f.type) in (list, List) and (get_args(f.type) and get_args(f.type)[0] is str)}
+    seen = set()
+    merged: List[T] = []
+    for q in queries_embeddings:
+        res = collection.search(
+            data=[q],
+            anns_field="embedding",
+            param={"metric_type": metric, "params": {"ef": 64}},
+            limit=topk,
+            output_fields=out_fields,
+        )
+        for hits in res:
+            for hit in hits:
+                # Deduplicate by key if present, else by id
+                key_val = None
+                if "key" in out_fields:
+                    key_val = hit.entity.get("key")
+                uniq = key_val if key_val is not None else hit.entity.get("id")
+                if uniq in seen:
+                    continue
+                seen.add(uniq)
+                kwargs = {}
+                for fname in out_fields:
+                    v = hit.entity.get(fname)
+                    if fname in list_str_field_names and isinstance(v, str):
+                        kwargs[fname] = [t for t in v.split(",") if t]
+                    else:
+                        kwargs[fname] = v
+                # Ensure embedding present (as None)
+                if any(f.name == "embedding" for f in dc_fields(model_cls)):
+                    kwargs["embedding"] = None
+                merged.append(model_cls(**kwargs))
+                if len(merged) >= topk:
+                    break
+            if len(merged) >= topk:
+                break
+    return merged
+
+
+def init_npc_collection(
+    collection_name: str,
+    *,
+    is_new_game: bool,
+    saved_entities_path: str,
+    template_entities_path: str,
+    embed_model: str = text_embedding_3_small,
+    model_cls: Optional[Type[T]] = None,
+    embed_text_attr: str = "key",
+) -> (Collection, Optional[List[T]]):
+    """Initialize a Milvus collection for the given dataclass type.
+    Returns (collection, seeded_records_or_None) where seeded records are instances of model_cls.
+    """
+    from src.utils import io_utils  # local import to avoid cycles at module load
+
+    if model_cls is None or not is_dataclass(model_cls):
+        raise TypeError("model_cls must be a dataclass type")
+
+    initialize_server()
+    col = load_or_create_collection(collection_name, get_dimensions_of_model(embed_model), model_cls=model_cls)
+
+    seeded: Optional[List[T]] = None
+    if col.num_entities == 0:
+        source = None
+        if (not is_new_game) and os.path.exists(saved_entities_path):
+            source = saved_entities_path
+        elif os.path.exists(template_entities_path):
+            source = template_entities_path
+        if source:
+            try:
+                records: List[T] = io_utils.load_yaml_into_dataclass(Path(source), List[model_cls])  # type: ignore
+                if isinstance(records, list):
+                    insert_dataclasses(col, records, model_cls=model_cls, embed_model=embed_model, embed_text_attr=embed_text_attr)
+                    seeded = records
+                    # Snapshot to saves if seeded from template on new game
+                    if is_new_game and source == template_entities_path:
+                        try:
+                            os.makedirs(os.path.dirname(saved_entities_path), exist_ok=True)
+                            io_utils.save_to_yaml_file(records, Path(saved_entities_path))
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        # Ensure loaded for search
+        col.load()
+    return col, seeded

@@ -1,3 +1,6 @@
 {
-  "python.analysis.typecheckingMode": "basic"
+  "python.analysis.typecheckingMode": "basic",
+  "python.testing.pytestArgs": ["src"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
 }

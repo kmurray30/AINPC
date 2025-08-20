@@ -22,6 +22,9 @@ class SavePaths:
     def npc_template(self, npc_name: str) -> Path:
         return self.npc_templates_root / npc_name / "template.yaml"
 
+    def npc_entities_template(self, npc_name: str) -> Path:
+        return self.npc_templates_root / npc_name / "entities.yaml"
+
     @property
     def save_root(self) -> Path:
         return self.project_path / "saves" / self.save_name
@@ -41,6 +44,9 @@ class SavePaths:
 
     def chat_log(self, npc_name: str) -> Path:
         return self.npc_save(npc_name) / "chat_log.yaml"
+
+    def npc_entities_save(self, npc_name: str) -> Path:
+        return self.npc_save(npc_name) / "entities.yaml"
 
     @property
     def get_npc_names(self) -> List[str]:

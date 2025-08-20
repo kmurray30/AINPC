@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 import json
 from typing import Dict, List, Optional
-from src.core.Schemas import GameSettings
+from src.core.schemas.Schemas import GameSettings
 from src.utils import Utilities, Logger, llm_utils
 from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level

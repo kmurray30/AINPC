@@ -46,8 +46,12 @@ def append_to_yaml_file(data: Any, file_path: Path) -> None:
         raise ValueError("Data must be a dataclass instance.")
     # Load existing data if the file exists
     if file_path.exists():
-        with open(file_path, 'r') as file:
-            existing_data = yaml.safe_load(file) or []
+        try:
+            with open(file_path, 'r') as file:
+                existing_data = yaml.safe_load(file) or []
+        except Exception:
+            # If the file is partially written or corrupted, reset to empty list
+            existing_data = []
     else:
         existing_data = []
 
@@ -58,9 +62,18 @@ def append_to_yaml_file(data: Any, file_path: Path) -> None:
     # Append the new data
     existing_data.append(data_dict)
 
-    # Write back to the file
-    with open(file_path, 'w') as file:
-        yaml.dump(existing_data, file, default_flow_style=False, sort_keys=False)
+    # Write back atomically to the file to avoid corruption under concurrency
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    import tempfile, os
+    with tempfile.NamedTemporaryFile('w', delete=False, dir=file_path.parent, prefix=file_path.name + '.', suffix='.tmp') as tmp:
+        yaml.dump(existing_data, tmp, default_flow_style=False, sort_keys=False)
+        try:
+            tmp.flush()
+            os.fsync(tmp.fileno())
+        except Exception:
+            pass
+        tmp_path = Path(tmp.name)
+    os.replace(tmp_path, file_path)
 
 def load_yaml_into_dataclass(file_path: Path, return_type: Type[T]) -> T:
     """Load YAML into structure described by `return_type` (dataclass/list/dict/enum/primitive/Optional)."""

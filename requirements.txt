@@ -7,9 +7,6 @@ anyio==4.8.0
 appnope==0.1.4
 asttokens==3.0.0
 attrs==24.3.0
-baml==0.19.1
-baml-py==0.72.1
-baml_core_ffi==0.1.7
 certifi==2024.12.14
 charset-normalizer==3.4.1
 colorama==0.4.6

@@ -1,0 +1,8 @@
+game_title: E2E POC1
+text_stream_speed: 0.0
+closing_enabled: true
+summarization_prompt: Summarize.
+num_last_messages_to_retain_when_summarizing: 1
+model: gpt_4o_mini
+log_level: DEBUG
+max_convo_mem_length: 2

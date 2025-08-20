@@ -10,8 +10,19 @@ from enum import Enum
 T = TypeVar('T')
 
 def _is_optional_type(field_type) -> bool:
-    """Check if a type is Optional (i.e., Union[T, None])."""
-    return get_origin(field_type) is Union and type(None) in get_args(field_type) and len(get_args(field_type)) == 2
+    """Check if a type is Optional (i.e., Union[T, None]) including PEP 604 unions (T | None)."""
+    origin = get_origin(field_type)
+    if origin is None:
+        return False
+    args = get_args(field_type)
+    return type(None) in args and len(args) == 2
+
+def _unwrap_optional(field_type):
+    """If Optional[T], return inner T; otherwise return field_type unchanged."""
+    if _is_optional_type(field_type):
+        inner_types = [t for t in get_args(field_type) if t is not type(None)]  # noqa: E721
+        return inner_types[0] if inner_types else field_type
+    return field_type
 
 def extract_obj_from_json_str(response_raw: str, response_type: Type[T], trim: bool = True) -> T:
         # Note: Sometimes the response starts with ```json, other times it starts with json
@@ -41,17 +52,19 @@ def extract_obj_from_dict(dict: Dict, response_type: Type[T]) -> T:
 def convert_to_dataclass(value: Any, field_type):
     # None handling
     if value is None:
-        if _is_optional_type(field_type):
+        if _is_optional_type(field_type) or field_type is Any:
             return None
         raise TypeError(
             f"Received None value for field of type {field_type}. "
             f"If this is intended, use Optional[{field_type}] in the dataclass definition."
         )
 
-    # Optional[T] -> T (we already handled None)
-    if _is_optional_type(field_type):
-        inner = [t for t in get_args(field_type) if t is not type(None)][0]  # noqa: E721
-        return convert_to_dataclass(value, inner)
+    # Normalize Optional[T] -> T (we already handled None case above)
+    field_type = _unwrap_optional(field_type)
+
+    # typing.Any: accept value as-is
+    if field_type is Any:
+        return value
 
     # Enums (expect name string)
     if isinstance(field_type, type) and issubclass(field_type, Enum):

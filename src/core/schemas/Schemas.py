@@ -14,3 +14,5 @@ class GameSettings:
     log_level: Logger.Level
     max_convo_mem_length: int
     save_name: str = ""
+
+

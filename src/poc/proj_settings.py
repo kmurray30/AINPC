@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
 
-from src.core.Schemas import GameSettings
+from src.core.schemas.Schemas import GameSettings
 from src.poc import proj_paths
 from src.utils import io_utils
 

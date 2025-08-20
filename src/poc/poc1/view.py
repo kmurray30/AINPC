@@ -3,7 +3,7 @@ import tkinter as tk
 from typing import Protocol, Callable
 from threading import Event
 
-from src.core.Schemas import GameSettings
+from src.core.schemas.Schemas import GameSettings
 from src.poc import proj_settings
 
 class Presenter(Protocol):
