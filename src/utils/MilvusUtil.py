@@ -100,7 +100,7 @@ def find_milvus_proc(port):
             get_conns = getattr(proc, 'net_connections', None) or getattr(proc, 'connections', None)
             for conn in get_conns(kind='inet'):
                 if conn.laddr.port == port:
-                    print(f"Found running process {proc.info['name']} on port {port}")
+                    print(f"Found running process {proc.info['name']} {proc.info['pid']} on port {port}")
                     if 'milvus' in proc.info['name']:
                         milvus_proc = proc
                     else:
@@ -141,13 +141,21 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
     if (running_milvus_proc):
         print("Connecting to established Milvus server")
   
-        connections.connect(
-            alias="default", 
-            host='localhost',
-            port=milvus_port
-        )
-        print("Connected to Milvus server\n")
-    else:
+        try:
+            connections.connect(
+                alias="default", 
+                host='localhost',
+                port=milvus_port,
+                timeout=10
+            )
+            print("Connected to Milvus server\n")
+        except Exception as e:
+            print(f"Connection to Milvus server failed with error: {e}")
+            print(f"Killing process {running_milvus_proc.pid} and restarting Milvus server")
+            running_milvus_proc.kill()
+            running_milvus_proc = None
+    
+    if not running_milvus_proc:
         print("Starting Milvus server")
         default_server.start()
         # TODO: Added this because it was failing to create connection on the first run. Make sure this works on the next cold run
