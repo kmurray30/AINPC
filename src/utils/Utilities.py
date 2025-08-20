@@ -23,7 +23,7 @@ import yaml
 T = TypeVar('T')
 
 def generate_uuid_int64() -> np.int64:
-    return np.int64(int(uuid.uuid4().int) >> 64)
+    return np.int64((uuid.uuid4().int >> 64) % (2**63))
 
 def add_to_entities(entity_df, id, vector):
     entity_df[0].append(id)

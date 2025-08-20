@@ -10,6 +10,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from src.utils import MilvusUtil, Utilities
 from src.core.schemas.CollectionSchemas import Entity
 
+# Global test dimension - can be changed to test with different dimensions
+TEST_DIMENSION = 8
+
 
 @pytest.fixture(autouse=True)
 def ensure_server():
@@ -22,13 +25,13 @@ def ensure_server():
 @pytest.fixture()
 def mock_embeddings(monkeypatch):
     def fake_dim(model):
-        return 8
+        return TEST_DIMENSION
 
     def fake_embed(text, model=MilvusUtil.text_embedding_3_small, dimensions=None):
-        # Deterministic 8-dim embedding from text bytes
-        arr = [0.0] * 8
+        # Deterministic embedding from text bytes using global test dimension
+        arr = [0.0] * TEST_DIMENSION
         for i, ch in enumerate(text.encode("utf-8")):
-            arr[i % 8] += (ch % 31) / 31.0
+            arr[i % TEST_DIMENSION] += (ch % 31) / 31.0
         return arr
 
     monkeypatch.setattr(MilvusUtil, "get_dimensions_of_model", fake_dim)
@@ -45,18 +48,18 @@ def test_dataclass_collection_creation_and_schema(unique_collection_name, mock_e
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
 
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
     assert isinstance(col, Collection)
 
     col_field_names = {f.name for f in col.schema.fields}
     for cls_field in dc_fields(Entity):
         assert cls_field.name in col_field_names
 
-def test_insert_and_export_entities(unique_collection_name):
+def test_insert_and_export_entities(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
 
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity, auto_id=False)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity, auto_id=False)
 
     rows = [
         Entity(key="alpha", content="first", tags=["t1", "t2"], id=Utilities.generate_uuid_int64()),
@@ -77,11 +80,11 @@ def test_insert_and_export_entities(unique_collection_name):
             assert e.id is not None
 
 
-def test_insert_and_export_entities_with_auto_id(unique_collection_name):
+def test_insert_and_export_entities_with_auto_id(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
 
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity, auto_id=True)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity, auto_id=True)
 
     rows = [
         Entity(key="alpha", content="first", tags=["t1", "t2"]),
@@ -105,16 +108,16 @@ def test_insert_and_export_entities_with_auto_id(unique_collection_name):
 def test_search_relevant_entities(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
 
     rows = [
         Entity(key="close app", content="prefers to end session if annoyed", tags=["goals"]),
         Entity(key="be concise", content="keep responses brief", tags=["traits"]),
     ]
-    MilvusUtil.insert_dataclasses(col, rows, model_cls=Entity)
+    MilvusUtil.insert_dataclasses(col, rows)
     col.flush()
 
-    q = MilvusUtil.compute_embeddings(["please be brief"], model=MilvusUtil.text_embedding_3_small)[0]
+    q = MilvusUtil.get_embedding("please be brief", model=MilvusUtil.text_embedding_3_small)
     hits = MilvusUtil.search_relevant_records(col, [q], model_cls=Entity, topk=2)
     assert any("be concise" == h.key for h in hits)
 
@@ -162,8 +165,8 @@ def test_init_npc_collection_seeding_from_template_and_saved(tmp_path, mock_embe
 def test_disconnect_and_reconnect(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity)
-    MilvusUtil.insert_dataclasses(col, [Entity(key="k", content="v", tags=[])], model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
+    MilvusUtil.insert_dataclasses(col, [Entity(key="k", content="v", tags=[])])
     col.flush()
 
     # Disconnect
@@ -183,21 +186,21 @@ def test_disconnect_and_reconnect(unique_collection_name, mock_embeddings):
 def test_idempotent_collection_creation(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col1 = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity)
+    col1 = MilvusUtil.load_or_create_collection(name, dim=1536, model_cls=Entity)
     # Calling again should not error and should return a Collection
-    col2 = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity)
+    col2 = MilvusUtil.load_or_create_collection(name, dim=1536, model_cls=Entity)
     assert isinstance(col1, Collection) and isinstance(col2, Collection)
 
 
 def test_insert_missing_tags_field(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
     rows = [
         Entity(key="no tags 1", content="c1", tags=[]),
         Entity(key="no tags 2", content="c2", tags=[]),
     ]
-    MilvusUtil.insert_dataclasses(col, rows, model_cls=Entity)
+    MilvusUtil.insert_dataclasses(col, rows)
     col.flush()
     exported = MilvusUtil.export_dataclasses(col, Entity)
     keys = {e.key for e in exported}
@@ -222,9 +225,57 @@ def test_init_npc_collection_no_seed_sources(unique_collection_name, tmp_path, m
 
 def test_compute_embeddings_len_and_dim(mock_embeddings):
     texts = ["a", "bb", "ccc"]
-    embs = MilvusUtil.compute_embeddings(texts, model=MilvusUtil.text_embedding_3_small)
+    embs = []
+    for text in texts:
+        embs.append(MilvusUtil.get_embedding(text, model=MilvusUtil.text_embedding_3_small))
     assert len(embs) == 3
-    assert all(len(v) == 8 for v in embs)
+    assert all(len(v) == TEST_DIMENSION for v in embs)
+
+
+@pytest.mark.parametrize("test_dim", [8, 16, 128, 1536])
+def test_flexible_dimension_handling(unique_collection_name, monkeypatch, test_dim):
+    """Test that the system works with any dimension value by dynamically mocking."""
+    
+    def fake_dim(model):
+        return test_dim
+
+    def fake_embed(text, model=MilvusUtil.text_embedding_3_small, dimensions=None):
+        # Generate embedding with the test dimension
+        arr = [0.0] * test_dim
+        for i, ch in enumerate(text.encode("utf-8")):
+            arr[i % test_dim] += (ch % 31) / 31.0
+        return arr
+
+    # Apply dynamic mocking for this specific dimension
+    monkeypatch.setattr(MilvusUtil, "get_dimensions_of_model", fake_dim)
+    monkeypatch.setattr(MilvusUtil, "get_embedding", fake_embed)
+    
+    name = unique_collection_name
+    MilvusUtil.drop_collection_if_exists(name)
+    
+    # Create collection with the test dimension
+    col = MilvusUtil.load_or_create_collection(name, dim=test_dim, model_cls=Entity, auto_id=True)
+    assert isinstance(col, Collection)
+    
+    # Insert data
+    rows = [
+        Entity(key="test1", content="content1", tags=["tag1"]),
+        Entity(key="test2", content="content2", tags=["tag2"]),
+    ]
+    MilvusUtil.insert_dataclasses(col, rows)
+    col.flush()
+    
+    # Verify data was inserted
+    assert col.num_entities >= 2
+    
+    # Test export
+    exported = MilvusUtil.export_dataclasses(col, Entity)
+    keys = {e.key for e in exported}
+    assert {"test1", "test2"}.issubset(keys)
+    
+    # Test embedding generation matches dimension
+    embedding = MilvusUtil.get_embedding("test", model=MilvusUtil.text_embedding_3_small)
+    assert len(embedding) == test_dim
 
 
 def test_optional_fields_dataclass(unique_collection_name, mock_embeddings):
@@ -241,7 +292,7 @@ def test_optional_fields_dataclass(unique_collection_name, mock_embeddings):
 
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=8, model_cls=Alt)
+    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Alt)
     assert isinstance(col, Collection)
 
 

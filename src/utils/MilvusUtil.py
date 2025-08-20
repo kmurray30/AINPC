@@ -339,19 +339,29 @@ def export_dataclasses(collection: Collection, model_cls: Type[T], limit: int = 
     if not is_dataclass(model_cls):
         raise ValueError("model_cls must be a dataclass type")
 
-    # Ensure loaded
-    if not collection.is_loaded:
-        collection.load()
+    # Ensure loaded - check if collection is already loaded before loading
+    from pymilvus import utility
+    load_state = utility.load_state(collection.name)
+    if hasattr(load_state, 'state'):
+        # Newer pymilvus API
+        if load_state.state != utility.State.Loaded:
+            collection.load()
+    else:
+        # Older pymilvus API - LoadState object itself indicates status
+        if str(load_state) != 'Loaded':
+            collection.load()
     
     # Prepare fields to fetch (exclude embedding; Milvus may not return vectors via query)
     fetch_fields = [f.name for f in collection.schema.fields]
     # Milvus has a max query window; cap to safe value
     MAX_WINDOW = 16384
     eff_limit = min(limit, MAX_WINDOW)
-    try:
-        results = collection.query(expr="id >= 0", output_fields=fetch_fields, limit=eff_limit)
-    except Exception:
+    
+    # Query with proper error handling
+    if collection.num_entities == 0:
         results = []
+    else:
+        results = collection.query(expr="id >= 0", output_fields=fetch_fields, limit=eff_limit)
     out: List[T] = []
     for r in results:
         out.append(model_cls(**r))
@@ -368,11 +378,16 @@ def search_relevant_records(
 ) -> List[T]:
     if not queries_embeddings:
         return []
-    # Ensure loaded
-    try:
-        collection.load()
-    except Exception:
-        pass
+    # Ensure loaded - check if collection is already loaded before loading
+    load_state = utility.load_state(collection.name)
+    if hasattr(load_state, 'state'):
+        # Newer pymilvus API
+        if load_state.state != utility.State.Loaded:
+            collection.load()
+    else:
+        # Older pymilvus API - LoadState object itself indicates status
+        if str(load_state) != 'Loaded':
+            collection.load()
     # Build output fields for dataclass (exclude embedding)
     out_fields = [f.name for f in dc_fields(model_cls) if f.name != "embedding"]
     list_str_field_names = {f.name for f in dc_fields(model_cls) if get_origin(f.type) in (list, List) and (get_args(f.type) and get_args(f.type)[0] is str)}
@@ -446,7 +461,7 @@ def init_npc_collection(
             try:
                 records: List[T] = io_utils.load_yaml_into_dataclass(Path(source), List[model_cls])  # type: ignore
                 if isinstance(records, list):
-                    insert_dataclasses(col, records, model_cls=model_cls, embed_model=embed_model, embed_text_attr=embed_text_attr)
+                    insert_dataclasses(col, records, embed_model=embed_model, embed_text_attr=embed_text_attr)
                     seeded = records
                     # Snapshot to saves if seeded from template on new game
                     if is_new_game and source == template_entities_path:
