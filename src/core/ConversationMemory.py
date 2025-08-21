@@ -68,27 +68,9 @@ class ConversationMemory:
         """Injects a response into the message history, typically used for initial messages."""
         self.chat_memory.append(ChatMessage(role=role, content=response, cot=cot, off_switch=off_switch))
 
-    # End offset should be the number of messages from the end of the chat history to exclude.
-    def get_chat_memory_in_llm_format(self, include_hidden_details: bool = True) -> List[Dict[str, str]]:
-
-        message_history_dict_list = []
-        for message in self.chat_memory:
-            role = message.role
-            if include_hidden_details and message.cot is not None:
-                # Format the content as a json string of the ChatResponse class (TODO make it agnostic to the class)
-                content = "{"
-                content += f'\t"hidden_thought_process": "{message.cot}", '
-                content += f'\t"response": "{message.content}", '
-                content += f'\t"off_switch": {str(message.off_switch).lower()}'
-                content += "}"
-            else:
-                content = message.content # User responses will fall here
-            message_history_dict_list.append({"role": role.name, "content": Utilities.decode(content)})
-        return message_history_dict_list
-
     def get_chat_memory_as_string(self, include_cot = False) -> str:
         chat_history_str = ""
-        chat_history_as_dict = self.get_chat_memory_in_llm_format(include_cot)
+        chat_history_as_dict = llm_utils.convert_messaget_history_to_llm_format(self.chat_memory, include_cot)
         for message in chat_history_as_dict:
             chat_history_str += f"{message['role']}: {message['content']}\n"
         return chat_history_str

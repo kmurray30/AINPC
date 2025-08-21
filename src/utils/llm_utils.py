@@ -1,6 +1,7 @@
-from typing import Type, TypeVar
+from typing import Dict, List, Type, TypeVar
 
-from src.utils import parsing_utils
+from src.core.ChatMessage import ChatMessage
+from src.utils import Utilities, parsing_utils
 
 T = TypeVar('T')
 
@@ -30,3 +31,19 @@ def extract_obj_from_llm_response(response_raw: str, response_type: Type[T]) -> 
         return response_type(response_raw.strip())
     response_obj = parsing_utils.extract_obj_from_json_str(response_raw, response_type, trim=True)
     return response_obj
+
+def convert_messaget_history_to_llm_format(message_history: List[ChatMessage], include_hidden_details: bool = True) -> List[Dict[str, str]]:
+    message_history_dict_list = []
+    for message in message_history:
+        role = message.role
+        if include_hidden_details and message.cot is not None:
+            # Format the content as a json string of the ChatResponse class (TODO make it agnostic to the class)
+            content = "{"
+            content += f'\t"hidden_thought_process": "{message.cot}", '
+            content += f'\t"response": "{message.content}", '
+            content += f'\t"off_switch": {str(message.off_switch).lower()}'
+            content += "}"
+        else:
+            content = message.content # User responses will fall here
+        message_history_dict_list.append({"role": role.name, "content": Utilities.decode(content)})
+    return message_history_dict_list

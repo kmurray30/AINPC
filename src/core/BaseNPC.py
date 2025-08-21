@@ -11,7 +11,7 @@ from src.core.Constants import Constants as constants
 from src.core.Constants import Role
 from src.utils import llm_utils
 from src.utils.ChatBot import ChatBot
-# from src.core.Agent import Agent
+from src.core.Agent import Agent
 
 class BaseNPC(ABC):
     """Abstract base class for NPCs. Concrete implementations (POC1, POC2) provide
@@ -21,7 +21,7 @@ class BaseNPC(ABC):
     # Stateful properties common to all NPCs
     conversation_memory: ConversationMemory
     user_prompt_wrapper: str = constants.user_message_placeholder
-    # chat_agent: Agent
+    response_agent: Agent[ChatResponse]
     game_settings: GameSettings
     npc_name: str
     is_new_game: bool
@@ -30,7 +30,7 @@ class BaseNPC(ABC):
         self.game_settings = game_settings
         self.npc_name = npc_name
         self.is_new_game = is_new_game
-        # self.chat_agent = Agent(system_prompt=None, response_type=ChatResponse)
+        self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
 
     # ---------- Public API ----------
     def maintain(self) -> None:
@@ -46,19 +46,9 @@ class BaseNPC(ABC):
         if user_message is not None:
             self.conversation_memory.append_chat(user_message, role=Role.user, off_switch=False)
 
-        # Get the chat history formatted for LLM
-        chat_history_dict = self.conversation_memory.get_chat_memory_in_llm_format(include_hidden_details=True)
-
-        # Prepend the system prompt to the chat history
-        full_message_history_dict = self._prepend_system_prompt(chat_history_dict, self.build_system_prompt())
-
-        # Wrap the latest user message if requested
-        if user_message is not None and self.user_prompt_wrapper:
-            user_prompt_wrapped = self.user_prompt_wrapper.replace(constants.user_message_placeholder, user_message)
-            full_message_history_dict[-1]["content"] = user_prompt_wrapped
-
-        # Call the LLM and append assistant response
-        response_obj: ChatResponse = ChatBot.call_llm(full_message_history_dict, ChatResponse)
+        self.response_agent.update_system_prompt(self.build_system_prompt())
+        self.response_agent.update_message_history(self.conversation_memory.chat_memory)
+        response_obj: ChatResponse = self.response_agent.chat(user_message)
         self.conversation_memory.append_chat(
             response_obj.response,
             role=Role.assistant,
@@ -66,10 +56,6 @@ class BaseNPC(ABC):
             cot=response_obj.hidden_thought_process,
         )
         return response_obj
-
-    # ---------- Helpers ----------
-    def _prepend_system_prompt(self, chat_history_formatted: List[Dict[str, str]], system_prompt: str) -> List[Dict[str, str]]:
-        return [{"role": Role.system.value, "content": system_prompt}] + chat_history_formatted
 
     # ---------- Abstracts to be implemented by subclasses ----------
     @abstractmethod
