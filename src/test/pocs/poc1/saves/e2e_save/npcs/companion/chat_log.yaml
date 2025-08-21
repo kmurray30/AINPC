@@ -14,9 +14,9 @@
   cot: null
   content: The user has opened the application
   off_switch: false
-- role: assistant
-  cot: ok
-  content: Alright, staying open.
+- role: user
+  cot: null
+  content: You're great!
   off_switch: false
 - role: assistant
   cot: ok

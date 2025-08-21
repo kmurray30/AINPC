@@ -46,6 +46,7 @@ class NPC(BaseNPC):
     def build_system_prompt(self) -> str:
         parts: List[str] = []
         parts.append("Context:\n" + self.template.initial_system_context)
+        parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
         parts.append("Response formatting:\n" + llm_utils.get_formatting_suffix(ChatResponse))
         return "\n\n".join(parts) + "\n\n"
 

@@ -82,6 +82,9 @@ class Presenter:
 
         self.npc = NPC(is_new_game=self.is_new_game, npc_name=npc_names[0])
 
+        # Set the events so they are non blocking until used
+        self.response_finished_event.set()
+
     # Run the presenter - handles setup and then the main event loop
     def run(self) -> None:
         # Create the UI bindings
@@ -178,6 +181,7 @@ class Presenter:
         
     def response_thread(self, response: str = None, off_switch: bool = False):
         try:
+            self.response_finished_event.clear() # Reset the event for the next response
             # Generate and play the response audio
             self.executor.submit(self.audio_thread, response, self.cancel_audio_token, self.audio_generated_event, self.audio_finished_event, voice=self.voice)
 

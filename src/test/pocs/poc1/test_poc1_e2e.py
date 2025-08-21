@@ -1,12 +1,13 @@
-from ast import Dict
 import os
 import sys
 import time
 from pathlib import Path
 from dataclasses import asdict
-from typing import Any, List
+from typing import Any, List, Dict
 
 import pytest
+
+from src.core.schemas.Schemas import GameSettings
 
 # Ensure src/ on sys.path
 PROJ_ROOT = Path(__file__).resolve().parents[4]
@@ -15,12 +16,12 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from src.core.ChatMessage import ChatMessage
-from src.poc import bootstrap
+from src.poc import bootstrap, proj_settings
 from src.poc import proj_paths
 from src.poc.poc1.presenter import Presenter
 from src.core.Constants import Role
 from src.core.ResponseTypes import ChatResponse, ChatSummary
-from src.utils import io_utils
+from src.utils import io_utils, llm_utils
 
 
 class FakeView:
@@ -67,7 +68,15 @@ def test_project():
     return base
 
 
+# Identifiers for validation
+first_response = "I'm closing this."
+second_response = "Alright, staying open."
+chat_summary_identifier = "chatsummaryidentifier"
+
+
 class ChatBotMock:
+    last_input_messages: List[Dict[str, str]] = []
+
     def __init__(self):
         self.calls: List[Any] = []
         self.response_counter = 0
@@ -78,18 +87,19 @@ class ChatBotMock:
         self.calls.append({"messages": messages, "response_type": response_type})
 
         if response_type is ChatResponse:
+            self.last_input_messages = messages
             self.response_counter += 1
             if self.response_counter == 1:
                 # First ChatBot response: rude and close
                 print("ChatBotMock: returning off_switch=True")
-                return ChatResponse(hidden_thought_process="rude", response="I'm closing this.", off_switch=True)
+                return ChatResponse(hidden_thought_process="rude", response=first_response, off_switch=True)
             # Subsequent: keep open
             print("ChatBotMock: returning off_switch=False")
-            return ChatResponse(hidden_thought_process="ok", response="Alright, staying open.", off_switch=False)
+            return ChatResponse(hidden_thought_process="ok", response=second_response, off_switch=False)
         elif response_type is ChatSummary:
             print("ChatBotMock: returning ChatSummary")
             return ChatSummary(
-                conversation_overview="short",
+                conversation_overview=chat_summary_identifier,
                 hidden_thought_processes="hidden",
                 chronology="steps",
                 standout_quotes="none",
@@ -121,6 +131,7 @@ def test_poc1_e2e_flow(test_project: Path, monkeypatch):
 
     # Helper to fetch save paths
     paths = proj_paths.get_paths()
+    game_settings: GameSettings = proj_settings.get_settings().game_settings
     npc_name = paths.get_npc_names[0]
 
     # Serialize YAML appends across presenters to avoid interleaving writes
@@ -226,9 +237,26 @@ def test_poc1_e2e_flow(test_project: Path, monkeypatch):
         time.sleep(0.05)
     assert any(c["response_type"] is ChatSummary for c in cb_mock.calls)
 
+    # Validate the npc object contains the summary
+    assert presenter2.npc.conversation_memory.get_chat_summary_as_string() is not None
+
     # Validate chat log appended over time
     logs2 = io_utils.load_yaml_into_dataclass(chat_log_path, List[ChatMessage])
     assert len(logs2) >= len(logs)
+
+    # Validate the last input message contains everything expected: system prompt, summary, formatting, and truncated message history
+    print(f"[E2E] last_input_messages={cb_mock.last_input_messages}")
+    assert cb_mock.last_input_messages[0]["role"] == "system"
+    # Assert the system prompt is present
+    assert "You are an ornery, rude" in cb_mock.last_input_messages[0]["content"]
+    # Assert the summary identifier is present
+    assert chat_summary_identifier in cb_mock.last_input_messages[0]["content"]
+    # Assert the formatting commands are present
+    assert llm_utils.prompt_formatting_message_prefix in cb_mock.last_input_messages[0]["content"]
+    # Assert the message count was truncated by the summary process
+    message_count_lower_bound = game_settings.num_last_messages_to_retain_when_summarizing 
+    message_count_upper_bound = game_settings.max_convo_mem_length
+    assert len(cb_mock.last_input_messages) - 1 >= message_count_lower_bound and len(cb_mock.last_input_messages) - 1 <= message_count_upper_bound
 
     # Validate closing message present in logs from first run
     assert any(entry.content.startswith("Application was closed by the assistant.") for entry in logs2 if isinstance(entry, ChatMessage))
@@ -239,54 +267,3 @@ def always_teardown():
     print("[E2E] Teardown")
     for p in presenters:
         p.on_exit() # Ensure all presenters exit and close any open threads
-
-# def test_audio_playback_smoke(test_project: Path, monkeypatch):
-#     # Build a fake simpleaudio interface
-#     class FakePlayObj:
-#         def __init__(self):
-#             self._playing = False
-#         def is_playing(self):
-#             return False
-#         def stop(self):
-#             self._playing = False
-#     class FakeWave:
-#         @staticmethod
-#         def from_wave_file(path):
-#             return FakeWave()
-#         def play(self):
-#             return FakePlayObj()
-
-#     # Patch simpleaudio in presenter.play_audio call path
-#     from src.poc.poc1 import presenter as presenter_mod
-#     import types
-#     sa_fake = types.SimpleNamespace(WaveObject=FakeWave)
-#     monkeypatch.setitem(sys.modules, 'simpleaudio', sa_fake)
-#     # Also patch the already-imported module variable
-#     monkeypatch.setattr(presenter_mod, 'sa', sa_fake, raising=False)
-
-#     # Also ensure TTS writes a stub file so generate_audio returns an existing path
-#     from src.utils import TextToSpeech
-#     def fake_tts(prompt, file_path, voice="echo"):
-#         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-#         # create empty file; our FakeWave ignores contents
-#         Path(file_path).write_bytes(b"")
-#     monkeypatch.setattr(TextToSpeech, "generate_speech_file", fake_tts)
-
-#     # Init app
-#     save_name = "audio_save"
-#     try:
-#         bootstrap.init_app(save_name=save_name, project_path=test_project)
-#     except RuntimeError:
-#         # Paths already initialized in prior test; continue with existing
-#         pass
-#     paths = proj_paths.get_paths()
-#     npc_name = paths.get_npc_names[0]
-
-#     view = FakeView()
-#     p = Presenter(view, force_new_game=True)
-#     # Directly exercise play path
-#     audio_path = p.generate_audio("hi", voice="fable")
-#     assert Path(audio_path).exists()
-#     p.play_audio(audio_path, cancel_token={"value": False}, audio_finished_event=None, delay=0)
-
-

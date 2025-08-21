@@ -4,7 +4,7 @@ from src.utils import Utilities, Logger, io_utils
 from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level
 from .Constants import Role, AgentName
-from .Agent import Agent
+from .EvalAgent import EvalAgent
 from .ChatMessage import ChatMessageAgnostic
 from .ResponseTypes import ChatResponse
 from src.core.Constants import Llm

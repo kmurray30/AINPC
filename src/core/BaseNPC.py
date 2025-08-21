@@ -11,7 +11,7 @@ from src.core.Constants import Constants as constants
 from src.core.Constants import Role
 from src.utils import llm_utils
 from src.utils.ChatBot import ChatBot
-
+# from src.core.Agent import Agent
 
 class BaseNPC(ABC):
     """Abstract base class for NPCs. Concrete implementations (POC1, POC2) provide
@@ -21,7 +21,7 @@ class BaseNPC(ABC):
     # Stateful properties common to all NPCs
     conversation_memory: ConversationMemory
     user_prompt_wrapper: str = constants.user_message_placeholder
-    chat_formatting_suffix: str
+    # chat_agent: Agent
     game_settings: GameSettings
     npc_name: str
     is_new_game: bool
@@ -30,7 +30,7 @@ class BaseNPC(ABC):
         self.game_settings = game_settings
         self.npc_name = npc_name
         self.is_new_game = is_new_game
-        self.chat_formatting_suffix = llm_utils.get_formatting_suffix(ChatResponse)
+        # self.chat_agent = Agent(system_prompt=None, response_type=ChatResponse)
 
     # ---------- Public API ----------
     def maintain(self) -> None:

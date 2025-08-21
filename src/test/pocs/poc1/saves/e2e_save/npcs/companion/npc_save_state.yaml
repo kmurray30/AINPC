@@ -9,7 +9,7 @@ conversation_memory:
       content: Application crashed unexpectedly.
       off_switch: false
   conversation_summary:
-    conversation_overview: short
+    conversation_overview: chatsummaryidentifier
     hidden_thought_processes: hidden
     chronology: steps
     standout_quotes: none
