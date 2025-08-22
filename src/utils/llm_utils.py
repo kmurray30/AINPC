@@ -32,7 +32,7 @@ def extract_obj_from_llm_response(response_raw: str, response_type: Type[T]) -> 
     response_obj = parsing_utils.extract_obj_from_json_str(response_raw, response_type, trim=True)
     return response_obj
 
-def convert_messaget_history_to_llm_format(message_history: List[ChatMessage], include_hidden_details: bool = True) -> List[Dict[str, str]]:
+def convert_message_history_to_llm_format(message_history: List[ChatMessage], include_hidden_details: bool = True) -> List[Dict[str, str]]:
     message_history_dict_list = []
     for message in message_history:
         role = message.role

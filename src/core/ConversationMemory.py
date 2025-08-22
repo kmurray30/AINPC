@@ -70,7 +70,7 @@ class ConversationMemory:
 
     def get_chat_memory_as_string(self, include_cot = False) -> str:
         chat_history_str = ""
-        chat_history_as_dict = llm_utils.convert_messaget_history_to_llm_format(self.chat_memory, include_cot)
+        chat_history_as_dict = llm_utils.convert_message_history_to_llm_format(self.chat_memory, include_cot)
         for message in chat_history_as_dict:
             chat_history_str += f"{message['role']}: {message['content']}\n"
         return chat_history_str

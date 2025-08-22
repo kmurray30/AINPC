@@ -17,6 +17,8 @@ class Llm(Enum):
     gpt_3_5_turbo_instruct = "gpt-3.5-turbo-instruct"
     gpt_4o_mini = "gpt-4o-mini"
     gpt_4o = "gpt-4o"
+    gpt_5_nano = "gpt-5-nano"
+    gpt_5_mini = "gpt-5-mini"
     o1 = "o1-preview"
     llama3 = "llama3"
 
@@ -31,6 +33,8 @@ embedding_models = {
         Llm.gpt_4o_mini,
         Llm.gpt_4o,
         Llm.o1,
+        Llm.gpt_5_nano,
+        Llm.gpt_5_mini,
     ],
     Platform.ollama: [
         Llm.llama3,

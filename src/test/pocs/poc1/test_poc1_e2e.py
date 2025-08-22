@@ -165,7 +165,7 @@ def test_poc1_e2e_flow(test_project: Path, monkeypatch):
     msgs = first_call["messages"]
     assert msgs[0]["role"] == "system"
     assert "You are an ornery, rude" in msgs[0]["content"]
-    assert "Response formatting:" in msgs[0]["content"]
+    assert "Format your response as a JSON" in msgs[0]["content"]
 
     # Small delay to ensure final write completes
     time.sleep(0.2)

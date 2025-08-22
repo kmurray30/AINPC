@@ -47,8 +47,7 @@ class BaseNPC(ABC):
             self.conversation_memory.append_chat(user_message, role=Role.user, off_switch=False)
 
         self.response_agent.update_system_prompt(self.build_system_prompt())
-        self.response_agent.update_message_history(self.conversation_memory.chat_memory)
-        response_obj: ChatResponse = self.response_agent.chat(user_message)
+        response_obj: ChatResponse = self.response_agent.chat_with_history(self.conversation_memory.chat_memory)
         self.conversation_memory.append_chat(
             response_obj.response,
             role=Role.assistant,

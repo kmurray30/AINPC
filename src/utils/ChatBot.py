@@ -39,24 +39,26 @@ class ChatBot:
         return None
 
     # Function to call the OpenAI API
-    def call_chat_agent(chatGptMessages):
-        platform = ChatBot.get_platform_of_model(ChatBot.default_chat_model)
+    def _call_llm_internal(chatGptMessages, chat_model: Llm = None):
+        if chat_model is None:
+            chat_model = ChatBot.default_chat_model
+        platform = ChatBot.get_platform_of_model(chat_model)
         if platform == Platform.open_ai:
             completion = ChatBot.chatGptClient.chat.completions.create(
-                model=ChatBot.default_chat_model.value,
+                model=chat_model.value,
                 messages=chatGptMessages
             )
             response = completion.choices[0].message.content
             return response
         elif platform == Platform.ollama:
-            response = ollama.chat(messages = chatGptMessages, model=ChatBot.default_chat_model)
+            response = ollama.chat(messages = chatGptMessages, model=chat_model)
             return response
         else:
-            raise Exception(f"ChatGPT model {ChatBot.default_chat_model} not supported")
+            raise Exception(f"ChatGPT model {chat_model} not present in Constants.embedding_models mapping")
 
     def call_chat_agent_and_update_message_history(prompt, chat_messages):
         chat_messages.append({"role": "user", "content": prompt})
-        response = ChatBot.call_chat_agent(chat_messages)
+        response = ChatBot._call_llm_internal(chat_messages)
         chat_messages.append({"role": "assistant", "content": response})
         return response
 
@@ -84,7 +86,7 @@ class ChatBot:
         # full_context_for_chatagent.append({"role": "user", "content": prompt})
 
         # Call ChatGPT with the full context
-        response = ChatBot.call_chat_agent(full_context_for_chatagent)
+        response = ChatBot._call_llm_internal(full_context_for_chatagent)
 
         # print("***DEBUG***")
         # for message in full_context_for_chatagent:
@@ -100,14 +102,14 @@ class ChatBot:
             print("DEBUG INFO: " + str(message_history))
         return response
 
-    def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None):        
+    def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None, chat_model: Llm = None):        
         if response_type is None:
-            return ChatBot.call_chat_agent(message_history_for_llm)
+            return ChatBot._call_llm_internal(message_history_for_llm, chat_model)
         else:
             exception = None
             for _ in range(ChatBot.llm_formatting_retries):
                 try:
-                    response_raw = ChatBot.call_chat_agent(message_history_for_llm)
+                    response_raw = ChatBot._call_llm_internal(message_history_for_llm, chat_model)
                     Logger.log(f"Raw response from LLM: {response_raw}", Level.DEBUG)
                     if response_raw.strip() == "":
                         raise ValueError("Response is empty")

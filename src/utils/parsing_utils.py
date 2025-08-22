@@ -27,6 +27,9 @@ def _unwrap_optional(field_type):
 def extract_obj_from_json_str(response_raw: str, response_type: Type[T], trim: bool = True) -> T:
         # Note: Sometimes the response starts with ```json, other times it starts with json
         # Trim everything before the first '{' and after the last '}'
+        if "{" not in response_raw or "}" not in response_raw:
+            raise ValueError(f"Response raw is not a valid JSON string (missing braces): {response_raw}")
+        
         if trim:
             response_trimmed = response_raw[response_raw.find("{"):response_raw.rfind("}")+1]
         else:

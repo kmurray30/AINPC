@@ -80,9 +80,6 @@ class NPC(BaseNPC):
             rel_text = "\n".join([e.content for e in relevant_items])
             parts.append("Relevant knowledge:\n" + rel_text)
 
-        # Response formatting
-        parts.append("Response formatting:\n" + self.chat_formatting_suffix)
-
         return "\n\n".join(parts) + "\n\n"
 
     def get_initial_response(self) -> str:

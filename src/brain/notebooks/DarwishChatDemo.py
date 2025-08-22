@@ -153,7 +153,7 @@ player_message = None # If set to none, the message history will be cleared and 
 def converse(player_message: str) -> str:
     prompt = prompt_shell.replace("$$$RAJINFO$$$", raj_info).replace("$$$PLAYERMESSAGE$$$", player_message)
     messages.append({"role": "user", "content": prompt})
-    response = chatbot.call_chat_agent(messages)
+    response = chatbot._call_llm_internal(messages)
     messages.append({"role": "assistant", "content": response})
     print("Player: " + player_message)
     print("\nRaj: " + response)
@@ -187,7 +187,7 @@ while True:
 
     prompt = prompt_shell.replace("$$$PLAYERMESSAGE$$$", player_message)
     messages.append({"role": "user", "content": prompt})
-    response_raw = chatbot.call_chat_agent(messages)
+    response_raw = chatbot._call_llm_internal(messages)
     messages.pop() # Replace the longform user prompt with just the player message
     messages.append({"role": "user", "content": player_message})
     messages.append({"role": "assistant", "content": response_raw})
@@ -207,7 +207,7 @@ prompt = prompt_shell.replace("$$$RAJINFO$$$", raj_info).replace("$$$PLAYERMESSA
 
 # Call 4o-mini to generate the response
 messages.append({"role": "user", "content": prompt})
-response = chatbot.call_chat_agent(messages)
+response = chatbot._call_llm_internal(messages)
 # messages.pop()
 messages.append({"role": "assistant", "content": response})
 print("Player: " + player_message)

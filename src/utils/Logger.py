@@ -23,7 +23,7 @@ window_width = 90
 indent = 0
 level = Level.VERBOSE
 
-def set_log_level(new_level: Level):
+def set_level(new_level: Level):
     """Sets the global log level."""
     global level
     level = new_level
