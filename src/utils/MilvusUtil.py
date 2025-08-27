@@ -6,16 +6,14 @@ from pymilvus import FieldSchema, CollectionSchema, DataType, Collection, utilit
 import openai
 from openai import OpenAI
 import ollama
-from typing import List, Dict, Optional, Type, get_origin, get_args, Union, TypeVar
+from typing import List, Dict, Optional, Tuple, Type, get_origin, get_args, Union, TypeVar
 from dataclasses import fields as dc_fields, is_dataclass, asdict
 from pathlib import Path
 import yaml
+import numpy as np
 
-filename = os.path.splitext(os.path.basename(__file__))[0]
-if __name__ == "__main__" or __name__ == filename: # If the script is being run directly
-    from utils import *
-else: # If the script is being imported
-    from .Utilities import *
+from src.utils import Logger
+from src.utils.Utilities import load_dotenv
 
 # Load the OpenAI API key from the .env file
 # print("Loading OpenAI API key")
@@ -90,7 +88,7 @@ def cosine_similarity(embedding1, embedding2):
 
 def find_milvus_proc(port):
     """Return a list of processes listening on the given port."""
-    print(f"Checking for running processes listening on port {port}")
+    Logger.verbose(f"Checking for running processes listening on port {port}")
     milvus_proc: psutil.Process = None
     last_proc: psutil.Process = None
     for proc in psutil.process_iter(['pid', 'name']):
@@ -100,7 +98,7 @@ def find_milvus_proc(port):
             get_conns = getattr(proc, 'net_connections', None) or getattr(proc, 'connections', None)
             for conn in get_conns(kind='inet'):
                 if conn.laddr.port == port:
-                    print(f"Found running process {proc.info['name']} {proc.info['pid']} on port {port}")
+                    Logger.verbose(f"Found running process {proc.info['name']} {proc.info['pid']} on port {port}")
                     if 'milvus' in proc.info['name']:
                         milvus_proc = proc
                     else:
@@ -110,14 +108,14 @@ def find_milvus_proc(port):
             pass
         except psutil.ZombieProcess:
             # Kill the zombie process
-            print(f"Killing zombie process {last_proc.pid}")
+            Logger.verbose(f"Killing zombie process {last_proc.pid}")
             last_proc.kill()
             # Check if the process is still alive
             if last_proc.is_running():
-                print(f"Zombie process {last_proc.pid} is still alive")
+                Logger.verbose(f"Zombie process {last_proc.pid} is still alive")
         except Exception as e:
-            print(f"Error: {e}")
-            print(f"Error type: {type(e)}")
+            Logger.verbose(f"Error: {e}")
+            Logger.verbose(f"Error type: {type(e)}")
             pass
 
     # Return the port of the Milvus process, if found
@@ -134,12 +132,12 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
 
     # Kill the Milvus process if it is running and the restart flag is set
     if running_milvus_proc and restart_milvus_server:
-        print(f"Killing Milvus process {running_milvus_proc.pid}")
+        Logger.verbose(f"Killing Milvus process {running_milvus_proc.pid}")
         running_milvus_proc.kill()
         running_milvus_proc = None
 
     if (running_milvus_proc):
-        print("Connecting to established Milvus server")
+        Logger.verbose("Connecting to established Milvus server")
   
         try:
             connections.connect(
@@ -148,23 +146,34 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
                 port=milvus_port,
                 timeout=10
             )
-            print("Connected to Milvus server\n")
+            Logger.verbose("Connected to Milvus server\n")
         except Exception as e:
-            print(f"Connection to Milvus server failed with error: {e}")
+            Logger.verbose(f"Connection to Milvus server failed with error: {e}")
             print(f"Killing process {running_milvus_proc.pid} and restarting Milvus server")
             running_milvus_proc.kill()
             running_milvus_proc = None
     
     if not running_milvus_proc:
-        print("Starting Milvus server")
-        default_server.start()
+        Logger.verbose("Establishing connection to Milvus server...")
+        if not default_server.running:
+            Logger.verbose("Milvus server is not running, starting it")
+            default_server.start()
+        else:
+            Logger.verbose("Milvus server is already running")
+
+        if default_server.listen_port != milvus_port:
+            raise Exception(f"Milvus server is running on port {default_server.listen_port} but expected port {milvus_port}")
         # TODO: Added this because it was failing to create connection on the first run. Make sure this works on the next cold run
-        connections.connect(
-            alias="default", 
-            host='localhost',
-            port=milvus_port
-        )
-        print(f"Milvus server initialized on port {default_server.listen_port}\n")
+        if not connections.has_connection(alias="default"):
+            Logger.verbose(f"Connecting to Milvus server on port {milvus_port}")
+            connections.connect(
+                alias="default", 
+                host='localhost',
+                port=milvus_port
+            )
+        else:
+            Logger.verbose(f"Milvus server already connected on port {default_server.listen_port}")
+        Logger.verbose(f"Milvus server initialized on port {default_server.listen_port}\n")
 
 
 # ---------------------- Generic VDB Helpers ----------------------
@@ -172,9 +181,10 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
 def drop_collection_if_exists(name: str):
     try:
         if utility.has_collection(name):
+            Logger.verbose(f"Dropping collection {name}")
             utility.drop_collection(name)
-    except Exception:
-        raise Exception(f"Failed to drop collection {name}")
+    except Exception as e:
+        raise Exception(f"Failed to drop collection {name}: {e}")
 
 def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: bool = True) -> Collection:
     # Create schema from model_cls
@@ -194,6 +204,7 @@ def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: 
     
     # Check if the collection already exists, validate schema, and load/return if it does
     if utility.has_collection(name):
+        Logger.verbose(f"Collection {name} already exists")
         # Validate compatibility with existing schema
         collection = Collection(name)
         existing_schema = collection.schema
@@ -206,6 +217,7 @@ def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: 
         return collection
 
     # Create collection if it doesn't exist
+    Logger.verbose(f"Creating collection {name}")
     return _create_collection(name, schema)
 
 
@@ -331,6 +343,8 @@ def insert_dataclasses(
             value = getattr(r, f.name, None)
             col_vals.append(_to_column_value(value, f))
         columns.append(col_vals)
+
+    Logger.verbose(f"Inserting {len(records)} records into collection {collection.name}")
     collection.insert(columns)
 
 
@@ -370,63 +384,151 @@ def export_dataclasses(collection: Collection, model_cls: Type[T], limit: int = 
 
 def search_relevant_records(
     collection: Collection,
-    queries_embeddings: List[List[float]],
+    query_embedding: List[float],
     *,
     model_cls: Type[T],
     topk: int = 5,
     metric: str = "COSINE",
-) -> List[T]:
-    if not queries_embeddings:
-        return []
-    # Ensure loaded - check if collection is already loaded before loading
+) -> List[Tuple[T, float]]:
+    """
+    Search for relevant records in a Milvus collection using a single query embedding.
+    
+    Args:
+        collection: The Milvus collection to search in
+        query_embedding: Single embedding vector to search with
+        model_cls: Dataclass type to return results as
+        topk: Maximum number of results to return
+        metric: Distance metric to use (COSINE, L2, etc.)
+    
+    Returns:
+        List of tuples containing (dataclass_instance, similarity_score)
+    """
+    # Ensure collection is loaded before searching
     load_state = utility.load_state(collection.name)
     if hasattr(load_state, 'state'):
-        # Newer pymilvus API
+        # Newer pymilvus API - check state attribute
         if load_state.state != utility.State.Loaded:
             collection.load()
     else:
         # Older pymilvus API - LoadState object itself indicates status
         if str(load_state) != 'Loaded':
             collection.load()
-    # Build output fields for dataclass (exclude embedding)
-    out_fields = [f.name for f in dc_fields(model_cls) if f.name != "embedding"]
-    list_str_field_names = {f.name for f in dc_fields(model_cls) if get_origin(f.type) in (list, List) and (get_args(f.type) and get_args(f.type)[0] is str)}
-    seen = set()
-    merged: List[T] = []
-    for q in queries_embeddings:
-        res = collection.search(
-            data=[q],
-            anns_field="embedding",
-            param={"metric_type": metric, "params": {"ef": 64}},
-            limit=topk,
-            output_fields=out_fields,
+    
+    # Build output fields for dataclass (exclude embedding field)
+    output_fields = [field.name for field in dc_fields(model_cls) if field.name != "embedding"]
+    
+    # Identify fields that are List[str] but stored as comma-separated strings
+    list_string_field_names = {
+        field.name for field in dc_fields(model_cls) 
+        if get_origin(field.type) in (list, List) and 
+        (get_args(field.type) and get_args(field.type)[0] is str)
+    }
+    
+    # Perform the search
+    search_results = collection.search(
+        data=[query_embedding],
+        anns_field="embedding",
+        param={"metric_type": metric, "params": {"ef": 64}},
+        limit=topk,
+        output_fields=output_fields,
+    )
+    
+    # Process search results into dataclass instances with similarity scores
+    result_records: List[Tuple[T, float]] = []
+    for result_batch in search_results:
+        for hit in result_batch:
+            # Build keyword arguments for dataclass constructor
+            constructor_kwargs = {}
+            for field_name in output_fields:
+                field_value = hit.entity.get(field_name)
+                
+                # Handle List[str] fields that are stored as comma-separated strings
+                if field_name in list_string_field_names and isinstance(field_value, str):
+                    constructor_kwargs[field_name] = [tag.strip() for tag in field_value.split(",") if tag.strip()]
+                else:
+                    constructor_kwargs[field_name] = field_value
+            
+            # Ensure embedding field is present (set to None since we don't retrieve it)
+            if any(field.name == "embedding" for field in dc_fields(model_cls)):
+                constructor_kwargs["embedding"] = None
+            
+            # Create dataclass instance and add to results with similarity score
+            dataclass_instance = model_cls(**constructor_kwargs)
+            similarity_score = hit.score
+            result_records.append((dataclass_instance, similarity_score))
+    
+    return result_records
+
+
+def multi_search_relevant_records(
+    collection: Collection,
+    queries_embeddings: List[List[float]],
+    *,
+    model_cls: Type[T],
+    topk: int = 5,
+    metric: str = "COSINE",
+) -> List[Tuple[T, float]]:
+    """
+    Search for relevant records using multiple query embeddings and merge results.
+    Deduplicates results based on key field or id field, keeping the highest similarity score.
+    
+    Args:
+        collection: The Milvus collection to search in
+        queries_embeddings: List of embedding vectors to search with
+        model_cls: Dataclass type to return results as
+        topk: Maximum number of results to return (total across all queries)
+        metric: Distance metric to use (COSINE, L2, etc.)
+    
+    Returns:
+        List of unique tuples containing (dataclass_instance, highest_similarity_score)
+    """
+    if not queries_embeddings:
+        return []
+    
+    # Track seen records to avoid duplicates, keeping track of best scores
+    seen_record_ids = {}  # Maps unique_id -> (record, best_score)
+    merged_results: List[Tuple[T, float]] = []
+    
+    # Get output fields to determine deduplication strategy
+    output_fields = [field.name for field in dc_fields(model_cls) if field.name != "embedding"]
+    
+    # Search with each query embedding
+    for query_embedding in queries_embeddings:
+        # Use single search function for each query
+        query_results = search_relevant_records(
+            collection=collection,
+            query_embedding=query_embedding,
+            model_cls=model_cls,
+            topk=topk,
+            metric=metric
         )
-        for hits in res:
-            for hit in hits:
-                # Deduplicate by key if present, else by id
-                key_val = None
-                if "key" in out_fields:
-                    key_val = hit.entity.get("key")
-                uniq = key_val if key_val is not None else hit.entity.get("id")
-                if uniq in seen:
-                    continue
-                seen.add(uniq)
-                kwargs = {}
-                for fname in out_fields:
-                    v = hit.entity.get(fname)
-                    if fname in list_str_field_names and isinstance(v, str):
-                        kwargs[fname] = [t for t in v.split(",") if t]
-                    else:
-                        kwargs[fname] = v
-                # Ensure embedding present (as None)
-                if any(f.name == "embedding" for f in dc_fields(model_cls)):
-                    kwargs["embedding"] = None
-                merged.append(model_cls(**kwargs))
-                if len(merged) >= topk:
-                    break
-            if len(merged) >= topk:
-                break
-    return merged
+        
+        # Process results and deduplicate
+        for record, similarity_score in query_results:
+            # Determine unique identifier for deduplication
+            # Prefer key field if available, otherwise use id
+            unique_identifier = None
+            if "key" in output_fields:
+                unique_identifier = getattr(record, "key", None)
+            
+            if unique_identifier is None:
+                unique_identifier = getattr(record, "id", None)
+            
+            # Check if we've seen this record before
+            if unique_identifier in seen_record_ids:
+                # Keep the record with the higher similarity score
+                existing_record, existing_score = seen_record_ids[unique_identifier]
+                if similarity_score > existing_score:
+                    seen_record_ids[unique_identifier] = (record, similarity_score)
+            else:
+                # New record, add it to our tracking
+                seen_record_ids[unique_identifier] = (record, similarity_score)
+    
+    # Convert to final result list, sorted by similarity score (highest first)
+    merged_results = sorted(seen_record_ids.values(), key=lambda x: x[1], reverse=True)
+    
+    # Limit to topk results
+    return merged_results[:topk]
 
 
 def init_npc_collection(

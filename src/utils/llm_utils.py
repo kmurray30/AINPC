@@ -8,6 +8,11 @@ T = TypeVar('T')
 prompt_formatting_message_prefix = "Format your response as a JSON object with the following keys:"
 prompt_formatting_message_suffix = "Make sure to include all keys, even if they are empty or null. If the type is str and the description specifies a list, make sure the field is a single string delimited by semicolons."
 
+type_hints = {
+    "bool": " (as true/false)",
+    "strlist": " (as a single string delimited by semicolons)",
+}
+
 # Iterate over the fields of the dataclass and add them to the prompt suffix
 # This will be used to instruct the LLM on how to format its response
 def get_formatting_suffix(response_type: Type[T], prepend_override: str = None, append_override: str = None) -> str:
@@ -18,7 +23,10 @@ def get_formatting_suffix(response_type: Type[T], prepend_override: str = None, 
     prompt_suffix = f"{prompt_formatting_message_prefix}\n" if prepend_override is None else prepend_override
     prompt_suffix += "{\n"
     for field_name, field_info in response_type.__dataclass_fields__.items():
-        prompt_suffix += f"\t{field_name} <type {field_info.type.__name__}>: {field_info.metadata.get('desc', '')}\n"
+        type_name = field_info.metadata.get('type', field_info.type.__name__) # Get the custom type name, or default to the actual type
+        type_hint = type_hints.get(type_name, "")
+        type_annotation = f"<type {type_name}{type_hint}>"
+        prompt_suffix += f"\t\"{field_name}\" {type_annotation}: {field_info.metadata.get('desc', '')}\n"
     prompt_suffix += "}\n"
     prompt_suffix += f"{prompt_formatting_message_suffix}\n" if append_override is None else append_override
     return prompt_suffix

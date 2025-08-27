@@ -3,7 +3,7 @@ from typing import List, Type, TypeVar, Dict
 
 from src.core.ChatMessage import ChatMessage
 from src.core.ResponseTypes import ChatResponse
-from src.utils import llm_utils
+from src.utils import Logger, llm_utils
 from src.core.Constants import Constants as constants, Role, Llm
 from src.utils.ChatBot import ChatBot
 
@@ -21,7 +21,7 @@ class Agent:
     def __init__(self, system_prompt: str, response_type: Type[T], llm_model: Llm = None):
         self.system_prompt = system_prompt
         self.response_type = response_type
-        if response_type is not None:
+        if response_type not in [str, int, float, bool, None]:
             self.response_formatting_suffix = llm_utils.get_formatting_suffix(response_type)
         self.llm_model = llm_model
 
@@ -47,6 +47,7 @@ class Agent:
             full_message_history_dict[-1]["content"] = user_prompt_wrapped
 
         # Call the LLM and append assistant response
+        Logger.debug(f"Full message history dict: {full_message_history_dict}")
         response_obj: T = ChatBot.call_llm(full_message_history_dict, self.response_type, self.llm_model)
         return response_obj
     

@@ -53,3 +53,20 @@ def log(message, log_level=Level.INFO):
         wrapped_message = '\n'.join(wrapped_lines)
         print(f"{color}{wrapped_message}\033[0m")
 
+def info(message):
+    log(message, Level.INFO)
+
+def warning(message):
+    log(message, Level.WARNING)
+
+def error(message):
+    log(message, Level.ERROR)
+
+def debug(message):
+    log(message, Level.DEBUG)
+
+def verbose(message):
+    log(message, Level.VERBOSE)
+
+
+

@@ -118,8 +118,8 @@ def test_search_relevant_entities(unique_collection_name, mock_embeddings):
     col.flush()
 
     q = MilvusUtil.get_embedding("please be brief", model=MilvusUtil.text_embedding_3_small)
-    hits = MilvusUtil.search_relevant_records(col, [q], model_cls=Entity, topk=2)
-    assert any("be concise" == h.key for h in hits)
+    hits = MilvusUtil.search_relevant_records(col, q, model_cls=Entity, topk=2)
+    assert any("be concise" == h[0].key for h in hits)
 
 
 def test_init_npc_collection_seeding_from_template_and_saved(tmp_path, mock_embeddings):
