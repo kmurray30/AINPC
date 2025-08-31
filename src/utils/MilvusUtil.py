@@ -123,9 +123,7 @@ def find_milvus_proc(port):
 
 def initialize_server(milvus_port=19530, restart_milvus_server=False):
     # Clear any existing connections
-    connections.disconnect("default")
-    connections.disconnect("milvus")
-    connections.disconnect("local")
+    disconnect_server()
 
     # Check if the Milvus server is already running
     running_milvus_proc = find_milvus_proc(milvus_port)
@@ -177,6 +175,14 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
 
 
 # ---------------------- Generic VDB Helpers ----------------------
+
+def disconnect_server():
+    for alias, _ in connections.list_connections():
+        Logger.verbose(f"Disconnecting connection {alias}")
+        connections.disconnect(alias)
+        Logger.verbose(f"Removing connection {alias}")
+        connections.remove_connection(alias)
+
 
 def drop_collection_if_exists(name: str):
     try:
@@ -317,6 +323,10 @@ def insert_dataclasses(
     # Ensure all records have an embedding
     if not all(hasattr(r, "embedding") for r in records):
         raise ValueError("All records must have an embedding field, even if empty")
+    
+    # Ensure all records have an embedding
+    if not all(hasattr(r, embed_text_attr) for r in records):
+        raise ValueError(f"All records must have a {embed_text_attr} field (specified by embed_text_attr argument), even if empty")
 
     # Ensure all records have an id IF auto_id is false
     is_auto_id = collection.schema.auto_id
@@ -330,6 +340,7 @@ def insert_dataclasses(
             text = getattr(r, embed_text_attr, None)
             if text is None:
                 raise ValueError(f"Record {r} {embed_text_attr} field is empty. Needed for embedding.")
+            Logger.verbose(f"Embedding text: {text}")
             embedding = get_embedding(text, model=embed_model)
             setattr(r, "embedding", embedding)
     
@@ -346,6 +357,8 @@ def insert_dataclasses(
 
     Logger.verbose(f"Inserting {len(records)} records into collection {collection.name}")
     collection.insert(columns)
+    collection.flush()
+    Logger.verbose(f"Done inserting {len(records)} records into collection {collection.name}")
 
 
 def export_dataclasses(collection: Collection, model_cls: Type[T], limit: int = 100000) -> List[T]:

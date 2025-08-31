@@ -4,9 +4,10 @@ import os
 from typing import List
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) # Adjust the path to the project root
+from src.brain import template_processor
 from src.core.Constants import Role
 from src.core.ChatMessage import ChatMessage
-from src.utils import MilvusUtil
+from src.utils import MilvusUtil, Utilities
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.Agent import Agent
 from src.utils import Logger
@@ -24,7 +25,7 @@ chat_history: List[ChatMessage] = []
 
 @dataclass
 class PreprocessedUserInput:
-    text: str = field(metadata={"desc": "The reworded user message. NOT EMPTY"})
+    text: str = field(metadata={"desc": "The reworded user message. NEVER EMPTY. If you don't know what to say, just put the original message in here."})
     has_information: bool = field(metadata={"desc": "Whether the input contains information that the assistant should remember."})
     ambiguous_pronouns: str = field(metadata={"desc": "A list of pronouns that are ambiguous and need clarification.", "type": "strlist"})
     needs_clarification: bool = field(metadata={"desc": "Whether you need clarification on any of the pronouns."})
@@ -51,7 +52,10 @@ def preprocess_input(message_history: List[ChatMessage], last_messages_to_retain
 
     message_history_truncated = message_history[-last_messages_to_retain:]
     Logger.verbose(f"Full input to preprocessor LLM:\nContext:{preprocess_agent_system_prompt}\nMessage History:\n{message_history_truncated}")
-    return preprocess_agent.chat_with_history(message_history_truncated)
+    preprocessed_message = preprocess_agent.chat_with_history(message_history_truncated)
+    if preprocessed_message.text == "":
+        preprocessed_message.text = "<empty>"
+    return preprocessed_message
 
 def update_memory(preprocessed_user_text: str):
     rows = [
@@ -114,17 +118,51 @@ def process_user_input(user_input: str):
 
 if __name__ == "__main__":
     # Simple chat loop
-    while True:
-        user_input_raw = input("You: ")
-        if user_input_raw.lower() in ["/exit", "/quit", "/bye"]:
-            exit()
-        if user_input_raw.lower() == "/list":
-            all_memories = MilvusUtil.export_dataclasses(collection, Entity)
-            Logger.verbose(f"All memories:\n{all_memories}")
-            continue
-        if user_input_raw.lower() == "/clear":
-            MilvusUtil.drop_collection_if_exists(collection_name)
-            collection = MilvusUtil.load_or_create_collection(collection_name, dim=TEST_DIMENSION, model_cls=Entity)
-            continue
-        response = process_user_input(user_input_raw)
-        print(f"AI: {response}")
+    try:
+        while True:
+            user_input_raw = input("You: ")
+            if user_input_raw.lower() in ["/exit", "/quit", "/bye"]:
+                exit()
+            if user_input_raw.lower() == "/list":
+                all_memories = MilvusUtil.export_dataclasses(collection, Entity)
+                # Print all the memories (without the embedding field)
+                Logger.verbose(f"All memories:")
+                for memory in all_memories:
+                    Logger.verbose(f"{memory.key}")
+                continue
+            if user_input_raw.lower().startswith("/path"):
+                # Print the current path of the runtime environment
+                Logger.verbose(f"Project root path: {os.getcwd()}")
+                Logger.verbose(f"Path to this file: {os.path.dirname(__file__)}")
+                continue
+            if user_input_raw.lower().startswith("/load"):
+                args = user_input_raw.lower().split(" ")
+                if len(args) != 2:
+                    Logger.error("Usage: /load <template_path>")
+                    continue
+                template_path = args[1]
+                if not template_path.endswith(".yaml"):
+                    Logger.error("File must be a yaml file")
+                    continue
+
+                template_path = os.path.join(os.path.dirname(__file__), template_path)
+                if not os.path.exists(template_path):
+                    Logger.error(f"File {template_path} does not exist")
+                    continue
+                # Prepend the path to the filename
+                template_path = os.path.join(os.path.dirname(__file__), template_path)
+                entities = template_processor.template_to_entities_simple(template_path)
+                MilvusUtil.insert_dataclasses(collection, entities)
+                Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
+                continue
+            if user_input_raw.lower() == "/clear":
+                MilvusUtil.drop_collection_if_exists(collection_name)
+                collection = MilvusUtil.load_or_create_collection(collection_name, dim=TEST_DIMENSION, model_cls=Entity)
+                continue
+            response = process_user_input(user_input_raw)
+            print(f"AI: {response}")
+    except Exception as e:
+        Logger.error(f"Error: {e}")
+        exit()
+    finally:
+        MilvusUtil.disconnect_server()
