@@ -19,7 +19,7 @@ from src.core.ChatMessage import ChatMessage
 from src.poc import bootstrap, proj_settings
 from src.poc import proj_paths
 from src.poc.poc1.presenter import Presenter
-from src.core.Constants import Role
+from src.core.Constants import Llm, Role
 from src.core.ResponseTypes import ChatResponse, ChatSummary
 from src.utils import io_utils, llm_utils
 
@@ -81,10 +81,10 @@ class ChatBotMock:
         self.calls: List[Any] = []
         self.response_counter = 0
 
-    def __call__(self, messages, response_type):
+    def __call__(self, messages, response_type, chat_model=None):
         print(f"ChatBotMock called: type={getattr(response_type,'__name__',response_type)} msgs={len(messages)}")
         # Keep call record for assertions
-        self.calls.append({"messages": messages, "response_type": response_type})
+        self.calls.append({"messages": messages, "response_type": response_type, "chat_model": chat_model})
 
         if response_type is ChatResponse:
             self.last_input_messages = messages
