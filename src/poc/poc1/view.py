@@ -4,7 +4,7 @@ from typing import Protocol, Callable
 from threading import Event
 
 from src.core.schemas.Schemas import GameSettings
-from src.poc import proj_settings
+from src.core import proj_settings
 
 class Presenter(Protocol):
     def on_send_action(self, event: Event) -> None:

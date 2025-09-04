@@ -8,7 +8,7 @@ from src.utils.Logger import Level
 from .Constants import Role
 from .ChatMessage import ChatMessage
 from .ResponseTypes import ChatResponse, ChatSummary
-from src.poc import proj_settings
+from src.core import proj_settings
 
 @dataclass
 class ConversationMemoryState:

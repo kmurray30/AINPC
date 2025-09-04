@@ -13,10 +13,10 @@ from pathlib import Path
 from src.core.ChatMessage import ChatMessage
 from src.poc.poc1.NPC import NPC
 from src.core.Constants import Constants as constants, Role
-from src.poc import proj_paths, proj_settings
+from src.core import proj_paths, proj_settings
 from src.utils import TextToSpeech, io_utils
 from src.core.schemas.Schemas import GameSettings
-from src.poc.proj_paths import SavePaths
+from src.core.proj_paths import SavePaths
 
 class View(Protocol):
     def create_ui(self, presenter: "Presenter") -> None:
@@ -155,7 +155,10 @@ class Presenter:
                 )
 
             # Get the AI response
-            chat_response = self.npc.call_llm_for_chat(user_input, enable_printing=True)
+            if hasattr(self.npc, "chat"):
+                chat_response = self.npc.chat(user_input)
+            else:
+                chat_response = self.npc.call_llm_for_chat(user_input, enable_printing=True)
 
             # Append the response to the chat logs
             self.append_chat_logs(

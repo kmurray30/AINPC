@@ -10,7 +10,7 @@ from src.core.ConversationMemory import ConversationMemory, ConversationMemorySt
 from src.core.ResponseTypes import ChatResponse
 from src.core.Constants import Role, Constants as constants
 from src.core.Agent import Agent
-from src.poc import proj_paths, proj_settings
+from src.core import proj_paths, proj_settings
 
 
 @dataclass

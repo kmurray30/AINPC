@@ -219,6 +219,7 @@ def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: 
         # Ensure there is an embedding field
         if not any(field.name == "embedding" and field.dtype == DataType.FLOAT_VECTOR for field in existing_schema.fields):
             raise ValueError(f"No embedding field found in schema for {model_cls.__name__}. Must have an embedding field with type FLOAT_VECTOR.")
+        Logger.verbose(f"Loading collection {name}")
         collection.load()
         return collection
 

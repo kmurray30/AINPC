@@ -13,7 +13,7 @@ from pathlib import Path
 from src.core.ChatMessage import ChatMessage
 from src.poc.poc2.NPC import NPC
 from src.core.Constants import Constants as constants, Role
-from src.poc import proj_paths, proj_settings
+from src.core import proj_paths, proj_settings
 from src.utils import TextToSpeech, io_utils
 from src.core.schemas.Schemas import GameSettings
 from src.poc.proj_paths import SavePaths

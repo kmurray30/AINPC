@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 from typing import List, Type, TypeVar, Dict
 
 from src.core.ChatMessage import ChatMessage
@@ -47,7 +48,7 @@ class Agent:
             full_message_history_dict[-1]["content"] = user_prompt_wrapped
 
         # Call the LLM and append assistant response
-        Logger.debug(f"Full message history dict: {full_message_history_dict}")
+        Logger.debug(f"Full message history dict:\n" + json.dumps(full_message_history_dict, indent=4))
         response_obj: T = ChatBot.call_llm(full_message_history_dict, self.response_type, self.llm_model)
         return response_obj
     

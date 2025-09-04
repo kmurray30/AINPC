@@ -1,6 +1,6 @@
 # src/poc/bootstrap.py
 from pathlib import Path
-from src.poc import proj_paths, proj_settings
+from src.core import proj_paths, proj_settings
 from src.utils import Logger
 
 def init_app(save_name: str, project_path: Path) -> None:

@@ -16,8 +16,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from src.core.ChatMessage import ChatMessage
-from src.poc import bootstrap, proj_settings
-from src.poc import proj_paths
+from src.poc import bootstrap
+from src.core import proj_settings, proj_paths
 from src.poc.poc1.presenter import Presenter
 from src.core.Constants import Llm, Role
 from src.core.ResponseTypes import ChatResponse, ChatSummary

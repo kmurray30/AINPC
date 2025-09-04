@@ -10,7 +10,7 @@ from src.utils.Logger import Level
 from src.core.Constants import Role
 from src.core.ResponseTypes import ChatResponse
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
-from src.poc import proj_paths, proj_settings
+from src.core import proj_paths, proj_settings
 from src.utils import MilvusUtil
 
 from pymilvus import Collection
