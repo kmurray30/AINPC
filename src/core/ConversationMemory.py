@@ -25,7 +25,7 @@ class ConversationMemory:
     game_settings: GameSettings
 
     @classmethod
-    def new_game(cls) -> 'ConversationMemory':
+    def from_new(cls) -> 'ConversationMemory':
         """Creates a new instance of ConversationMemory for a new game."""
         return cls(None)
 

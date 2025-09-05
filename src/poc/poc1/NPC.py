@@ -83,7 +83,7 @@ class NPC:
             self.init_state()
 
     def init_state(self) -> None:
-        self.conversation_memory = ConversationMemory.new_game()
+        self.conversation_memory = ConversationMemory.from_new()
 
     # ---------- Public API ----------
     def maintain(self) -> None:

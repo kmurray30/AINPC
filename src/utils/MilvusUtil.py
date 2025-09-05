@@ -6,7 +6,7 @@ from pymilvus import FieldSchema, CollectionSchema, DataType, Collection, utilit
 import openai
 from openai import OpenAI
 import ollama
-from typing import List, Dict, Optional, Tuple, Type, get_origin, get_args, Union, TypeVar
+from typing import Any, Final, List, Dict, Optional, Tuple, Type, get_origin, get_args, Union, TypeVar
 from dataclasses import fields as dc_fields, is_dataclass, asdict
 from pathlib import Path
 import yaml
@@ -20,6 +20,10 @@ from src.utils.Utilities import load_dotenv
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 openAIClient = OpenAI()
+
+# Milvus setup
+root_proj_dir = Path(__file__).parent.parent.parent
+default_server.set_base_dir(root_proj_dir / "milvus_data")
 
 # Platforms:
 _openai_ = "openai"
@@ -134,23 +138,22 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
         running_milvus_proc.kill()
         running_milvus_proc = None
 
-    if (running_milvus_proc):
+    if running_milvus_proc:
         Logger.verbose("Connecting to established Milvus server")
-  
         try:
             connections.connect(
                 alias="default", 
                 host='localhost',
                 port=milvus_port,
-                timeout=10
+                timeout=10,
             )
             Logger.verbose("Connected to Milvus server\n")
         except Exception as e:
             Logger.verbose(f"Connection to Milvus server failed with error: {e}")
-            print(f"Killing process {running_milvus_proc.pid} and restarting Milvus server")
+            Logger.verbose(f"Killing process {running_milvus_proc.pid} and restarting Milvus server")
             running_milvus_proc.kill()
             running_milvus_proc = None
-    
+
     if not running_milvus_proc:
         Logger.verbose("Establishing connection to Milvus server...")
         if not default_server.running:
@@ -159,19 +162,21 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
         else:
             Logger.verbose("Milvus server is already running")
 
-        if default_server.listen_port != milvus_port:
-            raise Exception(f"Milvus server is running on port {default_server.listen_port} but expected port {milvus_port}")
+    if default_server.listen_port != milvus_port:
+        raise Exception(
+            f"Milvus server is running on port {default_server.listen_port} but expected port {milvus_port}"
+        )
         # TODO: Added this because it was failing to create connection on the first run. Make sure this works on the next cold run
-        if not connections.has_connection(alias="default"):
-            Logger.verbose(f"Connecting to Milvus server on port {milvus_port}")
-            connections.connect(
-                alias="default", 
-                host='localhost',
-                port=milvus_port
-            )
-        else:
-            Logger.verbose(f"Milvus server already connected on port {default_server.listen_port}")
-        Logger.verbose(f"Milvus server initialized on port {default_server.listen_port}\n")
+    if not connections.has_connection(alias="default"):
+        Logger.verbose(f"Connecting to Milvus server on port {milvus_port}")
+        connections.connect(
+            alias="default", 
+            host='localhost',
+            port=milvus_port,
+        )
+    else:
+        Logger.verbose(f"Milvus server already connected on port {default_server.listen_port}")
+    Logger.verbose(f"Milvus server initialized on port {default_server.listen_port}\n")
 
 
 # ---------------------- Generic VDB Helpers ----------------------
@@ -192,7 +197,7 @@ def drop_collection_if_exists(name: str):
     except Exception as e:
         raise Exception(f"Failed to drop collection {name}: {e}")
 
-def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: bool = True) -> Collection:
+def create_schema_from_cls(model_cls: Type, dim: int, auto_id: bool = True) -> CollectionSchema:
     # Create schema from model_cls
     if not is_dataclass(model_cls):
         raise TypeError("model_cls must be a dataclass type")
@@ -208,27 +213,10 @@ def load_or_create_collection(name: str, dim: int, *, model_cls: Type, auto_id: 
     if not any(field.name == "id" and field.dtype == DataType.INT64 for field in field_schemas):
         raise ValueError(f"No id field found in schema for {model_cls.__name__}. Must have an id field with type INT64.")
     
-    # Check if the collection already exists, validate schema, and load/return if it does
-    if utility.has_collection(name):
-        Logger.verbose(f"Collection {name} already exists")
-        # Validate compatibility with existing schema
-        collection = Collection(name)
-        existing_schema = collection.schema
-        if existing_schema != schema:
-            raise ValueError(f"Collection {name} already exists with different schema")
-        # Ensure there is an embedding field
-        if not any(field.name == "embedding" and field.dtype == DataType.FLOAT_VECTOR for field in existing_schema.fields):
-            raise ValueError(f"No embedding field found in schema for {model_cls.__name__}. Must have an embedding field with type FLOAT_VECTOR.")
-        Logger.verbose(f"Loading collection {name}")
-        collection.load()
-        return collection
-
-    # Create collection if it doesn't exist
-    Logger.verbose(f"Creating collection {name}")
-    return _create_collection(name, schema)
-
+    return schema
 
 def _create_collection(name: str, schema: CollectionSchema) -> Collection:
+    Logger.verbose(f"Creating collection {name}")
     collection = Collection(name=name, schema=schema)
     collection.create_index(
             field_name="embedding",
@@ -241,6 +229,43 @@ def _create_collection(name: str, schema: CollectionSchema) -> Collection:
     # Ensure collection is loaded for immediate search/query
     collection.load()
     return collection
+
+_UNSET: Final = object()
+def _load_collection(name: str, schema: CollectionSchema, default: Any = _UNSET) -> Collection:
+    # Check if the collection already exists, validate schema, and load/return if it does
+    if utility.has_collection(name):
+        Logger.verbose(f"Collection {name} already exists")
+        # Validate compatibility with existing schema
+        collection = Collection(name)
+        existing_schema = collection.schema
+        if existing_schema != schema:
+            raise ValueError(f"Collection {name} already exists with different schema")
+        Logger.verbose(f"Loading collection {name}")
+        collection.load()
+        return collection
+    else:
+        if default is _UNSET:
+            raise ValueError(f"Collection {name} does not exist")
+        else:
+            return default
+
+def create_collection_from_cls(name: str, model_cls: Type, dim: int, auto_id: bool = True) -> Collection:
+    schema = create_schema_from_cls(model_cls, dim, auto_id)
+    return _create_collection(name, schema)
+
+def load_collection_from_cls(name: str, model_cls: Type, dim: int, auto_id: bool = True) -> Collection:
+    schema = create_schema_from_cls(model_cls, dim, auto_id)
+    return _load_collection(name, schema, default=None)
+
+def load_or_create_collection_from_cls(name: str, dim: int, *, model_cls: Type, auto_id: bool = True) -> Collection:
+    schema = create_schema_from_cls(model_cls, dim, auto_id)
+
+    collection = _load_collection(name, schema, default=None)
+
+    if collection:
+        return collection
+    else:
+        return _create_collection(name, schema)
     
 
 def _unwrap_optional(py_type):
@@ -564,7 +589,7 @@ def init_npc_collection(
         raise TypeError("model_cls must be a dataclass type")
 
     initialize_server()
-    col = load_or_create_collection(collection_name, get_dimensions_of_model(embed_model), model_cls=model_cls)
+    col = load_or_create_collection_from_cls(collection_name, get_dimensions_of_model(embed_model), model_cls=model_cls)
 
     seeded: Optional[List[T]] = None
     if col.num_entities == 0:

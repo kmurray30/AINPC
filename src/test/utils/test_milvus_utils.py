@@ -48,7 +48,7 @@ def test_dataclass_collection_creation_and_schema(unique_collection_name, mock_e
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
 
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Entity)
     assert isinstance(col, Collection)
 
     col_field_names = {f.name for f in col.schema.fields}
@@ -59,7 +59,7 @@ def test_insert_and_export_entities(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
 
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity, auto_id=False)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Entity, auto_id=False)
 
     rows = [
         Entity(key="alpha", content="first", tags=["t1", "t2"], id=Utilities.generate_uuid_int64()),
@@ -84,7 +84,7 @@ def test_insert_and_export_entities_with_auto_id(unique_collection_name, mock_em
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
 
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity, auto_id=True)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Entity, auto_id=True)
 
     rows = [
         Entity(key="alpha", content="first", tags=["t1", "t2"]),
@@ -108,7 +108,7 @@ def test_insert_and_export_entities_with_auto_id(unique_collection_name, mock_em
 def test_search_relevant_entities(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Entity)
 
     rows = [
         Entity(key="close app", content="prefers to end session if annoyed", tags=["goals"]),
@@ -165,7 +165,7 @@ def test_init_npc_collection_seeding_from_template_and_saved(tmp_path, mock_embe
 def test_disconnect_and_reconnect(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Entity)
     MilvusUtil.insert_dataclasses(col, [Entity(key="k", content="v", tags=[])])
     col.flush()
 
@@ -186,16 +186,16 @@ def test_disconnect_and_reconnect(unique_collection_name, mock_embeddings):
 def test_idempotent_collection_creation(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col1 = MilvusUtil.load_or_create_collection(name, dim=1536, model_cls=Entity)
+    col1 = MilvusUtil.load_or_create_collection_from_cls(name, dim=1536, model_cls=Entity)
     # Calling again should not error and should return a Collection
-    col2 = MilvusUtil.load_or_create_collection(name, dim=1536, model_cls=Entity)
+    col2 = MilvusUtil.load_or_create_collection_from_cls(name, dim=1536, model_cls=Entity)
     assert isinstance(col1, Collection) and isinstance(col2, Collection)
 
 
 def test_insert_missing_tags_field(unique_collection_name, mock_embeddings):
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Entity)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Entity)
     rows = [
         Entity(key="no tags 1", content="c1", tags=[]),
         Entity(key="no tags 2", content="c2", tags=[]),
@@ -254,7 +254,7 @@ def test_flexible_dimension_handling(unique_collection_name, monkeypatch, test_d
     MilvusUtil.drop_collection_if_exists(name)
     
     # Create collection with the test dimension
-    col = MilvusUtil.load_or_create_collection(name, dim=test_dim, model_cls=Entity, auto_id=True)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=test_dim, model_cls=Entity, auto_id=True)
     assert isinstance(col, Collection)
     
     # Insert data
@@ -292,7 +292,7 @@ def test_optional_fields_dataclass(unique_collection_name, mock_embeddings):
 
     name = unique_collection_name
     MilvusUtil.drop_collection_if_exists(name)
-    col = MilvusUtil.load_or_create_collection(name, dim=TEST_DIMENSION, model_cls=Alt)
+    col = MilvusUtil.load_or_create_collection_from_cls(name, dim=TEST_DIMENSION, model_cls=Alt)
     assert isinstance(col, Collection)
 
 

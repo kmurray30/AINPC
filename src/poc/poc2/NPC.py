@@ -120,7 +120,7 @@ class NPC(BaseNPC):
             raise e
 
     def init_state(self) -> None:
-        self.conversation_memory = ConversationMemory.new_game()
+        self.conversation_memory = ConversationMemory.from_new()
 
     # -------------------- Milvus/VDB helpers --------------------
     def _init_vdb(self, is_new_game: bool) -> None:

@@ -59,6 +59,9 @@ def mock_milvus():
         # Mock MilvusUtil methods
         mock_milvus.initialize_server.return_value = None
         mock_milvus.load_or_create_collection.return_value = mock_collection
+        mock_milvus.create_collection_from_cls.return_value = mock_collection
+        mock_milvus.load_or_create_collection_from_cls.return_value = mock_collection
+        mock_milvus.load_collection_from_cls.return_value = mock_collection
         mock_milvus.get_embedding.return_value = [0.1] * 1536
         mock_milvus.search_relevant_records.return_value = []
         mock_milvus.insert_dataclasses.return_value = None
@@ -132,7 +135,7 @@ def mock_conversation_memory():
         mock_instance.get_state = Mock()
         mock_instance.maintain = Mock()
         mock_instance.get_chat_summary_as_string = Mock(return_value="Mock conversation summary")
-        mock_cm.new_game.return_value = mock_instance
+        mock_cm.from_new.return_value = mock_instance
         yield mock_cm
 
 
@@ -176,10 +179,10 @@ class TestNPCInitialization:
     def test_milvus_initialization(self, npc_instance, mock_milvus):
         """Test that Milvus is initialized correctly"""
         mock_milvus.initialize_server.assert_called_once()
-        mock_milvus.load_or_create_collection.assert_called_once_with(
-            "simple_brain", 
-            dim=1536, 
-            model_cls=Entity
+        mock_milvus.create_collection_from_cls.assert_called_once_with(
+            "simple_brain",
+            model_cls=Entity,
+            dim=1536
         )
 
 
@@ -188,20 +191,20 @@ class TestNPCStateManagement:
     
     def test_init_state(self, npc_instance):
         """Test that state is initialized correctly for new game"""
-        npc_instance.init_state()
+        npc_instance._init_state()
         assert npc_instance.conversation_memory is not None
         # Since we're mocking ConversationMemory, just check it's not None
         assert npc_instance.conversation_memory is not None
     
     def test_save_state(self, npc_instance, mock_io_utils, mock_proj_paths):
         """Test that state is saved correctly"""
-        npc_instance.save_state()
+        npc_instance._save_state()
         mock_io_utils.save_to_yaml_file.assert_called_once()
     
     def test_load_state_file_not_found(self, npc_instance, mock_io_utils, mock_proj_paths):
         """Test that state loading handles missing files gracefully"""
         mock_io_utils.load_yaml_into_dataclass.side_effect = FileNotFoundError("File not found")
-        npc_instance.load_state()
+        npc_instance._load_state()
         # Should fall back to init_state
         assert npc_instance.conversation_memory is not None
 
@@ -232,10 +235,10 @@ class TestNPCSystemPrompt:
         npc_instance.conversation_memory.append_chat("Hello", role=Role.user)
         
         # Make get_memories return at least one item so brain context is included
-        with patch('src.brain.NPC.NPC.get_memories', return_value=[
+        with patch('src.brain.NPC.NPC._get_memories', return_value=[
             Entity(key="k", content="brain_content", tags=["memories"])
         ]):
-            prompt = npc_instance.build_system_prompt()
+            prompt = npc_instance._build_system_prompt()
         
         assert "You are a helpful test assistant." in prompt
         assert "Prior conversation summary:" in prompt
@@ -247,13 +250,13 @@ class TestNPCSystemPrompt:
     
     def test_build_system_prompt_without_conversation_summary(self, npc_instance):
         """Test system prompt without conversation summary"""
-        prompt = npc_instance.build_system_prompt(include_conversation_summary=False)
+        prompt = npc_instance._build_system_prompt(include_conversation_summary=False)
         assert "You are a helpful test assistant." in prompt
         assert "Prior conversation summary:" not in prompt
     
     def test_build_system_prompt_without_brain_context(self, npc_instance):
         """Test system prompt without brain context"""
-        prompt = npc_instance.build_system_prompt(include_brain_context=False)
+        prompt = npc_instance._build_system_prompt(include_brain_context=False)
         assert "You are a helpful test assistant." in prompt
         assert "Brain context:" not in prompt
 
@@ -263,7 +266,7 @@ class TestNPCBrainMemory:
     
     def test_update_memory(self, npc_instance, mock_milvus):
         """Test that memory can be updated"""
-        npc_instance.update_memory("Test memory content")
+        npc_instance._update_brain_memory("Test memory content")
         mock_milvus.insert_dataclasses.assert_called_once()
         npc_instance.collection.flush.assert_called_once()
     
@@ -273,7 +276,7 @@ class TestNPCBrainMemory:
             (Entity(key="test", content="test content", tags=["memories"]), 0.8)
         ]
         
-        memories = npc_instance.get_memories("test query", topk=5)
+        memories = npc_instance._get_memories("test query", topk=5)
         assert len(memories) == 1
         assert memories[0].content == "test content"
         mock_milvus.get_embedding.assert_called_once()
@@ -286,7 +289,7 @@ class TestNPCBrainMemory:
             Entity(key="key2", content="content2", tags=["memories"])
         ]
         
-        context = npc_instance.build_context(memories)
+        context = npc_instance._build_memory_context(memories)
         assert "content1" in context
         assert "content2" in context
         assert context.count("\n") == 1  # One newline between two memories
@@ -310,7 +313,7 @@ class TestNPCBrainMemoryAPI:
         """Test clearing brain memory"""
         npc_instance.clear_brain_memory()
         mock_milvus.drop_collection_if_exists.assert_called_once_with("simple_brain")
-        mock_milvus.load_or_create_collection.assert_called()
+        mock_milvus.load_or_create_collection_from_cls.assert_called()
     
     def test_load_entities_from_template(self, npc_instance, mock_milvus):
         """Test loading entities from template"""
@@ -352,7 +355,7 @@ class TestNPCPreprocessing:
         # Add some chat history
         npc_instance.conversation_memory.append_chat("Hello", role=Role.user)
         
-        result = npc_instance.preprocess_input(npc_instance.conversation_memory.chat_memory)
+        result = npc_instance._preprocess_input(npc_instance.conversation_memory.chat_memory)
         assert result.text == "processed text"
         assert result.has_information is True
         assert result.needs_clarification is False

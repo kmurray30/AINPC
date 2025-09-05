@@ -10,3 +10,4 @@ src/test/UnitTests/reports/*
 src/test/EvalTests/reports/*
 **/saves/
 *.app
+milvus_data/
