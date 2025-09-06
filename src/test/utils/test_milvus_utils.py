@@ -7,7 +7,7 @@ from dataclasses import fields as dc_fields
 from pymilvus import utility, connections, Collection
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from src.utils import MilvusUtil, Utilities
+from src.utils import MilvusUtil, Utilities, VectorUtils
 from src.core.schemas.CollectionSchemas import Entity
 
 # Global test dimension - can be changed to test with different dimensions
@@ -27,7 +27,7 @@ def mock_embeddings(monkeypatch):
     def fake_dim(model):
         return TEST_DIMENSION
 
-    def fake_embed(text, model=MilvusUtil.text_embedding_3_small, dimensions=None):
+    def fake_embed(text, model=VectorUtils.text_embedding_3_small, dimensions=None):
         # Deterministic embedding from text bytes using global test dimension
         arr = [0.0] * TEST_DIMENSION
         for i, ch in enumerate(text.encode("utf-8")):
@@ -117,7 +117,7 @@ def test_search_relevant_entities(unique_collection_name, mock_embeddings):
     MilvusUtil.insert_dataclasses(col, rows)
     col.flush()
 
-    q = MilvusUtil.get_embedding("please be brief", model=MilvusUtil.text_embedding_3_small)
+    q = VectorUtils.get_embedding("please be brief", model=VectorUtils.text_embedding_3_small)
     hits = MilvusUtil.search_relevant_records(col, q, model_cls=Entity, topk=2)
     assert any("be concise" == h[0].key for h in hits)
 
@@ -227,7 +227,7 @@ def test_compute_embeddings_len_and_dim(mock_embeddings):
     texts = ["a", "bb", "ccc"]
     embs = []
     for text in texts:
-        embs.append(MilvusUtil.get_embedding(text, model=MilvusUtil.text_embedding_3_small))
+        embs.append(VectorUtils.get_embedding(text, model=VectorUtils.text_embedding_3_small))
     assert len(embs) == 3
     assert all(len(v) == TEST_DIMENSION for v in embs)
 
@@ -239,7 +239,7 @@ def test_flexible_dimension_handling(unique_collection_name, monkeypatch, test_d
     def fake_dim(model):
         return test_dim
 
-    def fake_embed(text, model=MilvusUtil.text_embedding_3_small, dimensions=None):
+    def fake_embed(text, model=VectorUtils.text_embedding_3_small, dimensions=None):
         # Generate embedding with the test dimension
         arr = [0.0] * test_dim
         for i, ch in enumerate(text.encode("utf-8")):
@@ -274,7 +274,7 @@ def test_flexible_dimension_handling(unique_collection_name, monkeypatch, test_d
     assert {"test1", "test2"}.issubset(keys)
     
     # Test embedding generation matches dimension
-    embedding = MilvusUtil.get_embedding("test", model=MilvusUtil.text_embedding_3_small)
+    embedding = VectorUtils.get_embedding("test", model=VectorUtils.text_embedding_3_small)
     assert len(embedding) == test_dim
 
 
