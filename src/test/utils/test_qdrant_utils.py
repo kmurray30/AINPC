@@ -31,8 +31,8 @@ def mock_embeddings(monkeypatch):
             arr[i % TEST_DIMENSION] += (ch % 31) / 31.0
         return arr
 
-    monkeypatch.setattr(QdrantUtil, "get_dimensions_of_model", fake_dim)
-    monkeypatch.setattr(QdrantUtil, "get_embedding", fake_embed)
+    monkeypatch.setattr(VectorUtils, "get_dimensions_of_model", fake_dim)
+    monkeypatch.setattr(VectorUtils, "get_embedding", fake_embed)
     yield
 
 
@@ -103,7 +103,7 @@ def test_search_relevant_entities(unique_collection_name, mock_embeddings):
     ]
     QdrantUtil.insert_dataclasses(col, rows)
 
-    q = QdrantUtil.get_embedding("please be brief", model=VectorUtils.text_embedding_3_small)
+    q = VectorUtils.get_embedding("please be brief", model=VectorUtils.text_embedding_3_small)
     hits = QdrantUtil.search_relevant_records(col, q, model_cls=Entity, topk=2)
     assert any("be concise" == h[0].key for h in hits)
 
@@ -179,8 +179,8 @@ def test_flexible_dimension_handling(unique_collection_name, monkeypatch):
                 arr[i % test_dim] += (ch % 31) / 31.0
             return arr
 
-        monkeypatch.setattr(QdrantUtil, "get_dimensions_of_model", fake_dim)
-        monkeypatch.setattr(QdrantUtil, "get_embedding", fake_embed)
+        monkeypatch.setattr(VectorUtils, "get_dimensions_of_model", fake_dim)
+        monkeypatch.setattr(VectorUtils, "get_embedding", fake_embed)
 
         name = f"test_q_{uuid.uuid4().hex[:12]}"
         QdrantUtil.drop_collection_if_exists(name)
@@ -198,7 +198,7 @@ def test_flexible_dimension_handling(unique_collection_name, monkeypatch):
         keys = {e.key for e in exported}
         assert {"test1", "test2"}.issubset(keys)
 
-        embedding = QdrantUtil.get_embedding("test", model=VectorUtils.text_embedding_3_small)
+        embedding = VectorUtils.get_embedding("test", model=VectorUtils.text_embedding_3_small)
         assert len(embedding) == test_dim
 
 
