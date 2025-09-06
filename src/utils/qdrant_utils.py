@@ -76,20 +76,6 @@ def drop_collection_if_exists(name: str):
         raise Exception(f"Failed to drop collection {name}: {exc}")
 
 
-def _unwrap_optional(py_type):
-    origin = get_origin(py_type)
-    args = get_args(py_type)
-    if origin is Optional.__origin__ if hasattr(Optional, "__origin__") else None:
-        # typing.Optional[T] is Union[T, NoneType]
-        if len(args) == 2:
-            return args[0] if args[1] is type(None) else args[1]
-    # PEP 604: T | None
-    if origin is type(Optional[int] | None).__origin__ if hasattr(Optional[int] | None, "__origin__") else None:
-        # This branch is defensive; primary handling is above
-        return [a for a in args if a is not type(None)][0]
-    return py_type
-
-
 @dataclass
 class QdrantCollection:
     name: str

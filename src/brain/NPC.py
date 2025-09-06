@@ -2,8 +2,7 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional
 
-from src.core.schemas.Schemas import GameSettings
-from src.utils import io_utils, llm_utils
+from src.utils import VectorUtils, io_utils, qdrant_utils
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
@@ -11,9 +10,7 @@ from src.core.ResponseTypes import ChatResponse
 from src.core.Constants import Role, Constants as constants
 from src.core.Agent import Agent
 from src.core import proj_paths
-from src.utils import MilvusUtil
 from src.core.schemas.CollectionSchemas import Entity
-from src.core.ChatMessage import ChatMessage
 from dataclasses import dataclass, field
 
 
@@ -62,11 +59,7 @@ class NPC:
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
 
-        # Initialize Milvus and collection which holds the brain memory
-
-        # TODO move this into main class
-        MilvusUtil.initialize_server()
-
+        # Initialize or load the brain memory and conversation memory
         if not is_new_game:
             self._load_state()
         else:
@@ -110,7 +103,7 @@ class NPC:
     def _load_state(self) -> None:
         try:
             # Load the milvus collection which holds the brain memory
-            self.collection = MilvusUtil.load_collection_from_cls(
+            self.collection = qdrant_utils.load_collection_from_cls(
                 self.collection_name,
                 model_cls=Entity,
                 dim=self.TEST_DIMENSION
@@ -127,7 +120,7 @@ class NPC:
 
     def _init_state(self) -> None:
         # Create a fresh milvus collection which holds the brain memory
-        self.collection = MilvusUtil.create_collection_from_cls(
+        self.collection = qdrant_utils.create_collection_from_cls(
             self.collection_name,
             model_cls=Entity,
             dim=self.TEST_DIMENSION
@@ -169,13 +162,13 @@ class NPC:
             Entity(key=preprocessed_user_text, content=preprocessed_user_text, tags=["memories"]),
         ]
         Logger.verbose(f"Updating memory with {preprocessed_user_text}")
-        MilvusUtil.insert_dataclasses(self.collection, rows)
+        qdrant_utils.insert_dataclasses(self.collection, rows)
         self.collection.flush()
         Logger.verbose(f"Collection now has {self.collection.num_entities} entities")
 
     def _get_memories(self, preprocessed_user_text: str, topk: int = 5) -> List[Entity]:
-        query = MilvusUtil.get_embedding(preprocessed_user_text, model=MilvusUtil.text_embedding_3_small)
-        hits = MilvusUtil.search_relevant_records(self.collection, query, model_cls=Entity, topk=topk)
+        query = qdrant_utils.get_embedding(preprocessed_user_text, model=VectorUtils.text_embedding_3_small)
+        hits = qdrant_utils.search_relevant_records(self.collection, query, model_cls=Entity, topk=topk)
         Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
         # Print the memories with their similarity scores
         for hit in hits:
@@ -197,7 +190,7 @@ class NPC:
 
     def list_all_memories(self) -> List[Entity]:
         """API method for /list command"""
-        all_memories = MilvusUtil.export_dataclasses(self.collection, Entity)
+        all_memories = qdrant_utils.export_dataclasses(self.collection, Entity)
         Logger.verbose(f"All memories:")
         for memory in all_memories:
             Logger.verbose(f"{memory.key}")
@@ -214,13 +207,13 @@ class NPC:
 
         from src.brain import template_processor
         entities = template_processor.template_to_entities_simple(template_path)
-        MilvusUtil.insert_dataclasses(self.collection, entities)
+        qdrant_utils.insert_dataclasses(self.collection, entities)
         Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
 
     def clear_brain_memory(self) -> None:
         """API method for /clear command"""
-        MilvusUtil.drop_collection_if_exists(self.collection_name)
-        self.collection = MilvusUtil.load_or_create_collection_from_cls(
+        qdrant_utils.drop_collection_if_exists(self.collection_name)
+        self.collection = qdrant_utils.load_or_create_collection_from_cls(
             self.collection_name, 
             dim=self.TEST_DIMENSION, 
             model_cls=Entity

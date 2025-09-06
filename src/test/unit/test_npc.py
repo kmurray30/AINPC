@@ -48,27 +48,27 @@ num_last_messages_to_retain_when_summarizing: 5
 
 
 @pytest.fixture
-def mock_milvus():
-    """Mock Milvus utilities"""
-    with patch('src.brain.NPC.MilvusUtil') as mock_milvus:
+def mock_qdrant():
+    """Mock qdrant utilities"""
+    with patch('src.brain.NPC.qdrant_utils') as mock_qdrant:
         # Mock collection
         mock_collection = Mock()
         mock_collection.num_entities = 0
         mock_collection.flush.return_value = None
         
-        # Mock MilvusUtil methods
-        mock_milvus.initialize_server.return_value = None
-        mock_milvus.load_or_create_collection.return_value = mock_collection
-        mock_milvus.create_collection_from_cls.return_value = mock_collection
-        mock_milvus.load_or_create_collection_from_cls.return_value = mock_collection
-        mock_milvus.load_collection_from_cls.return_value = mock_collection
-        mock_milvus.get_embedding.return_value = [0.1] * 1536
-        mock_milvus.search_relevant_records.return_value = []
-        mock_milvus.insert_dataclasses.return_value = None
-        mock_milvus.export_dataclasses.return_value = []
-        mock_milvus.drop_collection_if_exists.return_value = None
+        # Mock qdrant utilities
+        mock_qdrant.initialize_server.return_value = None
+        mock_qdrant.load_or_create_collection.return_value = mock_collection
+        mock_qdrant.create_collection_from_cls.return_value = mock_collection
+        mock_qdrant.load_or_create_collection_from_cls.return_value = mock_collection
+        mock_qdrant.load_collection_from_cls.return_value = mock_collection
+        mock_qdrant.get_embedding.return_value = [0.1] * 1536
+        mock_qdrant.search_relevant_records.return_value = []
+        mock_qdrant.insert_dataclasses.return_value = None
+        mock_qdrant.export_dataclasses.return_value = []
+        mock_qdrant.drop_collection_if_exists.return_value = None
         
-        yield mock_milvus
+        yield mock_qdrant
 
 
 @pytest.fixture
@@ -140,7 +140,7 @@ def mock_conversation_memory():
 
 
 @pytest.fixture
-def npc_instance(temp_project_dir, mock_milvus, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory):
+def npc_instance(temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory):
     """Create an NPC instance for testing"""
     # Reset proj_paths singleton state
     from src.core import proj_paths
@@ -175,15 +175,6 @@ class TestNPCInitialization:
         """Test that template is loaded correctly"""
         assert npc_instance.template.response_system_prompt == "You are a helpful test assistant."
         assert npc_instance.template.preprocess_system_prompt == "You are a text preprocessor."
-    
-    def test_milvus_initialization(self, npc_instance, mock_milvus):
-        """Test that Milvus is initialized correctly"""
-        mock_milvus.initialize_server.assert_called_once()
-        mock_milvus.create_collection_from_cls.assert_called_once_with(
-            "simple_brain",
-            model_cls=Entity,
-            dim=1536
-        )
 
 
 class TestNPCStateManagement:
@@ -264,23 +255,23 @@ class TestNPCSystemPrompt:
 class TestNPCBrainMemory:
     """Test NPC brain memory functionality"""
     
-    def test_update_memory(self, npc_instance, mock_milvus):
+    def test_update_memory(self, npc_instance, mock_qdrant):
         """Test that memory can be updated"""
         npc_instance._update_brain_memory("Test memory content")
-        mock_milvus.insert_dataclasses.assert_called_once()
+        mock_qdrant.insert_dataclasses.assert_called_once()
         npc_instance.collection.flush.assert_called_once()
     
-    def test_get_memories(self, npc_instance, mock_milvus):
+    def test_get_memories(self, npc_instance, mock_qdrant):
         """Test that memories can be retrieved"""
-        mock_milvus.search_relevant_records.return_value = [
+        mock_qdrant.search_relevant_records.return_value = [
             (Entity(key="test", content="test content", tags=["memories"]), 0.8)
         ]
         
         memories = npc_instance._get_memories("test query", topk=5)
         assert len(memories) == 1
         assert memories[0].content == "test content"
-        mock_milvus.get_embedding.assert_called_once()
-        mock_milvus.search_relevant_records.assert_called_once()
+        mock_qdrant.get_embedding.assert_called_once()
+        mock_qdrant.search_relevant_records.assert_called_once()
     
     def test_build_context(self, npc_instance):
         """Test that context is built correctly from memories"""
@@ -298,24 +289,24 @@ class TestNPCBrainMemory:
 class TestNPCBrainMemoryAPI:
     """Test NPC brain memory API methods"""
     
-    def test_list_all_memories(self, npc_instance, mock_milvus):
+    def test_list_all_memories(self, npc_instance, mock_qdrant):
         """Test listing all memories"""
-        mock_milvus.export_dataclasses.return_value = [
+        mock_qdrant.export_dataclasses.return_value = [
             Entity(key="key1", content="content1", tags=["memories"]),
             Entity(key="key2", content="content2", tags=["memories"])
         ]
         
         memories = npc_instance.list_all_memories()
         assert len(memories) == 2
-        mock_milvus.export_dataclasses.assert_called_once()
+        mock_qdrant.export_dataclasses.assert_called_once()
     
-    def test_clear_brain_memory(self, npc_instance, mock_milvus):
+    def test_clear_brain_memory(self, npc_instance, mock_qdrant):
         """Test clearing brain memory"""
         npc_instance.clear_brain_memory()
-        mock_milvus.drop_collection_if_exists.assert_called_once_with("simple_brain")
-        mock_milvus.load_or_create_collection_from_cls.assert_called()
+        mock_qdrant.drop_collection_if_exists.assert_called_once_with("simple_brain")
+        mock_qdrant.load_or_create_collection_from_cls.assert_called()
     
-    def test_load_entities_from_template(self, npc_instance, mock_milvus):
+    def test_load_entities_from_template(self, npc_instance, mock_qdrant):
         """Test loading entities from template"""
         with patch('src.brain.template_processor.template_to_entities_simple') as mock_template_processor, \
              patch('os.path.exists', return_value=True):
@@ -325,7 +316,7 @@ class TestNPCBrainMemoryAPI:
             
             npc_instance.load_entities_from_template("test.yaml")
             mock_template_processor.assert_called_once()
-            mock_milvus.insert_dataclasses.assert_called_once()
+            mock_qdrant.insert_dataclasses.assert_called_once()
     
     def test_load_entities_from_template_invalid_file(self, npc_instance):
         """Test loading entities with invalid file"""
