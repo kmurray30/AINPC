@@ -1,15 +1,13 @@
 import os
-from milvus import default_server
 import psutil
 from pymilvus import connections
 from pymilvus import FieldSchema, CollectionSchema, DataType, Collection, utility
 import openai
 from openai import OpenAI
 import ollama
-from typing import Any, Final, List, Dict, Optional, Tuple, Type, get_origin, get_args, Union, TypeVar
-from dataclasses import fields as dc_fields, is_dataclass, asdict
+from typing import Any, Final, List, Optional, Tuple, Type, get_origin, get_args, Union, TypeVar
+from dataclasses import fields as dc_fields, is_dataclass
 from pathlib import Path
-import yaml
 import numpy as np
 
 from src.utils import Logger
@@ -20,10 +18,6 @@ from src.utils.Utilities import load_dotenv
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 openAIClient = OpenAI()
-
-# Milvus setup
-root_proj_dir = Path(__file__).parent.parent.parent
-default_server.set_base_dir(root_proj_dir / "milvus_data")
 
 # Platforms:
 _openai_ = "openai"
@@ -126,6 +120,14 @@ def find_milvus_proc(port):
     return milvus_proc
 
 def initialize_server(milvus_port=19530, restart_milvus_server=False):
+    connections.connect(
+        alias="default",
+        host="127.0.0.1",
+        port=19530,
+        timeout=5.0
+    )
+
+def initialize_server_old(milvus_port=19530, restart_milvus_server=False):
     # Clear any existing connections
     disconnect_server()
 
@@ -144,9 +146,9 @@ def initialize_server(milvus_port=19530, restart_milvus_server=False):
             connections.connect(
                 alias="default", 
                 host='localhost',
-                port=milvus_port,
-                timeout=10,
-            )
+                    port=milvus_port,
+                    timeout=10,
+                )
             Logger.verbose("Connected to Milvus server\n")
         except Exception as e:
             Logger.verbose(f"Connection to Milvus server failed with error: {e}")
