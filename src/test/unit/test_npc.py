@@ -8,9 +8,8 @@ from typing import List
 # Ensure src/ is on sys.path
 import sys
 PROJ_ROOT = Path(__file__).resolve().parents[3]
-SRC_DIR = PROJ_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+if str(PROJ_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJ_ROOT))
 
 from src.brain.NPC import NPC, NPCState, NPCTemplate
 from src.core.ConversationMemory import ConversationMemory
@@ -18,6 +17,15 @@ from src.core.ResponseTypes import ChatResponse
 from src.core.schemas.CollectionSchemas import Entity
 from src.brain.simple_brain import PreprocessedUserInput
 from src.core.Constants import Role
+
+
+@pytest.fixture(autouse=True)
+def mock_vector_embeddings(monkeypatch):
+    """Avoid real embedding calls; return fixed-size embeddings."""
+    from src.brain import NPC as npc_module
+    def fake_embed(text, model=None, dimensions=None):
+        return [0.0] * 1536
+    monkeypatch.setattr(npc_module.VectorUtils, "get_embedding", fake_embed, raising=True)
 
 
 @pytest.fixture
@@ -51,23 +59,12 @@ num_last_messages_to_retain_when_summarizing: 5
 def mock_qdrant():
     """Mock qdrant utilities"""
     with patch('src.brain.NPC.qdrant_utils') as mock_qdrant:
-        # Mock collection
-        mock_collection = Mock()
-        mock_collection.num_entities = 0
-        mock_collection.flush.return_value = None
-        
-        # Mock qdrant utilities
-        mock_qdrant.initialize_server.return_value = None
-        mock_qdrant.load_or_create_collection.return_value = mock_collection
-        mock_qdrant.create_collection_from_cls.return_value = mock_collection
-        mock_qdrant.load_or_create_collection_from_cls.return_value = mock_collection
-        mock_qdrant.load_collection_from_cls.return_value = mock_collection
-        mock_qdrant.get_embedding.return_value = [0.1] * 1536
-        mock_qdrant.search_relevant_records.return_value = []
+        # New qdrant utils API: collection_name is a string, not object
+        mock_qdrant.create_collection.return_value = None
         mock_qdrant.insert_dataclasses.return_value = None
-        mock_qdrant.export_dataclasses.return_value = []
+        mock_qdrant.export_collection_as_entities.return_value = []
+        mock_qdrant.search_relevant_records.return_value = []
         mock_qdrant.drop_collection_if_exists.return_value = None
-        
         yield mock_qdrant
 
 
@@ -259,7 +256,6 @@ class TestNPCBrainMemory:
         """Test that memory can be updated"""
         npc_instance._update_brain_memory("Test memory content")
         mock_qdrant.insert_dataclasses.assert_called_once()
-        npc_instance.collection.flush.assert_called_once()
     
     def test_get_memories(self, npc_instance, mock_qdrant):
         """Test that memories can be retrieved"""
@@ -270,7 +266,6 @@ class TestNPCBrainMemory:
         memories = npc_instance._get_memories("test query", topk=5)
         assert len(memories) == 1
         assert memories[0].content == "test content"
-        mock_qdrant.get_embedding.assert_called_once()
         mock_qdrant.search_relevant_records.assert_called_once()
     
     def test_build_context(self, npc_instance):
@@ -291,20 +286,20 @@ class TestNPCBrainMemoryAPI:
     
     def test_get_all_memories(self, npc_instance, mock_qdrant):
         """Test listing all memories"""
-        mock_qdrant.export_dataclasses.return_value = [
+        mock_qdrant.export_collection_as_entities.return_value = [
             Entity(key="key1", content="content1", tags=["memories"]),
             Entity(key="key2", content="content2", tags=["memories"])
         ]
         
         memories = npc_instance.get_all_memories()
         assert len(memories) == 2
-        mock_qdrant.export_dataclasses.assert_called_once()
+        mock_qdrant.export_collection_as_entities.assert_called_once()
     
     def test_clear_brain_memory(self, npc_instance, mock_qdrant):
         """Test clearing brain memory"""
         npc_instance.clear_brain_memory()
         mock_qdrant.drop_collection_if_exists.assert_called_once_with("simple_brain")
-        mock_qdrant.load_or_create_collection_from_cls.assert_called()
+        mock_qdrant.create_collection.assert_called()
     
     def test_load_entities_from_template(self, npc_instance, mock_qdrant):
         """Test loading entities from template"""
