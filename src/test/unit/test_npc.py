@@ -58,15 +58,19 @@ num_last_messages_to_retain_when_summarizing: 5
 
 @pytest.fixture
 def mock_qdrant():
-    """Mock qdrant utilities"""
-    with patch('src.brain.NPC.qdrant_utils') as mock_qdrant:
-        # New qdrant utils API: collection_name is a string, not object
-        mock_qdrant.create_collection.return_value = None
-        mock_qdrant.insert_dataclasses.return_value = None
-        mock_qdrant.export_collection_as_entities.return_value = []
-        mock_qdrant.search_relevant_records.return_value = []
-        mock_qdrant.drop_collection_if_exists.return_value = None
-        yield mock_qdrant
+    """Mock the QdrantCollection used inside NPC."""
+    with patch('src.brain.NPC.QdrantCollection') as MockQCol:
+        instance = Mock()
+        # methods used by NPC
+        instance.create.return_value = None
+        instance.drop_if_exists.return_value = None
+        instance.insert_dataclasses.return_value = None
+        instance.export_entities.return_value = []
+        instance.search_text.return_value = []
+        # provide an embedding_cache attribute for tests that access it
+        instance.embedding_cache = EmbeddingCache()
+        MockQCol.return_value = instance
+        yield instance
 
 
 @pytest.fixture
@@ -260,47 +264,52 @@ class TestNPCBrainMemory:
     
     def test_get_memories(self, npc_instance, mock_qdrant):
         """Test that memories can be retrieved"""
-        mock_qdrant.search_relevant_records.return_value = [
+        mock_qdrant.search_text.return_value = [
             (Entity(key="test", content="test content", tags=["memories"]), 0.8)
         ]
         
         memories = npc_instance._get_memories("test query", topk=5)
         assert len(memories) == 1
         assert memories[0].content == "test content"
-        mock_qdrant.search_relevant_records.assert_called_once()
+        mock_qdrant.search_text.assert_called_once()
 
-    def test_get_memories_uses_cache_hit(self, npc_instance, monkeypatch, mock_qdrant):
-        """When cache has embedding, avoid calling VectorUtils.get_embedding and use cached value."""
-        # Seed cache
+    def test_get_memories_uses_cache_hit(self, npc_instance, monkeypatch):
+        """When cache has embedding, ensure embed isn't called (via real QdrantCollection.search_text)."""
+        from src.utils.QdrantCollection import QdrantCollection as RealQCol
+        real = RealQCol("simple_brain")
+        # seed cache
         cached_vec = [0.1] * 1536
-        npc_instance.embedding_cache.add("cached text", cached_vec)
+        real.embedding_cache.add("cached text", cached_vec)
+        # stub search_vectors to avoid network
+        def fake_search_vectors(vec, topk=5):
+            return []
+        real._search_vectors = fake_search_vectors  # type: ignore
+        npc_instance.collection = real
 
-        # Spy on embed call
+        # Spy on the embedding function used by QdrantCollection
         embed_spy = Mock()
-        monkeypatch.setattr('src.brain.NPC.VectorUtils.get_embedding', embed_spy)
+        monkeypatch.setattr('src.utils.QdrantCollection.VectorUtils.get_embedding', embed_spy)
 
-        mock_qdrant.search_relevant_records.return_value = []
         npc_instance._get_memories("cached text", topk=3)
-
         embed_spy.assert_not_called()
-        mock_qdrant.search_relevant_records.assert_called_once_with(npc_instance.collection, cached_vec, topk=3)
 
-    def test_get_memories_cache_miss_adds_and_calls_embed(self, npc_instance, monkeypatch, mock_qdrant):
-        """When cache misses, it should call embed, then add to cache and search with that embedding."""
-        # Ensure miss
-        assert npc_instance.embedding_cache.get("new text") is None
+    def test_get_memories_cache_miss_adds_and_calls_embed(self, npc_instance, monkeypatch):
+        """On cache miss, embed is called and cached inside collection."""
+        from src.utils.QdrantCollection import QdrantCollection as RealQCol
+        real = RealQCol("simple_brain")
+        assert real.embedding_cache.get("new text") is None
+        def fake_search_vectors(vec, topk=5):
+            return []
+        real._search_vectors = fake_search_vectors  # type: ignore
+        npc_instance.collection = real
 
         called_vec = [0.2] * 1536
         def fake_embed(text, model=None, dimensions=None):
             return called_vec
-        monkeypatch.setattr('src.brain.NPC.VectorUtils.get_embedding', fake_embed)
+        monkeypatch.setattr('src.utils.QdrantCollection.VectorUtils.get_embedding', fake_embed)
 
-        mock_qdrant.search_relevant_records.return_value = []
         npc_instance._get_memories("new text", topk=4)
-
-        # Now cached
-        assert npc_instance.embedding_cache.get("new text") == called_vec
-        mock_qdrant.search_relevant_records.assert_called_once_with(npc_instance.collection, called_vec, topk=4)
+        assert real.embedding_cache.get("new text") == called_vec
     
     def test_build_context(self, npc_instance):
         """Test that context is built correctly from memories"""
@@ -320,20 +329,20 @@ class TestNPCBrainMemoryAPI:
     
     def test_get_all_memories(self, npc_instance, mock_qdrant):
         """Test listing all memories"""
-        mock_qdrant.export_collection_as_entities.return_value = [
+        mock_qdrant.export_entities.return_value = [
             Entity(key="key1", content="content1", tags=["memories"]),
             Entity(key="key2", content="content2", tags=["memories"])
         ]
         
         memories = npc_instance.get_all_memories()
         assert len(memories) == 2
-        mock_qdrant.export_collection_as_entities.assert_called_once()
+        mock_qdrant.export_entities.assert_called_once()
     
     def test_clear_brain_memory(self, npc_instance, mock_qdrant):
         """Test clearing brain memory"""
         npc_instance.clear_brain_memory()
-        mock_qdrant.drop_collection_if_exists.assert_called_once_with("simple_brain")
-        mock_qdrant.create_collection.assert_called()
+        mock_qdrant.drop_if_exists.assert_called_once()
+        mock_qdrant.create.assert_called()
     
     def test_load_entities_from_template(self, npc_instance, mock_qdrant):
         """Test loading entities from template"""

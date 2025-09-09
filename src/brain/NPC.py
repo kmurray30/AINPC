@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional
 
-from src.utils import VectorUtils, io_utils, qdrant_utils, Utilities
+from src.utils import VectorUtils, io_utils, Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
@@ -12,7 +12,7 @@ from src.core.Agent import Agent
 from src.core import proj_paths
 from src.core.schemas.CollectionSchemas import Entity
 from dataclasses import dataclass, field
-from src.brain.embedding_cache import EmbeddingCache
+from src.utils.QdrantCollection import QdrantCollection
 
 
 @dataclass
@@ -48,10 +48,9 @@ class NPC:
     template: NPCTemplate
     
     # Brain memory properties
-    collection: any  # Milvus collection
+    collection: QdrantCollection
     collection_name: str = "simple_brain"
     TEST_DIMENSION: int = 1536
-    embedding_cache: EmbeddingCache
 
     def __init__(self, is_new_game: bool, npc_name: str):
         self.save_paths = proj_paths.get_paths()
@@ -60,8 +59,8 @@ class NPC:
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
-        # Initialize embedding cache
-        self.embedding_cache = EmbeddingCache()
+        # Bind Qdrant collection wrapper to this NPC's brain collection
+        self.collection = QdrantCollection(self.collection_name)
 
         # Initialize or load the brain memory and conversation memory
         if not is_new_game:
@@ -107,11 +106,7 @@ class NPC:
     def _load_state(self) -> None:
         try:
             # Ensure the Qdrant collection exists and track by name
-            qdrant_utils.create_collection(
-                self.collection_name,
-                dim=self.TEST_DIMENSION
-            )
-            self.collection = self.collection_name
+            self.collection.create(dim=self.TEST_DIMENSION)
             
             # Load the conversation memory and other metadata for the NPC
             prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
@@ -124,11 +119,7 @@ class NPC:
 
     def _init_state(self) -> None:
         # Create a fresh Qdrant collection which holds the brain memory
-        qdrant_utils.create_collection(
-            self.collection_name,
-            dim=self.TEST_DIMENSION
-        )
-        self.collection = self.collection_name
+        self.collection.create(dim=self.TEST_DIMENSION)
 
         # Create a fresh conversation memory
         self.conversation_memory = ConversationMemory.from_new()
@@ -171,17 +162,10 @@ class NPC:
             ),
         ]
         Logger.verbose(f"Updating memory with {preprocessed_user_text}")
-        qdrant_utils.insert_dataclasses(self.collection, rows)
+        self.collection.insert_dataclasses(rows)
 
     def _get_memories(self, preprocessed_user_text: str, topk: int = 5) -> List[Entity]:
-        # Check embedding cache first
-        cached = self.embedding_cache.get(preprocessed_user_text)
-        if cached is None:
-            query = VectorUtils.get_embedding(preprocessed_user_text, model=VectorUtils.text_embedding_3_small)
-            self.embedding_cache.add(preprocessed_user_text, query)
-        else:
-            query = cached
-        hits = qdrant_utils.search_relevant_records(self.collection, query, topk=topk)
+        hits = self.collection.search_text(preprocessed_user_text, topk=topk)
         Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
         # Print the memories with their similarity scores
         for hit in hits:
@@ -197,15 +181,15 @@ class NPC:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()
         self._save_state()
-        # Persist embedding cache
-        self.embedding_cache.save()
+        # Persist embedding cache associated with the collection
+        self.collection.embedding_cache.save()
 
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
 
     def get_all_memories(self) -> List[Entity]:
         """API method for /list command"""
-        all_memories = qdrant_utils.export_collection_as_entities(self.collection)
+        all_memories = self.collection.export_entities()
         Logger.verbose(f"All memories:")
         return all_memories
 
@@ -224,17 +208,13 @@ class NPC:
         for e in entities:
             if getattr(e, "id", None) is None:
                 e.id = int(Utilities.generate_uuid_int64())
-        qdrant_utils.insert_dataclasses(self.collection, entities)
+        self.collection.insert_dataclasses(entities)
         Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
 
     def clear_brain_memory(self) -> None:
         """API method for /clear command"""
-        qdrant_utils.drop_collection_if_exists(self.collection_name)
-        qdrant_utils.create_collection(
-            self.collection_name,
-            dim=self.TEST_DIMENSION
-        )
-        self.collection = self.collection_name
+        self.collection.drop_if_exists()
+        self.collection.create(dim=self.TEST_DIMENSION)
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Primary chat API: preprocess, update brain, build prompt, respond, persist. Returns ChatResponse."""
@@ -259,7 +239,7 @@ class NPC:
 
         # Update brain memory if there's information
         if preprocessed_message.has_information:
-            self._update_brain_memory(preprocessed_message.text)
+            self._update_brain_memory(preprocessed_user_text=preprocessed_message.text)
 
         # Build system prompt (includes convo summary and brain context)
         self.response_agent.update_system_prompt(self._build_system_prompt())
