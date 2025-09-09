@@ -12,6 +12,7 @@ from src.core.Agent import Agent
 from src.core import proj_paths
 from src.core.schemas.CollectionSchemas import Entity
 from dataclasses import dataclass, field
+from src.brain.embedding_cache import EmbeddingCache
 
 
 @dataclass
@@ -50,6 +51,7 @@ class NPC:
     collection: any  # Milvus collection
     collection_name: str = "simple_brain"
     TEST_DIMENSION: int = 1536
+    embedding_cache: EmbeddingCache
 
     def __init__(self, is_new_game: bool, npc_name: str):
         self.save_paths = proj_paths.get_paths()
@@ -58,6 +60,8 @@ class NPC:
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
+        # Initialize embedding cache
+        self.embedding_cache = EmbeddingCache()
 
         # Initialize or load the brain memory and conversation memory
         if not is_new_game:
@@ -170,7 +174,13 @@ class NPC:
         qdrant_utils.insert_dataclasses(self.collection, rows)
 
     def _get_memories(self, preprocessed_user_text: str, topk: int = 5) -> List[Entity]:
-        query = VectorUtils.get_embedding(preprocessed_user_text, model=VectorUtils.text_embedding_3_small)
+        # Check embedding cache first
+        cached = self.embedding_cache.get(preprocessed_user_text)
+        if cached is None:
+            query = VectorUtils.get_embedding(preprocessed_user_text, model=VectorUtils.text_embedding_3_small)
+            self.embedding_cache.add(preprocessed_user_text, query)
+        else:
+            query = cached
         hits = qdrant_utils.search_relevant_records(self.collection, query, topk=topk)
         Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
         # Print the memories with their similarity scores
@@ -187,6 +197,8 @@ class NPC:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()
         self._save_state()
+        # Persist embedding cache
+        self.embedding_cache.save()
 
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)

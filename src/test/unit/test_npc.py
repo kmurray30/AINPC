@@ -17,6 +17,7 @@ from src.core.ResponseTypes import ChatResponse
 from src.core.schemas.CollectionSchemas import Entity
 from src.brain.simple_brain import PreprocessedUserInput
 from src.core.Constants import Role
+from src.brain.embedding_cache import EmbeddingCache
 
 
 @pytest.fixture(autouse=True)
@@ -267,6 +268,39 @@ class TestNPCBrainMemory:
         assert len(memories) == 1
         assert memories[0].content == "test content"
         mock_qdrant.search_relevant_records.assert_called_once()
+
+    def test_get_memories_uses_cache_hit(self, npc_instance, monkeypatch, mock_qdrant):
+        """When cache has embedding, avoid calling VectorUtils.get_embedding and use cached value."""
+        # Seed cache
+        cached_vec = [0.1] * 1536
+        npc_instance.embedding_cache.add("cached text", cached_vec)
+
+        # Spy on embed call
+        embed_spy = Mock()
+        monkeypatch.setattr('src.brain.NPC.VectorUtils.get_embedding', embed_spy)
+
+        mock_qdrant.search_relevant_records.return_value = []
+        npc_instance._get_memories("cached text", topk=3)
+
+        embed_spy.assert_not_called()
+        mock_qdrant.search_relevant_records.assert_called_once_with(npc_instance.collection, cached_vec, topk=3)
+
+    def test_get_memories_cache_miss_adds_and_calls_embed(self, npc_instance, monkeypatch, mock_qdrant):
+        """When cache misses, it should call embed, then add to cache and search with that embedding."""
+        # Ensure miss
+        assert npc_instance.embedding_cache.get("new text") is None
+
+        called_vec = [0.2] * 1536
+        def fake_embed(text, model=None, dimensions=None):
+            return called_vec
+        monkeypatch.setattr('src.brain.NPC.VectorUtils.get_embedding', fake_embed)
+
+        mock_qdrant.search_relevant_records.return_value = []
+        npc_instance._get_memories("new text", topk=4)
+
+        # Now cached
+        assert npc_instance.embedding_cache.get("new text") == called_vec
+        mock_qdrant.search_relevant_records.assert_called_once_with(npc_instance.collection, called_vec, topk=4)
     
     def test_build_context(self, npc_instance):
         """Test that context is built correctly from memories"""
