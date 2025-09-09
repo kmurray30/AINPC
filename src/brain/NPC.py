@@ -103,7 +103,7 @@ class NPC:
     def _load_state(self) -> None:
         try:
             # Load the milvus collection which holds the brain memory
-            self.collection = qdrant_utils.load_collection_from_cls(
+            self.collection = qdrant_utils.collection_exists(
                 self.collection_name,
                 model_cls=Entity,
                 dim=self.TEST_DIMENSION
@@ -120,7 +120,7 @@ class NPC:
 
     def _init_state(self) -> None:
         # Create a fresh milvus collection which holds the brain memory
-        self.collection = qdrant_utils.create_collection_from_cls(
+        self.collection = qdrant_utils.create_collection(
             self.collection_name,
             model_cls=Entity,
             dim=self.TEST_DIMENSION
@@ -190,7 +190,7 @@ class NPC:
 
     def list_all_memories(self) -> List[Entity]:
         """API method for /list command"""
-        all_memories = qdrant_utils.export_dataclasses(self.collection, Entity)
+        all_memories = qdrant_utils.export_collection_as_entities(self.collection, Entity)
         Logger.verbose(f"All memories:")
         for memory in all_memories:
             Logger.verbose(f"{memory.key}")
@@ -213,10 +213,9 @@ class NPC:
     def clear_brain_memory(self) -> None:
         """API method for /clear command"""
         qdrant_utils.drop_collection_if_exists(self.collection_name)
-        self.collection = qdrant_utils.load_or_create_collection_from_cls(
+        self.collection = qdrant_utils.create_collection(
             self.collection_name, 
-            dim=self.TEST_DIMENSION, 
-            model_cls=Entity
+            dim=self.TEST_DIMENSION
         )
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:

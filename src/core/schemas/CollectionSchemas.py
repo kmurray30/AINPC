@@ -8,6 +8,6 @@ class Entity:
     content: str
     tags: List[str]
     id: Optional[int] = None
-    embedding: Optional[List[float]] = None
+    # embedding: Optional[List[float]] = None
 
 

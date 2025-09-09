@@ -66,5 +66,3 @@ if __name__ == "__main__":
         # Print the traceback
         Logger.error(f"Error: {traceback.format_exc()}")
         exit()
-    finally:
-        MilvusUtil.disconnect_server()
