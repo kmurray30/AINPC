@@ -289,14 +289,14 @@ class TestNPCBrainMemory:
 class TestNPCBrainMemoryAPI:
     """Test NPC brain memory API methods"""
     
-    def test_list_all_memories(self, npc_instance, mock_qdrant):
+    def test_get_all_memories(self, npc_instance, mock_qdrant):
         """Test listing all memories"""
         mock_qdrant.export_dataclasses.return_value = [
             Entity(key="key1", content="content1", tags=["memories"]),
             Entity(key="key2", content="content2", tags=["memories"])
         ]
         
-        memories = npc_instance.list_all_memories()
+        memories = npc_instance.get_all_memories()
         assert len(memories) == 2
         mock_qdrant.export_dataclasses.assert_called_once()
     

@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from src.brain import template_processor
 from src.core.Constants import Role
 from src.core.ChatMessage import ChatMessage
-from src.utils import MilvusUtil, Utilities
+from src.utils import Utilities
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.Agent import Agent
 from src.utils import Logger
@@ -39,7 +39,9 @@ if __name__ == "__main__":
             if user_input_raw.lower() in ["/exit", "/quit", "/bye"]:
                 exit()
             if user_input_raw.lower() == "/list":
-                npc.list_all_memories()
+                all_memories = npc.get_all_memories()
+                for memory in all_memories:
+                    Logger.verbose(f"Memory: {memory}")
                 continue
             if user_input_raw.lower().startswith("/path"):
                 # Print the current path of the runtime environment

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional
 
-from src.utils import VectorUtils, io_utils, qdrant_utils
+from src.utils import VectorUtils, io_utils, qdrant_utils, Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
@@ -102,12 +102,12 @@ class NPC:
 
     def _load_state(self) -> None:
         try:
-            # Load the milvus collection which holds the brain memory
-            self.collection = qdrant_utils.collection_exists(
+            # Ensure the Qdrant collection exists and track by name
+            qdrant_utils.create_collection(
                 self.collection_name,
-                model_cls=Entity,
                 dim=self.TEST_DIMENSION
             )
+            self.collection = self.collection_name
             
             # Load the conversation memory and other metadata for the NPC
             prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
@@ -119,12 +119,12 @@ class NPC:
             self._init_state()
 
     def _init_state(self) -> None:
-        # Create a fresh milvus collection which holds the brain memory
-        self.collection = qdrant_utils.create_collection(
+        # Create a fresh Qdrant collection which holds the brain memory
+        qdrant_utils.create_collection(
             self.collection_name,
-            model_cls=Entity,
             dim=self.TEST_DIMENSION
         )
+        self.collection = self.collection_name
 
         # Create a fresh conversation memory
         self.conversation_memory = ConversationMemory.from_new()
@@ -159,16 +159,19 @@ class NPC:
 
     def _update_brain_memory(self, preprocessed_user_text: str):
         rows = [
-            Entity(key=preprocessed_user_text, content=preprocessed_user_text, tags=["memories"]),
+            Entity(
+                key=preprocessed_user_text,
+                content=preprocessed_user_text,
+                tags=["memories"],
+                id=int(Utilities.generate_uuid_int64()),
+            ),
         ]
         Logger.verbose(f"Updating memory with {preprocessed_user_text}")
         qdrant_utils.insert_dataclasses(self.collection, rows)
-        self.collection.flush()
-        Logger.verbose(f"Collection now has {self.collection.num_entities} entities")
 
     def _get_memories(self, preprocessed_user_text: str, topk: int = 5) -> List[Entity]:
-        query = qdrant_utils.get_embedding(preprocessed_user_text, model=VectorUtils.text_embedding_3_small)
-        hits = qdrant_utils.search_relevant_records(self.collection, query, model_cls=Entity, topk=topk)
+        query = VectorUtils.get_embedding(preprocessed_user_text, model=VectorUtils.text_embedding_3_small)
+        hits = qdrant_utils.search_relevant_records(self.collection, query, topk=topk)
         Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
         # Print the memories with their similarity scores
         for hit in hits:
@@ -188,12 +191,10 @@ class NPC:
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
 
-    def list_all_memories(self) -> List[Entity]:
+    def get_all_memories(self) -> List[Entity]:
         """API method for /list command"""
-        all_memories = qdrant_utils.export_collection_as_entities(self.collection, Entity)
+        all_memories = qdrant_utils.export_collection_as_entities(self.collection)
         Logger.verbose(f"All memories:")
-        for memory in all_memories:
-            Logger.verbose(f"{memory.key}")
         return all_memories
 
     def load_entities_from_template(self, template_path: str) -> None:
@@ -207,16 +208,21 @@ class NPC:
 
         from src.brain import template_processor
         entities = template_processor.template_to_entities_simple(template_path)
+        # Ensure each entity has an id for Qdrant
+        for e in entities:
+            if getattr(e, "id", None) is None:
+                e.id = int(Utilities.generate_uuid_int64())
         qdrant_utils.insert_dataclasses(self.collection, entities)
         Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
 
     def clear_brain_memory(self) -> None:
         """API method for /clear command"""
         qdrant_utils.drop_collection_if_exists(self.collection_name)
-        self.collection = qdrant_utils.create_collection(
-            self.collection_name, 
+        qdrant_utils.create_collection(
+            self.collection_name,
             dim=self.TEST_DIMENSION
         )
+        self.collection = self.collection_name
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Primary chat API: preprocess, update brain, build prompt, respond, persist. Returns ChatResponse."""
