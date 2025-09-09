@@ -223,3 +223,61 @@ def test_optional_fields_dataclass(unique_collection_name, mock_embeddings):
     col.create(dim=TEST_DIMENSION)
 
 
+def test_embedding_cache_binary_encoding():
+    """Test that embedding cache can encode/decode vectors to/from base64 binary format"""
+    from src.brain.embedding_cache import EmbeddingCache
+    import tempfile
+    from pathlib import Path
+    
+    # Test with realistic embedding dimensions and values
+    test_cases = [
+        # Standard OpenAI embedding dimension
+        ("short text", [0.1, -0.2, 0.3, -0.4] * 384),  # 1536 dimensions
+        # Different values to test precision
+        ("another text", [0.123456789, -0.987654321, 0.0, 1.0, -1.0] * 307 + [0.5]),  # 1536 dimensions
+        # Edge cases
+        ("edge case", [0.0] * 1536),  # All zeros
+        ("max values", [1.0, -1.0] * 768),  # Max/min values
+    ]
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cache_path = Path(tmp_dir) / "test_cache.json"
+        cache = EmbeddingCache(cache_path)
+        
+        # Add test vectors
+        for text, vector in test_cases:
+            assert len(vector) == 1536, f"Test vector for '{text}' should be 1536 dimensions"
+            cache.add(text, vector)
+        
+        # Save to disk (uses binary encoding)
+        cache.save()
+        
+        # Verify file was created
+        assert cache_path.exists(), "Cache file should be created"
+        
+        # Load from disk (should decode binary format)
+        cache2 = EmbeddingCache(cache_path)
+        
+        # Verify all vectors are loaded correctly
+        for text, original_vector in test_cases:
+            loaded_vector = cache2.get(text)
+            assert loaded_vector is not None, f"Should load vector for '{text}'"
+            assert len(loaded_vector) == len(original_vector), f"Vector length mismatch for '{text}'"
+            
+            # Check precision (should be very close due to float32 encoding)
+            for i, (orig, loaded) in enumerate(zip(original_vector, loaded_vector)):
+                diff = abs(orig - loaded)
+                assert diff < 1e-6, f"Vector precision error at index {i} for '{text}': {orig} vs {loaded}"
+        
+        # Test direct encoding/decoding methods
+        test_vector = [0.1, -0.2, 0.3, -0.4, 0.5]
+        encoded = cache._encode_vector(test_vector)
+        decoded = cache._decode_vector(encoded)
+        
+        assert isinstance(encoded, str), "Encoded vector should be a string"
+        assert len(decoded) == len(test_vector), "Decoded vector should have same length"
+        
+        for orig, dec in zip(test_vector, decoded):
+            assert abs(orig - dec) < 1e-6, f"Direct encoding/decoding precision error: {orig} vs {dec}"
+
+

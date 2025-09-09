@@ -59,6 +59,9 @@ if __name__ == "__main__":
                 except Exception as e:
                     Logger.error(f"Error loading template: {e}")
                 continue
+            if user_input_raw.lower() == "/save":
+                npc.maintain()
+                continue
             if user_input_raw.lower() == "/clear":
                 npc.clear_brain_memory()
                 continue
