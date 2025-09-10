@@ -2,7 +2,8 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional
 
-from src.utils import VectorUtils, io_utils, Utilities
+from src.brain.brain_memory import BrainMemory
+from src.utils import io_utils, Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
@@ -12,16 +13,6 @@ from src.core.Agent import Agent
 from src.core import proj_paths
 from src.core.schemas.CollectionSchemas import Entity
 from dataclasses import dataclass, field
-from src.utils.QdrantCollection import QdrantCollection
-
-
-@dataclass
-class PreprocessedUserInput:
-    text: str = field(metadata={"desc": "The reworded user message. NEVER EMPTY. If you don't know what to say, just put the original message in here."})
-    has_information: bool = field(metadata={"desc": "Whether the input contains information that the assistant should remember."})
-    ambiguous_pronouns: str = field(metadata={"desc": "A list of pronouns that are ambiguous and need clarification.", "type": "strlist"})
-    needs_clarification: bool = field(metadata={"desc": "Whether you need clarification on any of the pronouns."})
-
 
 @dataclass
 class NPCState:
@@ -36,37 +27,50 @@ class NPCTemplate:
     preprocess_system_prompt: str | None = None
 
 
+@dataclass
+class PreprocessedUserInput:
+    text: str = field(metadata={"desc": "The reworded user message. NEVER EMPTY. If you don't know what to say, just put the original message in here."})
+    has_information: bool = field(metadata={"desc": "Whether the input contains information that the assistant should remember."})
+    ambiguous_pronouns: str = field(metadata={"desc": "A list of pronouns that are ambiguous and need clarification.", "type": "strlist"})
+    needs_clarification: bool = field(metadata={"desc": "Whether you need clarification on any of the pronouns."})
+
+
 class NPC:
     # Stateful properties common to all NPCs
     conversation_memory: ConversationMemory
+    brain_memory: BrainMemory
+
     user_prompt_wrapper: str = constants.user_message_placeholder
-    response_agent: Agent
-    preprocessor_agent: Agent
     npc_name: str
     is_new_game: bool
     save_paths: proj_paths.SavePaths
     template: NPCTemplate
+
+    response_agent: Agent
+    preprocessor_agent: Agent
+
+    # Settings
+    last_messages_to_retain_for_preprocessor: int = 4
     
-    # Brain memory properties
-    collection: QdrantCollection
-    collection_name: str = "simple_brain"
-    TEST_DIMENSION: int = 1536
 
     def __init__(self, is_new_game: bool, npc_name: str):
         self.save_paths = proj_paths.get_paths()
         self.npc_name = npc_name
         self.is_new_game = is_new_game
+        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
+
+        # Init the agents
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
-        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
-        # Bind Qdrant collection wrapper to this NPC's brain collection
-        self.collection = QdrantCollection(self.collection_name)
+
+        # Initialize the brain memory (backed by a persistent collection so doesn't matter if new game or not)
+        self.brain_memory = BrainMemory()
 
         # Initialize or load the brain memory and conversation memory
-        if not is_new_game:
-            self._load_state()
-        else:
+        if is_new_game:
             self._init_state()
+        else:
+            self._load_state()
     
     # ---------- Private API - Helpers ---------
 
@@ -82,10 +86,9 @@ class NPC:
             recent_user_messages = [msg for msg in self.conversation_memory.chat_memory if msg.role == Role.user]
             if recent_user_messages:
                 last_user_message = recent_user_messages[-1].content
-                memories = self._get_memories(last_user_message, topk=5)
-                brain_context = self._build_memory_context(memories)
-                if brain_context:
-                    parts.append("Brain context:\n" + brain_context)
+                memories = self.brain_memory.get_memories(last_user_message, topk=5, as_str=True)
+                if memories:
+                    parts.append("Brain context:\n" + memories)
         
         return "\n\n".join(parts) + "\n\n"
 
@@ -101,13 +104,10 @@ class NPC:
         )
         io_utils.save_to_yaml_file(current_state, save_path)
         Logger.log(f"Session saved successfully to {save_path}", Level.INFO)
-        # Note that the milvus collection does not need to be saved. TODO save it once using docker?
+        # Note that the vdb collection does not need to be saved.
 
     def _load_state(self) -> None:
         try:
-            # Ensure the Qdrant collection exists and track by name
-            self.collection.create(dim=self.TEST_DIMENSION)
-            
             # Load the conversation memory and other metadata for the NPC
             prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
             self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory)
@@ -118,103 +118,52 @@ class NPC:
             self._init_state()
 
     def _init_state(self) -> None:
-        # Create a fresh Qdrant collection which holds the brain memory
-        self.collection.create(dim=self.TEST_DIMENSION)
-
         # Create a fresh conversation memory
         self.conversation_memory = ConversationMemory.from_new()
 
-    # ---------- Private API - Brain Memory Management ----------
-
-    def _preprocess_input(self, message_history: List, last_messages_to_retain: int = 4) -> PreprocessedUserInput:
-        # Use only the template-provided preprocess prompt
-        preprocess_agent_system_prompt = self.template.preprocess_system_prompt
-        if not preprocess_agent_system_prompt:
-            raise ValueError("preprocess_system_prompt is required in NPCTemplate")
-        
-        # Get brain context for preprocessor
-        recent_user_messages = [msg for msg in message_history if msg.role == Role.user]
-        if recent_user_messages:
-            last_user_message = recent_user_messages[-1].content
-            memories = self._get_memories(last_user_message, topk=3)
-            brain_context = self._build_memory_context(memories)
-            if brain_context:
-                preprocess_agent_system_prompt += f"""
-                Context:
-                {brain_context}
-                """
-
-        self.preprocessor_agent.update_system_prompt(preprocess_agent_system_prompt)
-        message_history_truncated = message_history[-last_messages_to_retain:]
-        Logger.verbose(f"Full input to preprocessor LLM:\nContext:{preprocess_agent_system_prompt}\nMessage History:\n{message_history_truncated}")
-        preprocessed_message = self.preprocessor_agent.chat_with_history(message_history_truncated)
-        if preprocessed_message.text == "":
-            preprocessed_message.text = "<empty>"
-        return preprocessed_message
-
-    def _update_brain_memory(self, preprocessed_user_text: str):
-        rows = [
-            Entity(
-                key=preprocessed_user_text,
-                content=preprocessed_user_text,
-                tags=["memories"],
-                id=int(Utilities.generate_uuid_int64()),
-            ),
-        ]
-        Logger.verbose(f"Updating memory with {preprocessed_user_text}")
-        self.collection.insert_dataclasses(rows)
-
-    def _get_memories(self, preprocessed_user_text: str, topk: int = 5) -> List[Entity]:
-        hits = self.collection.search_text(preprocessed_user_text, topk=topk)
-        Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
-        # Print the memories with their similarity scores
-        for hit in hits:
-            Logger.verbose(f"Similarity: {hit[1]}, Content: {hit[0].content}")
-        return [hit[0] for hit in hits]
-
-    def _build_memory_context(self, memories: List[Entity]):
-        context = "\n".join([f"{memory.content}" for memory in memories])
-        return context
 
     # ---------- Public API ----------
     def maintain(self) -> None:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()
         self._save_state()
-        # Persist embedding cache associated with the collection
-        self.collection.embedding_cache.save()
+        self.brain_memory.maintain()
 
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
 
     def get_all_memories(self) -> List[Entity]:
-        """API method for /list command"""
-        all_memories = self.collection.export_entities()
-        Logger.verbose(f"All memories:")
-        return all_memories
+        return self.brain_memory.get_all_memories()
 
     def load_entities_from_template(self, template_path: str) -> None:
-        """API method for /load command"""
-        if not template_path.endswith(".yaml"):
-            raise ValueError("File must be a yaml file")
-
-        template_path = os.path.join(os.path.dirname(__file__), template_path)
-        if not os.path.exists(template_path):
-            raise FileNotFoundError(f"File {template_path} does not exist")
-
-        from src.brain import template_processor
-        entities = template_processor.template_to_entities_simple(template_path)
-        # Ensure each entity has an id for Qdrant
-        for e in entities:
-            if getattr(e, "id", None) is None:
-                e.id = int(Utilities.generate_uuid_int64())
-        self.collection.insert_dataclasses(entities)
-        Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
+        self.brain_memory.load_entities_from_template(template_path)
 
     def clear_brain_memory(self) -> None:
-        """API method for /clear command"""
-        self.collection.drop_if_exists()
-        self.collection.create(dim=self.TEST_DIMENSION)
+        self.brain_memory.clear_brain_memory()
+
+    
+    def _preprocess_input(self, user_message: str) -> PreprocessedUserInput:
+        # Use only the template-provided preprocess prompt
+        preprocess_agent_system_prompt = self.template.preprocess_system_prompt
+        if not preprocess_agent_system_prompt:
+            raise ValueError("preprocess_system_prompt is required in NPCTemplate")
+        
+        # Get brain memories to provide context for preprocessor, using the last user message
+        if user_message:
+            memories = self.brain_memory.get_memories(user_message, topk=3, as_str=True)
+            if memories:
+                preprocess_agent_system_prompt += f"""
+                Context:
+                {memories}
+                """
+
+        self.preprocessor_agent.update_system_prompt(preprocess_agent_system_prompt)
+        message_history_truncated = self.conversation_memory.chat_memory[-self.last_messages_to_retain_for_preprocessor:]
+        Logger.verbose(f"Full input to preprocessor LLM:\nContext:{preprocess_agent_system_prompt}\nMessage History:\n{message_history_truncated}")
+        preprocessed_message: PreprocessedUserInput = self.preprocessor_agent.chat_with_history(message_history_truncated)
+        if preprocessed_message.text == "":
+            preprocessed_message.text = "<empty>"
+        return preprocessed_message
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Primary chat API: preprocess, update brain, build prompt, respond, persist. Returns ChatResponse."""
@@ -224,10 +173,7 @@ class NPC:
         self.conversation_memory.append_chat(user_message, role=Role.user, off_switch=False)
 
         # Preprocess using brain context
-        preprocessed_message: PreprocessedUserInput = self._preprocess_input(
-            self.conversation_memory.chat_memory,
-            last_messages_to_retain=4,
-        )
+        preprocessed_message: PreprocessedUserInput = self._preprocess_input(user_message)
         Logger.warning(f"Preprocessed message: {preprocessed_message}")
 
         if preprocessed_message.needs_clarification:
@@ -239,17 +185,13 @@ class NPC:
 
         # Update brain memory if there's information
         if preprocessed_message.has_information:
-            self._update_brain_memory(preprocessed_user_text=preprocessed_message.text)
+            self.brain_memory.add_memory(preprocessed_user_text=preprocessed_message.text)
 
         # Build system prompt (includes convo summary and brain context)
         self.response_agent.update_system_prompt(self._build_system_prompt())
 
         # Call response agent with full conversation history
-        response_obj: ChatResponse | str = self.response_agent.chat_with_history(self.conversation_memory.chat_memory)
-
-        # Normalize to ChatResponse
-        if not isinstance(response_obj, ChatResponse):
-            response_obj = ChatResponse(hidden_thought_process=None, response=str(response_obj), off_switch=False)
+        response_obj: ChatResponse = self.response_agent.chat_with_history(self.conversation_memory.chat_memory)
 
         # Append response to conversation
         assistant_text = response_obj.response
@@ -259,6 +201,7 @@ class NPC:
             off_switch=response_obj.off_switch,
             cot=response_obj.hidden_thought_process,
         )
+
         return response_obj
 
 

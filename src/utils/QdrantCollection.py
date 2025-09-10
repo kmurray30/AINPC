@@ -67,6 +67,9 @@ class QdrantCollection:
             vectors_config=_vector_params(dim, metric=metric),
         )
 
+    def maintain(self) -> None:
+        self.embedding_cache.save()
+
     def drop_if_exists(self) -> None:
         client = _get_client()
         try:
@@ -98,13 +101,7 @@ class QdrantCollection:
             text_to_embed = record.key
             if text_to_embed is None:
                 raise ValueError(f"Record {record} key field is empty. Needed for embedding.")
-            cached = self.embedding_cache.get(text_to_embed)
-            if cached is None:
-                Logger.verbose(f"Embedding text: {text_to_embed}")
-                embedding = self.get_embedding(text_to_embed)
-                self.embedding_cache.add(text_to_embed, embedding)
-            else:
-                embedding = cached
+            embedding = self.get_embedding(text_to_embed)
             embedding_map[record_id] = embedding
 
         points: List[models.PointStruct] = []

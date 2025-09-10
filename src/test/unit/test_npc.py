@@ -23,10 +23,10 @@ from src.brain.embedding_cache import EmbeddingCache
 @pytest.fixture(autouse=True)
 def mock_vector_embeddings(monkeypatch):
     """Avoid real embedding calls; return fixed-size embeddings."""
-    from src.brain import NPC as npc_module
+    from src.utils import VectorUtils
     def fake_embed(text, model=None, dimensions=None):
         return [0.0] * 1536
-    monkeypatch.setattr(npc_module.VectorUtils, "get_embedding", fake_embed, raising=True)
+    monkeypatch.setattr(VectorUtils, "get_embedding", fake_embed, raising=True)
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ num_last_messages_to_retain_when_summarizing: 5
 @pytest.fixture
 def mock_qdrant():
     """Mock the QdrantCollection used inside NPC."""
-    with patch('src.brain.NPC.QdrantCollection') as MockQCol:
+    with patch('src.brain.brain_memory.QdrantCollection') as MockQCol:
         instance = Mock()
         # methods used by NPC
         instance.create.return_value = None
@@ -171,7 +171,7 @@ class TestNPCInitialization:
         assert npc_instance.response_agent is not None
         assert npc_instance.preprocessor_agent is not None
         assert npc_instance.template is not None
-        assert npc_instance.collection is not None
+        assert npc_instance.brain_memory.collection is not None
     
     def test_template_loading(self, npc_instance):
         """Test that template is loaded correctly"""
@@ -228,9 +228,7 @@ class TestNPCSystemPrompt:
         npc_instance.conversation_memory.append_chat("Hello", role=Role.user)
         
         # Make get_memories return at least one item so brain context is included
-        with patch('src.brain.NPC.NPC._get_memories', return_value=[
-            Entity(key="k", content="brain_content", tags=["memories"])
-        ]):
+        with patch.object(npc_instance.brain_memory, 'get_memories', return_value="brain_content"):
             prompt = npc_instance._build_system_prompt()
         
         assert "You are a helpful test assistant." in prompt
@@ -259,7 +257,7 @@ class TestNPCBrainMemory:
     
     def test_update_memory(self, npc_instance, mock_qdrant):
         """Test that memory can be updated"""
-        npc_instance._update_brain_memory("Test memory content")
+        npc_instance.brain_memory.add_memory("Test memory content")
         mock_qdrant.insert_dataclasses.assert_called_once()
     
     def test_get_memories(self, npc_instance, mock_qdrant):
@@ -268,7 +266,7 @@ class TestNPCBrainMemory:
             (Entity(key="test", content="test content", tags=["memories"]), 0.8)
         ]
         
-        memories = npc_instance._get_memories("test query", topk=5)
+        memories = npc_instance.brain_memory.get_memories("test query", topk=5)
         assert len(memories) == 1
         assert memories[0].content == "test content"
         mock_qdrant.search_text.assert_called_once()
@@ -284,13 +282,13 @@ class TestNPCBrainMemory:
         def fake_search_vectors(vec, topk=5):
             return []
         real._search_vectors = fake_search_vectors  # type: ignore
-        npc_instance.collection = real
+        npc_instance.brain_memory.collection = real
 
         # Spy on the embedding function used by QdrantCollection
         embed_spy = Mock()
         monkeypatch.setattr('src.utils.QdrantCollection.VectorUtils.get_embedding', embed_spy)
 
-        npc_instance._get_memories("cached text", topk=3)
+        npc_instance.brain_memory.get_memories("cached text", topk=3)
         embed_spy.assert_not_called()
 
     def test_get_memories_cache_miss_adds_and_calls_embed(self, npc_instance, monkeypatch):
@@ -301,27 +299,26 @@ class TestNPCBrainMemory:
         def fake_search_vectors(vec, topk=5):
             return []
         real._search_vectors = fake_search_vectors  # type: ignore
-        npc_instance.collection = real
+        npc_instance.brain_memory.collection = real
 
         called_vec = [0.2] * 1536
         def fake_embed(text, model=None, dimensions=None):
             return called_vec
         monkeypatch.setattr('src.utils.QdrantCollection.VectorUtils.get_embedding', fake_embed)
 
-        npc_instance._get_memories("new text", topk=4)
+        npc_instance.brain_memory.get_memories("new text", topk=4)
         assert real.embedding_cache.get("new text") == called_vec
     
     def test_build_context(self, npc_instance):
         """Test that context is built correctly from memories"""
-        memories = [
-            Entity(key="key1", content="content1", tags=["memories"]),
-            Entity(key="key2", content="content2", tags=["memories"])
-        ]
+        # Add a user message so brain context can be retrieved
+        npc_instance.conversation_memory.append_chat("test message", role=Role.user)
         
-        context = npc_instance._build_memory_context(memories)
-        assert "content1" in context
-        assert "content2" in context
-        assert context.count("\n") == 1  # One newline between two memories
+        # Mock brain memory to return specific memories
+        with patch.object(npc_instance.brain_memory, 'get_memories', return_value="content1\ncontent2"):
+            context = npc_instance._build_system_prompt(include_conversation_summary=False, include_brain_context=True)
+            assert "content1" in context
+            assert "content2" in context
 
 
 class TestNPCBrainMemoryAPI:
