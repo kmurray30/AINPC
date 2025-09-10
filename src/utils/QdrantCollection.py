@@ -1,9 +1,10 @@
 import os
 from dataclasses import fields as dc_fields
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Optional
 
 from qdrant_client import QdrantClient, models
+from qdrant_client.models import Filter
 
 from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Logger, VectorUtils
@@ -79,7 +80,7 @@ class QdrantCollection:
         except Exception as exc:
             raise Exception(f"Failed to drop collection {self.name}: {exc}")
 
-    def get_embedding(self, text: str) -> List[float]:
+    def _get_embedding(self, text: str) -> List[float]:
         cached = self.embedding_cache.get(text)
         if cached:
             return cached
@@ -101,7 +102,7 @@ class QdrantCollection:
             text_to_embed = record.key
             if text_to_embed is None:
                 raise ValueError(f"Record {record} key field is empty. Needed for embedding.")
-            embedding = self.get_embedding(text_to_embed)
+            embedding = self._get_embedding(text_to_embed)
             embedding_map[record_id] = embedding
 
         points: List[models.PointStruct] = []
@@ -156,12 +157,13 @@ class QdrantCollection:
         return out
 
     # Search
-    def _search_vectors(self, query_embedding: List[float], topk: int = 5) -> List[Tuple[Entity, float]]:
+    def _search_vectors(self, query_embedding: List[float], topk: int = 5, filter: Optional[Filter] = None) -> List[Tuple[Entity, float]]:
         client = _get_client()
         results = client.search(
             collection_name=self.name,
             query_vector=query_embedding,
             limit=topk,
+            query_filter=filter,
             with_payload=True,
             with_vectors=False,
         )
@@ -179,9 +181,13 @@ class QdrantCollection:
             result_records.append((Entity(**constructor_kwargs), float(scored_point.score)))
         return result_records
 
-    def search_text(self, text: str, topk: int = 5) -> List[Tuple[Entity, float]]:
-        embedding = self.get_embedding(text)
-        return self._search_vectors(embedding, topk=topk)
+    def search_text(self, text: str, topk: int = 5, filter: Optional[Filter] = None) -> List[Tuple[Entity, float]]:
+        embedding = self._get_embedding(text)
+        return self._search_vectors(embedding, topk=topk, filter=filter)
+
+    def maintain(self) -> None:
+        """Persist embedding cache associated with this collection"""
+        self.embedding_cache.save()
 
     def init_from_file(self, saved_entities_path: str) -> None:
         from src.utils import io_utils  # local import to avoid cycles at module load

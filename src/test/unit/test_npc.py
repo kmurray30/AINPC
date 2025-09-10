@@ -279,7 +279,7 @@ class TestNPCBrainMemory:
         cached_vec = [0.1] * 1536
         real.embedding_cache.add("cached text", cached_vec)
         # stub search_vectors to avoid network
-        def fake_search_vectors(vec, topk=5):
+        def fake_search_vectors(vec, topk=5, filter=None):
             return []
         real._search_vectors = fake_search_vectors  # type: ignore
         npc_instance.brain_memory.collection = real
@@ -296,7 +296,7 @@ class TestNPCBrainMemory:
         from src.utils.QdrantCollection import QdrantCollection as RealQCol
         real = RealQCol("simple_brain")
         assert real.embedding_cache.get("new text") is None
-        def fake_search_vectors(vec, topk=5):
+        def fake_search_vectors(vec, topk=5, filter=None):
             return []
         real._search_vectors = fake_search_vectors  # type: ignore
         npc_instance.brain_memory.collection = real

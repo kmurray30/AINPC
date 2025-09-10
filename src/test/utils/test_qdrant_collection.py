@@ -281,3 +281,110 @@ def test_embedding_cache_binary_encoding():
             assert abs(orig - dec) < 1e-6, f"Direct encoding/decoding precision error: {orig} vs {dec}"
 
 
+def test_search_with_tag_filters(unique_collection_name, mock_embeddings):
+    """Test that search_text and _search_vectors work with Qdrant filters for tags"""
+    from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+    from src.core.schemas.CollectionSchemas import Entity
+    from src.utils import Utilities
+    
+    name = unique_collection_name
+    col = QdrantCollection(name)
+    col.drop_if_exists()
+    col.create(dim=TEST_DIMENSION)
+    
+    # Insert test data with different tags
+    test_entities = [
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory1",
+            content="This is about cats and animals",
+            tags=["animals", "pets"]
+        ),
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory2", 
+            content="This is about dogs and animals",
+            tags=["animals", "pets"]
+        ),
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory3",
+            content="This is about work and coding",
+            tags=["work", "programming"]
+        ),
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory4",
+            content="This is about cats and work",
+            tags=["animals", "work"]
+        )
+    ]
+    
+    col.insert_dataclasses(test_entities)
+    
+    # Test 1: Filter for single tag match
+    animals_filter = Filter(
+        must=[
+            FieldCondition(
+                key="tags",
+                match=MatchValue(value="animals")
+            )
+        ]
+    )
+    
+    # Search using search_text with filter
+    results = col.search_text("test query", topk=10, filter=animals_filter)
+    result_keys = {entity.key for entity, score in results}
+    
+    # Should return entities with "animals" tag
+    expected_keys = {"memory1", "memory2", "memory4"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 2: Filter for multiple possible tags using MatchAny
+    pets_or_work_filter = Filter(
+        must=[
+            FieldCondition(
+                key="tags",
+                match=MatchAny(any=["pets", "programming"])
+            )
+        ]
+    )
+    
+    results = col.search_text("test query", topk=10, filter=pets_or_work_filter)
+    result_keys = {entity.key for entity, score in results}
+    
+    # Should return entities with either "pets" or "programming" tags
+    expected_keys = {"memory1", "memory2", "memory3"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 3: Test _search_vectors directly with filter
+    query_embedding = VectorUtils.get_embedding("test query")
+    results = col._search_vectors(query_embedding, topk=10, filter=animals_filter)
+    result_keys = {entity.key for entity, score in results}
+    
+    # Should return same results as search_text with same filter
+    expected_keys = {"memory1", "memory2", "memory4"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 4: No filter should return all results
+    results = col.search_text("test query", topk=10, filter=None)
+    result_keys = {entity.key for entity, score in results}
+    
+    # Should return all entities
+    expected_keys = {"memory1", "memory2", "memory3", "memory4"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 5: Filter that matches no entities
+    nonexistent_filter = Filter(
+        must=[
+            FieldCondition(
+                key="tags",
+                match=MatchValue(value="nonexistent_tag")
+            )
+        ]
+    )
+    
+    results = col.search_text("test query", topk=10, filter=nonexistent_filter)
+    assert len(results) == 0, "Filter with nonexistent tag should return no results"
+
+
