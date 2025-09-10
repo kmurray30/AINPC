@@ -388,3 +388,74 @@ def test_search_with_tag_filters(unique_collection_name, mock_embeddings):
     assert len(results) == 0, "Filter with nonexistent tag should return no results"
 
 
+def test_string_filter_expressions(unique_collection_name, mock_embeddings):
+    """Test that string filter expressions work with search methods"""
+    from src.core.schemas.CollectionSchemas import Entity
+    from src.utils import Utilities
+    
+    name = unique_collection_name
+    col = QdrantCollection(name)
+    col.drop_if_exists()
+    col.create(dim=TEST_DIMENSION)
+    
+    # Insert test data with different tags
+    test_entities = [
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory1",
+            content="This is about cats and animals",
+            tags=["animals", "pets"]
+        ),
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory2", 
+            content="This is about dogs and animals",
+            tags=["animals", "pets"]
+        ),
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory3",
+            content="This is about work and coding",
+            tags=["work", "programming"]
+        ),
+        Entity(
+            id=int(Utilities.generate_uuid_int64()),
+            key="memory4",
+            content="This is about cats and work",
+            tags=["animals", "work"]
+        )
+    ]
+    
+    col.insert_dataclasses(test_entities)
+    
+    # Test 1: Simple string filter
+    results = col.search_text("test query", topk=10, filter="'animals'")
+    result_keys = {entity.key for entity, score in results}
+    expected_keys = {"memory1", "memory2", "memory4"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 2: AND operation
+    results = col.search_text("test query", topk=10, filter="'animals' and 'pets'")
+    result_keys = {entity.key for entity, score in results}
+    expected_keys = {"memory1", "memory2"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 3: OR operation  
+    results = col.search_text("test query", topk=10, filter="'pets' or 'programming'")
+    result_keys = {entity.key for entity, score in results}
+    expected_keys = {"memory1", "memory2", "memory3"}
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 4: Complex nested operation
+    results = col.search_text("test query", topk=10, filter="'animals' and ('pets' or 'work')")
+    result_keys = {entity.key for entity, score in results}
+    expected_keys = {"memory1", "memory2", "memory4"}  # All have animals, and either pets or work
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+    
+    # Test 5: NOT operation
+    results = col.search_text("test query", topk=10, filter="not 'programming'")
+    result_keys = {entity.key for entity, score in results}
+    expected_keys = {"memory1", "memory2", "memory4"}  # All except memory3
+    assert result_keys == expected_keys, f"Expected {expected_keys}, got {result_keys}"
+
+

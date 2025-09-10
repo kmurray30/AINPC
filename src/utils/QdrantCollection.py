@@ -1,13 +1,14 @@
 import os
 from dataclasses import fields as dc_fields
 from pathlib import Path
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional, Union
 
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import Filter
 
 from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Logger, VectorUtils
+from src.utils.qdrant_filter import parse_filter_string
 from src.brain.embedding_cache import EmbeddingCache
 
 
@@ -157,13 +158,15 @@ class QdrantCollection:
         return out
 
     # Search
-    def _search_vectors(self, query_embedding: List[float], topk: int = 5, filter: Optional[Filter] = None) -> List[Tuple[Entity, float]]:
+    def _search_vectors(self, query_embedding: List[float], topk: int = 5, filter: Union[str, Filter, None] = None) -> List[Tuple[Entity, float]]:
         client = _get_client()
+        # Convert string filter expressions to Qdrant Filter objects
+        qdrant_filter = parse_filter_string(filter)
         results = client.search(
             collection_name=self.name,
             query_vector=query_embedding,
             limit=topk,
-            query_filter=filter,
+            query_filter=qdrant_filter,
             with_payload=True,
             with_vectors=False,
         )
@@ -181,7 +184,7 @@ class QdrantCollection:
             result_records.append((Entity(**constructor_kwargs), float(scored_point.score)))
         return result_records
 
-    def search_text(self, text: str, topk: int = 5, filter: Optional[Filter] = None) -> List[Tuple[Entity, float]]:
+    def search_text(self, text: str, topk: int = 5, filter: Union[str, Filter, None] = None) -> List[Tuple[Entity, float]]:
         embedding = self._get_embedding(text)
         return self._search_vectors(embedding, topk=topk, filter=filter)
 
