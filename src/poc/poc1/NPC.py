@@ -94,7 +94,7 @@ class NPC:
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
 
-    def call_llm_for_chat(self, user_message: Optional[str] = None, enable_printing: bool = False) -> ChatResponse:
+    def chat(self, user_message: Optional[str] = None) -> ChatResponse:
         # Add the latest user prompt to the chat history. If none, skip this step
         if user_message is not None:
             self.conversation_memory.append_chat(user_message, role=Role.user, off_switch=False)

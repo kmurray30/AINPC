@@ -2,7 +2,8 @@
   "python.analysis.typecheckingMode": "basic",
   "python.testing.pytestArgs": [
     "src",
-    "--ignore=src/test/utils/test_milvus_utils.py"
+    "test",
+    "--ignore=test/utils/test_milvus_utils.py"
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,

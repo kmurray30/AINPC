@@ -158,7 +158,7 @@ class Presenter:
             if hasattr(self.npc, "chat"):
                 chat_response = self.npc.chat(user_input)
             else:
-                chat_response = self.npc.call_llm_for_chat(user_input, enable_printing=True)
+                chat_response = self.npc.chat(user_input, enable_printing=True)
 
             # Append the response to the chat logs
             self.append_chat_logs(
