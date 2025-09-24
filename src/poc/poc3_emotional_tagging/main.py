@@ -14,7 +14,7 @@ from src.core.schemas.CollectionSchemas import Entity
 from src.core.Agent import Agent
 from src.utils import Logger
 from src.utils.Logger import Level
-from src.poc.poc2_simple_brain.NPC import NPC, PreprocessedUserInput
+from src.poc.poc3_emotional_tagging.NPC import NPC, PreprocessedUserInput
 from src.core import proj_paths, proj_settings
 
 Logger.set_level(Level.DEBUG)
@@ -26,11 +26,11 @@ if __name__ == "__main__":
     # Simple chat loop
     try:
         # Initialize NPC
-        proj_paths.set_paths(Path(__file__).resolve().parent, "simple_brain")
+        proj_paths.set_paths(Path(__file__).resolve().parent, "poc3_emotional_tagging")
         proj_settings.init_settings()
         Logger.set_level(proj_settings.get_settings().game_settings.log_level)
 
-        npc = NPC(is_new_game=True, npc_name="simple_brain")
+        npc = NPC(is_new_game=True, npc_name="emotional_ai")
         
         while True:
             user_input_raw = input("You: ")

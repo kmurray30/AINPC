@@ -15,7 +15,7 @@ from src.poc.poc2_simple_brain.NPC import NPC, NPCTemplate, PreprocessedUserInpu
 from src.core.ResponseTypes import ChatResponse
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.Constants import Role
-from src.brain.embedding_cache import EmbeddingCache
+from src.utils.embedding_cache import EmbeddingCache
 
 
 @pytest.fixture(autouse=True)
@@ -345,14 +345,14 @@ class TestNPCBrainMemoryAPI:
     
     def test_load_entities_from_template(self, npc_instance, mock_qdrant):
         """Test loading entities from template"""
-        with patch('src.brain.template_processor.template_to_entities_simple') as mock_template_processor, \
+        with patch('src.utils.io_utils.load_yaml_into_dataclass') as mock_io_utils, \
              patch('os.path.exists', return_value=True):
-            mock_template_processor.return_value = [
+            mock_io_utils.return_value = [
                 Entity(key="key1", content="content1", tags=["memories"])
             ]
             
             npc_instance.load_entities_from_template("test.yaml")
-            mock_template_processor.assert_called_once()
+            mock_io_utils.assert_called_once()
             mock_qdrant.insert_dataclasses.assert_called_once()
     
     def test_load_entities_from_template_invalid_file(self, npc_instance):

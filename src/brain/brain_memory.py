@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import os
+from pathlib import Path
 from typing import Any, List
 
 from src.core.ResponseTypes import ChatResponse
@@ -7,6 +8,7 @@ from src.core.Agent import Agent
 from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Logger, Utilities
 from src.utils.QdrantCollection import QdrantCollection
+from src.utils import io_utils
 
 
 class BrainMemory:
@@ -62,8 +64,7 @@ class BrainMemory:
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"File {template_path} does not exist")
 
-        from src.brain import template_processor
-        entities = template_processor.template_to_entities_simple(template_path)
+        entities = io_utils.load_yaml_into_dataclass(Path(template_path), List[Entity])
         # Ensure each entity has an id for Qdrant
         for e in entities:
             if getattr(e, "id", None) is None:

@@ -11,3 +11,4 @@ src/test/EvalTests/reports/*
 **/saves/
 *.app
 milvus_data/
+cache/

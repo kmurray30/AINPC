@@ -24,7 +24,7 @@ class EmbeddingCache:
         self._lock = RLock()
         self._cache: Dict[str, List[float]] = {}
         # Default location inside the brain module directory
-        default_path = Path(__file__).resolve().parent / "embedding_cache.json"
+        default_path = Path(__file__).resolve().parent.parent.parent / "cache" / "embedding_cache.json"
         self._cache_file = cache_file or default_path
         self._load_if_exists()
 

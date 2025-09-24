@@ -9,7 +9,7 @@ from qdrant_client.models import Filter
 from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Logger, VectorUtils
 from src.utils.qdrant_filter import parse_filter_string
-from src.brain.embedding_cache import EmbeddingCache
+from src.utils.embedding_cache import EmbeddingCache
 
 
 _QDRANT_CLIENT: QdrantClient | None = None
