@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # Simple chat loop
     try:
         # Initialize NPC
-        proj_paths.set_paths(Path(__file__).resolve().parent, "simple_brain")
+        proj_paths.set_paths(Path(__file__).resolve().parent, "poc2_simple_brain")
         proj_settings.init_settings()
         Logger.set_level(proj_settings.get_settings().game_settings.log_level)
 
