@@ -225,7 +225,7 @@ def test_optional_fields_dataclass(unique_collection_name, mock_embeddings):
 
 def test_embedding_cache_binary_encoding():
     """Test that embedding cache can encode/decode vectors to/from base64 binary format"""
-    from src.brain.embedding_cache import EmbeddingCache
+    from src.utils.embedding_cache import EmbeddingCache
     import tempfile
     from pathlib import Path
     

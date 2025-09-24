@@ -9,7 +9,7 @@ from threading import RLock
 
 class EmbeddingCache:
     """
-    Simple JSON-backed cache mapping raw text -> embedding list[float].
+    Singleton JSON-backed cache mapping raw text -> embedding list[float].
     Uses base64-encoded binary format for vectors to minimize file size.
 
     - Loads existing cache file on initialization if present.
@@ -18,15 +18,35 @@ class EmbeddingCache:
     - Creates the file and parent directory automatically if missing on save().
     - File format: JSON object { text: base64_encoded_vector }.
       For backward-compatibility, will accept legacy formats and convert in-memory to a dict.
+    - Singleton pattern ensures only one instance exists across the application.
     """
+    
+    _instance = None
+    _lock = RLock()
+
+    def __new__(cls, cache_file: Optional[Path] = None) -> 'EmbeddingCache':
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self, cache_file: Optional[Path] = None) -> None:
-        self._lock = RLock()
-        self._cache: Dict[str, List[float]] = {}
-        # Default location inside the brain module directory
-        default_path = Path(__file__).resolve().parent.parent.parent / "cache" / "embedding_cache.json"
-        self._cache_file = cache_file or default_path
-        self._load_if_exists()
+        if self._initialized:
+            return  # Already initialized, don't do it again
+        
+        with self.__class__._lock:  # Use the class lock for consistency
+            if self._initialized:  # Double-check after acquiring lock
+                return
+            
+            self._lock = RLock()  # Create instance lock
+            self._cache: Dict[str, List[float]] = {}
+            # Default location in storage directory
+            default_path = Path(__file__).resolve().parent.parent.parent / "storage" / "embedding_cache.json"
+            self._cache_file = cache_file or default_path
+            self._load_if_exists()
+            self._initialized = True
 
     def _load_if_exists(self) -> None:
         with self._lock:
