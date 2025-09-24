@@ -18,7 +18,7 @@ if str(SRC_DIR) not in sys.path:
 from src.core.ChatMessage import ChatMessage
 from src.poc import bootstrap
 from src.core import proj_settings, proj_paths
-from src.poc.poc1.presenter import Presenter
+from src.poc.poc1_static_prompt.presenter import Presenter
 from src.core.Constants import Llm, Role
 from src.core.ResponseTypes import ChatResponse, ChatSummary
 from src.utils import io_utils, llm_utils
@@ -118,7 +118,7 @@ def test_poc1_e2e_flow(test_project: Path, monkeypatch):
     monkeypatch.setattr(ChatBotModule, "call_llm", cb_mock)
 
     # No-op audio
-    from src.poc.poc1 import presenter as presenter_mod
+    from src.poc.poc1_static_prompt import presenter as presenter_mod
     # No-op audio thread and play
     monkeypatch.setattr(presenter_mod.Presenter, "audio_thread", lambda self, text, cancel_token, audio_generated_event, audio_finished_event, delay=0, voice="fable": audio_generated_event.set())
     monkeypatch.setattr(presenter_mod.Presenter, "play_audio", lambda self, *a, **k: None)

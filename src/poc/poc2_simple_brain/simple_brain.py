@@ -14,7 +14,7 @@ from src.core.schemas.CollectionSchemas import Entity
 from src.core.Agent import Agent
 from src.utils import Logger
 from src.utils.Logger import Level
-from src.poc.simple_brain.NPC import NPC, PreprocessedUserInput
+from src.poc.poc2_simple_brain.NPC import NPC, PreprocessedUserInput
 from src.core import proj_paths, proj_settings
 
 Logger.set_level(Level.DEBUG)

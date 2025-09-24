@@ -5,8 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) # Adjust the path to the project root
 from src.utils import Logger
-from src.poc.poc1.view import View
-from src.poc.poc1.presenter import Presenter
+from src.poc.poc1_static_prompt.view import View
+from src.poc.poc1_static_prompt.presenter import Presenter
 from src.poc import bootstrap
 
 def main() -> None:

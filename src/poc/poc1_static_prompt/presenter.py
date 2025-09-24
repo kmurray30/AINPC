@@ -11,7 +11,7 @@ import traceback
 from pathlib import Path
 
 from src.core.ChatMessage import ChatMessage
-from src.poc.poc1.NPC import NPC
+from src.poc.poc1_static_prompt.NPC import NPC
 from src.core.Constants import Constants as constants, Role
 from src.core import proj_paths, proj_settings
 from src.utils import TextToSpeech, io_utils

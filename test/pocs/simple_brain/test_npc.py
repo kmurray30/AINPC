@@ -11,7 +11,7 @@ PROJ_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJ_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJ_ROOT))
 
-from src.poc.simple_brain.NPC import NPC, NPCTemplate, PreprocessedUserInput
+from src.poc.poc2_simple_brain.NPC import NPC, NPCTemplate, PreprocessedUserInput
 from src.core.ResponseTypes import ChatResponse
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.Constants import Role
@@ -74,7 +74,7 @@ def mock_qdrant():
 @pytest.fixture
 def mock_agent():
     """Mock Agent class"""
-    with patch('src.poc.simple_brain.NPC.Agent') as mock_agent_class:
+    with patch('src.poc.poc2_simple_brain.NPC.Agent') as mock_agent_class:
         def factory(*args, **kwargs):
             m = Mock()
             m.chat_with_history.return_value = "Mock response"
@@ -87,7 +87,7 @@ def mock_agent():
 @pytest.fixture
 def mock_io_utils():
     """Mock io_utils"""
-    with patch('src.poc.simple_brain.NPC.io_utils') as mock_io:
+    with patch('src.poc.poc2_simple_brain.NPC.io_utils') as mock_io:
         mock_io.load_yaml_into_dataclass.return_value = NPCTemplate(
             response_system_prompt="You are a helpful test assistant.",
             preprocess_system_prompt="You are a text preprocessor."
@@ -128,7 +128,7 @@ def mock_proj_settings():
 @pytest.fixture
 def mock_conversation_memory():
     """Mock ConversationMemory to avoid proj_settings dependency"""
-    with patch('src.poc.simple_brain.NPC.ConversationMemory') as mock_cm:
+    with patch('src.poc.poc2_simple_brain.NPC.ConversationMemory') as mock_cm:
         mock_instance = Mock()
         mock_instance.chat_memory = []
         
