@@ -5,7 +5,7 @@ import os
 import traceback
 from typing import List
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))) # Adjust the path to the project root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) # Adjust the path to the project root
 from src.brain import template_processor
 from src.core.Constants import Role
 from src.core.ChatMessage import ChatMessage
@@ -14,12 +14,10 @@ from src.core.schemas.CollectionSchemas import Entity
 from src.core.Agent import Agent
 from src.utils import Logger
 from src.utils.Logger import Level
-from src.brain.NPC import NPC
+from src.poc.simple_brain.NPC import NPC, PreprocessedUserInput
 from src.core import proj_paths, proj_settings
 
 Logger.set_level(Level.DEBUG)
-
-from src.brain.NPC import PreprocessedUserInput
 
 # All brain functionality has been moved to NPC.py
 # This file now only contains the main loop that uses the NPC API
@@ -55,6 +53,7 @@ if __name__ == "__main__":
                     continue
                 template_path = args[1]
                 try:
+                    template_path = os.path.join(os.path.dirname(__file__), template_path)
                     npc.load_entities_from_template(template_path)
                 except Exception as e:
                     Logger.error(f"Error loading template: {e}")
@@ -64,6 +63,9 @@ if __name__ == "__main__":
                 continue
             if user_input_raw.lower() == "/clear":
                 npc.clear_brain_memory()
+                continue
+            if user_input_raw.lower().startswith("/"):
+                Logger.error(f"Unknown command: {user_input_raw}")
                 continue
             response = npc.chat(user_input_raw)
             print(f"AI: {response.response}")

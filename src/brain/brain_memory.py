@@ -58,7 +58,7 @@ class BrainMemory:
         if not template_path.endswith(".yaml"):
             raise ValueError("File must be a yaml file")
 
-        template_path = os.path.join(os.path.dirname(__file__), template_path)
+        # template_path = os.path.join(os.path.dirname(__file__), template_path)
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"File {template_path} does not exist")
 
