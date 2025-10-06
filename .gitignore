@@ -9,6 +9,7 @@ generated/
 src/test/UnitTests/reports/*
 src/test/EvalTests/reports/*
 **/saves/
+**/reports/
 *.app
 milvus_data/
 cache/

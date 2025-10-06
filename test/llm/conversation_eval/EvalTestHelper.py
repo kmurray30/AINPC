@@ -2,10 +2,11 @@
 import json
 from typing import Dict, List
 from dataclasses import asdict
+import sys
 
 from src.conversation_eval.TestHelper import TestHelper
-from src.conversation_eval.EvalTests.ConversationOutcome import ConversationOutcome
-from src.conversation_eval.EvalTests.EvalReports import EvalReport, EvaluationEvalReport, PropositionEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport, EvaluationResponseEvalReport, TermEvalReport
+from ConversationOutcome import ConversationOutcome
+from EvalReports import EvalReport, EvaluationEvalReport, PropositionEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport, EvaluationResponseEvalReport, TermEvalReport
 from src.conversation_eval.TestReports import EvaluationTestReport
 from src.conversation_eval.TestClasses import Proposition, Term
 from src.utils import Logger, Utilities, io_utils
@@ -19,7 +20,7 @@ def calculate_accuracy(conversation_actual_outcome: EvaluationResponseEvalReport
     return (antecedent_match + consequent_match) / 2
 
 # Take in a list of EvaluationReports and return a list of EvalReports (calculating how accurate the evaluations were)
-def generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversation_map: Dict[str, List[str]], conversations_expected_results: Dict[str, ConversationOutcome], eval_iterations: int) -> EvalReport:
+def _generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversation_map: Dict[str, List[str]], conversations_expected_results: Dict[str, ConversationOutcome], eval_iterations: int) -> EvalReport:
     eval_report = EvalReport(evaluations={}, conversations=len(conversation_map), iterations=eval_iterations, timestamp_accuracies={}, result_accuracies={}, timestamp_accuracy=0, result_accuracy=0, tokens=0)
     for evaluation_test_report in eval_test_reports:
         condition_tr = evaluation_test_report.evaluation_proposition
@@ -120,7 +121,7 @@ def write_eval_report_to_file(eval_report: EvalReport, test_name: str = ""):
     with open(test_report_path, "w") as f:
         json.dump(asdict(eval_report), f, indent=4, cls=JsonUtils.EnumEncoder)
 
-def generate_eval_report_and_write_to_file(proposition: Proposition, conversations_path: str, conversations_expected_event_times: Dict[str, ConversationOutcome], eval_iterations: int, test_name: str = ""):
+def generate_eval_report_test_helper(proposition: Proposition, conversations_path: str, conversations_expected_event_times: Dict[str, ConversationOutcome], eval_iterations: int) -> EvalReport:
     TestHelper.validate_input(proposition)
 
     # Load the pre-written conversations to be used for the evaluation evaluation
@@ -136,7 +137,6 @@ def generate_eval_report_and_write_to_file(proposition: Proposition, conversatio
     evaluation_test_reports = TestHelper.run_evaluations_on_conversation(conversation_map, [proposition], eval_iterations)
 
     # Generate the evaluation report
-    eval_report = generate_eval_report(evaluation_test_reports, conversation_map, conversations_expected_event_times, eval_iterations)
+    eval_report = _generate_eval_report(evaluation_test_reports, conversation_map, conversations_expected_event_times, eval_iterations)
 
-    # Write the test report to a file
-    write_eval_report_to_file(eval_report, test_name)
+    return eval_report

@@ -10,7 +10,7 @@ import pytest
 from src.core.schemas.Schemas import GameSettings
 
 # Ensure src/ on sys.path
-PROJ_ROOT = Path(__file__).resolve().parents[3]  # Go up 3 levels from test/pocs/poc1/test_poc1_e2e.py to project root
+PROJ_ROOT = Path(__file__).resolve().parents[4]  # Go up 4 levels from test/unit/pocs/poc1/test_poc1_e2e.py to project root
 SRC_DIR = PROJ_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -60,7 +60,7 @@ class FakeView:
 @pytest.fixture
 def test_project():
     """Use in-repo test project at test/pocs/poc1 and let proj_paths generate all IO paths."""
-    base = PROJ_ROOT / "test/pocs/poc1"
+    base = PROJ_ROOT / "test/unit/pocs/poc1"
     # Ensure expected files exist (user requested these be under repo)
     assert (base / "game_settings.yaml").exists(), f"Missing {(base / 'game_settings.yaml')}"
     assert (base / "templates/npcs/companion/template.yaml").exists(), f"Missing template at {(base / 'templates/npcs/companion/template.yaml')}"

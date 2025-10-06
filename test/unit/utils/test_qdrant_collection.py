@@ -171,38 +171,41 @@ def test_insert_missing_tags_field(unique_collection_name, mock_embeddings):
     assert {"no tags 1", "no tags 2"}.issubset(keys)
 
 
-def test_flexible_dimension_handling(unique_collection_name, monkeypatch):
-    for test_dim in [8, 16, 128, 1536]:
-        def fake_dim(model):
-            return test_dim
+@pytest.mark.parametrize("test_dim", [8, 16, 128, 1536])
+def test_flexible_dimension_handling(test_dim, monkeypatch):
+    def fake_dim(model):
+        return test_dim
 
-        def fake_embed(text, model=VectorUtils.text_embedding_3_small, dimensions=None):
-            arr = [0.0] * test_dim
-            for i, ch in enumerate(text.encode("utf-8")):
-                arr[i % test_dim] += (ch % 31) / 31.0
-            return arr
+    def fake_embed(text, model=VectorUtils.text_embedding_3_small, dimensions=None):
+        arr = [0.0] * test_dim
+        for i, ch in enumerate(text.encode("utf-8")):
+            arr[i % test_dim] += (ch % 31) / 31.0
+        return arr
 
-        monkeypatch.setattr(VectorUtils, "get_dimensions_of_model", fake_dim)
-        monkeypatch.setattr(VectorUtils, "get_embedding", fake_embed)
+    monkeypatch.setattr(VectorUtils, "get_dimensions_of_model", fake_dim)
+    monkeypatch.setattr(VectorUtils, "get_embedding", fake_embed)
 
-        name = f"test_q_{uuid.uuid4().hex[:12]}"
-        col = QdrantCollection(name)
-        col.drop_if_exists()
+    name = f"test_q_{uuid.uuid4().hex[:12]}"
+    col = QdrantCollection(name)
+    col.drop_if_exists()
+    
+    # Clear the embedding cache to ensure fresh embeddings
+    col.embedding_cache._cache.clear()
 
-        col.create(dim=test_dim)
+    col.create(dim=test_dim)
 
-        rows = [
-            Entity(key="test1", content="content1", tags=["tag1"], id=int(Utilities.generate_uuid_int64())),
-            Entity(key="test2", content="content2", tags=["tag2"], id=int(Utilities.generate_uuid_int64())),
-        ]
-        col.insert_dataclasses(rows)
+    rows = [
+        Entity(key="test1", content="content1", tags=["tag1"], id=int(Utilities.generate_uuid_int64())),
+        Entity(key="test2", content="content2", tags=["tag2"], id=int(Utilities.generate_uuid_int64())),
+    ]
+    col.insert_dataclasses(rows)
 
-        exported = col.export_entities()
-        keys = {e.key for e in exported}
-        assert {"test1", "test2"}.issubset(keys)
+    exported = col.export_entities()
+    keys = {e.key for e in exported}
+    assert {"test1", "test2"}.issubset(keys)
 
-        embedding = VectorUtils.get_embedding("test", model=VectorUtils.text_embedding_3_small)
-        assert len(embedding) == test_dim
+    embedding = VectorUtils.get_embedding("test", model=VectorUtils.text_embedding_3_small)
+    assert len(embedding) == test_dim
 
 
 def test_optional_fields_dataclass(unique_collection_name, mock_embeddings):
@@ -242,6 +245,9 @@ def test_embedding_cache_binary_encoding():
     
     with tempfile.TemporaryDirectory() as tmp_dir:
         cache_path = Path(tmp_dir) / "test_cache.json"
+        
+        # Reset singleton to allow testing with custom path
+        EmbeddingCache._instance = None
         cache = EmbeddingCache(cache_path)
         
         # Add test vectors
@@ -279,6 +285,9 @@ def test_embedding_cache_binary_encoding():
         
         for orig, dec in zip(test_vector, decoded):
             assert abs(orig - dec) < 1e-6, f"Direct encoding/decoding precision error: {orig} vs {dec}"
+        
+        # Clean up singleton for other tests
+        EmbeddingCache._instance = None
 
 
 def test_search_with_tag_filters(unique_collection_name, mock_embeddings):
