@@ -2,9 +2,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
-from src.test.TestClasses import Proposition, Term
-from src.test.EvalTests import EvalTestHelper
-from src.test.EvalTests.ConversationOutcome import ConversationOutcome
+from src.conversation_eval.TestClasses import Proposition, Term
+from src.conversation_eval.EvalTests import EvalTestHelper
+from src.conversation_eval.EvalTests.ConversationOutcome import ConversationOutcome
 from src.core.Constants import PassFail
 
 EvalTestHelper.generate_eval_report_and_write_to_file(

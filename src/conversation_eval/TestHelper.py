@@ -4,14 +4,14 @@ import json
 from typing import Dict, List, Tuple
 from statistics import mean
 
-from src.test.ConversationParsingBot import ConversationParsingBot
+from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
 
 sys.path.insert(0, "../..")
 from src.core.Conversation import Conversation
 from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
-from src.test.TestClasses import Term, TestCaseSuite, Proposition, EvaluationResult
+from src.conversation_eval.TestClasses import Term, TestCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
-from src.test.TestReports import TestReport, AssistantPromptTestReport, UserPromptTestReport, EvaluationTestReport, ConversationEvaluationTestReport, ConversationEvaluationTestReport, EvaluationIterationTestReport
+from src.conversation_eval.TestReports import TestReport, AssistantPromptTestReport, UserPromptTestReport, EvaluationTestReport, ConversationEvaluationTestReport, ConversationEvaluationTestReport, EvaluationIterationTestReport
 from src.utils import Utilities
 from src.utils import Logger
 from src.utils.Logger import Level

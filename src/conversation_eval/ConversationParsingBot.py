@@ -6,11 +6,12 @@ from src.core import Constants
 from src.core.Constants import Role, Constants, Llm
 from src.utils import io_utils, parsing_utils
 from src.utils.ChatBot import ChatBot
-from src.test.TestClasses import Proposition
+from src.conversation_eval.TestClasses import Proposition
 
 class ConversationParsingBot:
 
-    chat_bot: ChatBot = ChatBot(model=Llm.gpt_4o_mini)
+    chat_bot: ChatBot = ChatBot
+    chat_bot.set_chat_model(Llm.gpt_4o_mini)
 
     @staticmethod
     def evaluate_conversation_timestamps(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:

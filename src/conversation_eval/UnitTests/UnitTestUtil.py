@@ -4,8 +4,8 @@ from typing import List
 from dataclasses import asdict
 
 from src.core import JsonUtils
-from src.test.TestReports import TestReport
-from src.test.TestClasses import TestCaseSuite, TestCase, Proposition
+from src.conversation_eval.TestReports import TestReport
+from src.conversation_eval.TestClasses import TestCaseSuite, TestCase, Proposition
 from src.utils import Logger, Utilities
 
 # Load a test suite from a JSON file

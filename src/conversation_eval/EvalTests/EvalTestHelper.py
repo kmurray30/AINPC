@@ -3,11 +3,11 @@ import json
 from typing import Dict, List
 from dataclasses import asdict
 
-from src.test.TestHelper import TestHelper
-from src.test.EvalTests.ConversationOutcome import ConversationOutcome
-from src.test.EvalTests.EvalReports import EvalReport, EvaluationEvalReport, PropositionEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport, EvaluationResponseEvalReport, TermEvalReport
-from src.test.TestReports import EvaluationTestReport
-from src.test.TestClasses import Proposition, Term
+from src.conversation_eval.TestHelper import TestHelper
+from src.conversation_eval.EvalTests.ConversationOutcome import ConversationOutcome
+from src.conversation_eval.EvalTests.EvalReports import EvalReport, EvaluationEvalReport, PropositionEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport, EvaluationResponseEvalReport, TermEvalReport
+from src.conversation_eval.TestReports import EvaluationTestReport
+from src.conversation_eval.TestClasses import Proposition, Term
 from src.utils import Logger, Utilities, io_utils
 from src.core import JsonUtils
 
