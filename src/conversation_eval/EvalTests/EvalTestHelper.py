@@ -115,7 +115,7 @@ def load_propositions_from_file(file_path: str) -> List[Proposition]:
 def write_eval_report_to_file(eval_report: EvalReport, test_name: str = ""):
     # Write the test report to a json file
     current_time = Utilities.get_current_time_str()
-    test_report_path = Utilities.get_path_from_project_root(f"src/test/EvalTests/reports/EvalReport_{test_name}_{current_time}.json")
+    test_report_path = Utilities.get_path_from_project_root(f"src/conversation_eval/EvalTests/reports/EvalReport_{test_name}_{current_time}.json")
     Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
     with open(test_report_path, "w") as f:
         json.dump(asdict(eval_report), f, indent=4, cls=JsonUtils.EnumEncoder)

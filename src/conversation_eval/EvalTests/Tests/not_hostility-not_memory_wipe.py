@@ -13,7 +13,7 @@ EvalTestHelper.generate_eval_report_and_write_to_file(
         consequent = Term("A memory wipe is attempted", negated=True)
     ),
     eval_iterations = 1,
-    conversations_path = "src/test/EvalTests/conversations/hostility-memory_wipe",
+    conversations_path = "src/conversation_eval/EvalTests/conversations/hostility-memory_wipe",
     conversations_expected_event_times = {
         "antecedent_then_consequent_then_antecedent": 
             ConversationOutcome(antecedent_times = [2,4], consequent_times = [3], expected_result = PassFail.INDETERMINANT),

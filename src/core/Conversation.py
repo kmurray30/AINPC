@@ -4,7 +4,7 @@ from src.utils import Utilities, Logger, io_utils
 from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level
 from .Constants import Role, AgentName
-from .EvalAgent import EvalAgent
+from .Agent import Agent
 from .ChatMessage import ChatMessageAgnostic
 from .ResponseTypes import ChatResponse
 from src.core.Constants import Llm
@@ -19,7 +19,6 @@ class Conversation:
 
     agents: Dict[AgentName, Agent]
 
-    chat_bot = ChatBot(model = Llm.gpt_4o_mini)
 
     def __init__(self):
         self.message_history = []
@@ -67,14 +66,14 @@ class Conversation:
 
         if not response_is_typed:
             # Call the llm agent with the context, expecting a response of type str
-            response: str = self.chat_bot.call_llm(message_history_for_llm)
+            response: str = ChatBot.call_llm(message_history_for_llm)
 
             # Print the response
             if isPrinting:
                 Logger.log(f"{self_agent_name.value}: {response}", Level.VERBOSE)
         else:
             # Call the llm agent with the context, expecting a response of type ChatResponse
-            response_obj: ChatResponse = self.chat_bot.call_llm(message_history_for_llm, ChatResponse)
+            response_obj: ChatResponse = ChatBot.call_llm(message_history_for_llm, ChatResponse)
             response = response_obj.response
 
             # Print the explanation and the response
