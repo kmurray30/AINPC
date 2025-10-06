@@ -92,6 +92,29 @@ class NPC:
         
         return "\n\n".join(parts) + "\n\n"
 
+    def _preprocess_input(self, user_message: str) -> PreprocessedUserInput:
+        # Use only the template-provided preprocess prompt
+        preprocess_agent_system_prompt = self.template.preprocess_system_prompt
+        if not preprocess_agent_system_prompt:
+            raise ValueError("preprocess_system_prompt is required in NPCTemplate")
+        
+        # Get brain memories to provide context for preprocessor, using the last user message
+        if user_message:
+            memories = self.brain_memory.get_memories(user_message, topk=3, as_str=True)
+            if memories:
+                preprocess_agent_system_prompt += f"""
+                Context:
+                {memories}
+                """
+
+        self.preprocessor_agent.update_system_prompt(preprocess_agent_system_prompt)
+        message_history_truncated = self.conversation_memory.chat_memory[-self.last_messages_to_retain_for_preprocessor:]
+        Logger.verbose(f"Full input to preprocessor LLM:\nContext:{preprocess_agent_system_prompt}\nMessage History:\n{message_history_truncated}")
+        preprocessed_message: PreprocessedUserInput = self.preprocessor_agent.chat_with_history(message_history_truncated)
+        if preprocessed_message.text == "":
+            preprocessed_message.text = "<empty>"
+        return preprocessed_message
+
     # ---------- Private API - State Management ----------
 
     def _save_state(self) -> None:
@@ -139,31 +162,7 @@ class NPC:
         self.brain_memory.load_entities_from_template(template_path)
 
     def clear_brain_memory(self) -> None:
-        self.brain_memory.clear_brain_memory()
-
-    
-    def _preprocess_input(self, user_message: str) -> PreprocessedUserInput:
-        # Use only the template-provided preprocess prompt
-        preprocess_agent_system_prompt = self.template.preprocess_system_prompt
-        if not preprocess_agent_system_prompt:
-            raise ValueError("preprocess_system_prompt is required in NPCTemplate")
-        
-        # Get brain memories to provide context for preprocessor, using the last user message
-        if user_message:
-            memories = self.brain_memory.get_memories(user_message, topk=3, as_str=True)
-            if memories:
-                preprocess_agent_system_prompt += f"""
-                Context:
-                {memories}
-                """
-
-        self.preprocessor_agent.update_system_prompt(preprocess_agent_system_prompt)
-        message_history_truncated = self.conversation_memory.chat_memory[-self.last_messages_to_retain_for_preprocessor:]
-        Logger.verbose(f"Full input to preprocessor LLM:\nContext:{preprocess_agent_system_prompt}\nMessage History:\n{message_history_truncated}")
-        preprocessed_message: PreprocessedUserInput = self.preprocessor_agent.chat_with_history(message_history_truncated)
-        if preprocessed_message.text == "":
-            preprocessed_message.text = "<empty>"
-        return preprocessed_message
+        self.brain_memory.clear_all_memories()
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Primary chat API: preprocess, update brain, build prompt, respond, persist. Returns ChatResponse."""

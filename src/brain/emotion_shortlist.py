@@ -11,9 +11,9 @@ from src.utils.QdrantCollection import QdrantCollection
 from src.utils import io_utils
 
 
-class BrainMemory:
+class EmotionShortlist:
     collection: QdrantCollection
-    collection_name: str = "simple_brain"
+    collection_name: str = "emotion_shortlist"
     TEST_DIMENSION: int = 1536
 
     def __init__(self):
@@ -25,37 +25,36 @@ class BrainMemory:
         # Persist embedding cache associated with the collection
         self.collection.maintain()
 
-    def add_memory(self, preprocessed_user_text: str):
+    def add_emotion(self, emotion_name: str):
         rows = [
             Entity(
-                key=preprocessed_user_text,
-                content=preprocessed_user_text,
-                tags=["memories"],
+                key=emotion_name,
+                content=emotion_name,
+                tags=None,
                 id=int(Utilities.generate_uuid_int64()),
             ),
         ]
-        Logger.verbose(f"Updating memory with {preprocessed_user_text}")
+        Logger.verbose(f"Adding emotion {emotion_name} to shortlist")
         self.collection.insert_dataclasses(rows)
 
-    def get_memories(self, preprocessed_user_text: str, topk: int = 5, as_str: bool = False) -> Any:
-        hits = self.collection.search_text(preprocessed_user_text, topk=topk)
-        Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
+    def get_emotions(self, emotional_description: str, topk: int = 5, as_str: bool = False) -> Any:
+        hits = self.collection.search_text(emotional_description, topk=topk)
+        Logger.verbose(f"Found {len(hits)} emotions for input '{emotional_description}'")
         # Print the memories with their similarity scores
         # Sort the hits by similarity score
         hits.sort(key=lambda x: x[1], reverse=True)
         for hit in hits:
-            Logger.verbose(f"Similarity: {hit[1]}, Content: {hit[0].content}")
-        Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
+            Logger.verbose(f"Similarity: {hit[1]}, Emotion: {hit[0].content}")
         if as_str:
             return "\n".join([hit[0].content for hit in hits])
         else:
             return [hit[0] for hit in hits]
 
-    def get_all_memories(self) -> List[Entity]:
+    def get_all_emotions(self) -> List[Entity]:
         """API method for /list command"""
-        all_memories = self.collection.export_entities()
-        Logger.verbose(f"All memories:")
-        return all_memories
+        all_emotions = self.collection.export_entities()
+        Logger.verbose(f"All emotions:")
+        return all_emotions
 
     def load_entities_from_template(self, template_path: str) -> None:
         """API method for /load command"""
@@ -74,7 +73,7 @@ class BrainMemory:
         self.collection.insert_dataclasses(entities)
         Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
 
-    def clear_all_memories(self) -> None:
+    def clear_all_emotions(self) -> None:
         """API method for /clear command"""
         self.collection.drop_if_exists()
         self.collection.create(dim=self.TEST_DIMENSION)

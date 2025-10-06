@@ -1,8 +1,0 @@
-game_title: Brain-Test
-text_stream_speed: 0.01
-closing_enabled: true
-summarization_prompt: Please summarize the following conversation and consolidate it with the prior summary of previous conversation if provided. Do it from the perspective of the assistant.
-num_last_messages_to_retain_when_summarizing: 4
-model: gpt_4o_mini
-log_level: DEBUG
-max_convo_mem_length: 10

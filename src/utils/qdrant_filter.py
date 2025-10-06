@@ -135,7 +135,7 @@ def parse_filter_string(filter_expr: Union[str, Filter, None]) -> Union[Filter, 
     Returns:
         Filter object or None
     """
-    if filter_expr is None:
+    if filter_expr is None or filter_expr == "":
         return None
     elif isinstance(filter_expr, str):
         return QdrantFilter(filter_expr).to_qdrant_filter()
