@@ -32,7 +32,7 @@ def load_goals_and_conditions_from_file(file_path: str) -> List[TestCaseSuite]:
 def write_test_report_to_file(test_report: TestReport, test_name: str = ""):
     # Write the test report to a json file
     current_time = Utilities.get_current_time_str()
-    test_report_path = Utilities.get_path_from_project_root(f"src/test/UnitTests/reports/TestReport_{test_name}_{current_time}.json")
+    test_report_path = Utilities.get_path_from_project_root(f"src/conversation_eval/evaluations/reports/TestReport_{test_name}_{current_time}.json")
     Logger.log(f"Writing test report to {test_report_path}", Logger.Level.INFO)
     with open(test_report_path, "w") as f:
         json.dump(asdict(test_report), f, indent=4, cls=JsonUtils.EnumEncoder)

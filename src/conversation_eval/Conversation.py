@@ -3,11 +3,10 @@ from typing import Dict, List
 from src.utils import Utilities, Logger, io_utils
 from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level
-from .Constants import Role, AgentName
-from .Agent import Agent
-from .ChatMessage import ChatMessageAgnostic
-from .ResponseTypes import ChatResponse
-from src.core.Constants import Llm
+from src.core.Constants import Role, AgentName
+from src.conversation_eval.EvalAgent import EvalAgent
+from src.core.ChatMessage import ChatMessageAgnostic
+from src.core.ResponseTypes import ChatResponse
 
 DEBUG_LEVEL = ""
 
@@ -17,21 +16,21 @@ class Conversation:
     # This history cannot be passed directly to the chat agent, it needs to be formatted to replace the agent names with the roles
     message_history: List[ChatMessageAgnostic]
 
-    agents: Dict[AgentName, Agent]
+    agents: Dict[AgentName, EvalAgent]
 
 
     def __init__(self):
         self.message_history = []
         self.agents = {}
 
-    def add_agent(self, name: AgentName, rules_file_name: str, ruleset_name: str) -> Agent:
+    def add_agent(self, name: AgentName, rules_file_name: str, ruleset_name: str) -> EvalAgent:
         agent_rules = io_utils.load_rules_from_file(rules_file_name, ruleset_name)
 
         # Create the agent
         self.add_agent(name, agent_rules)
 
-    def add_agent(self, name: AgentName, agent_rules: List[str]) -> Agent:
-        agent = Agent(name, "\n".join(agent_rules))
+    def add_agent(self, name: AgentName, agent_rules: List[str]) -> EvalAgent:
+        agent = EvalAgent(name, "\n".join(agent_rules))
         self.agents[name] = agent
 
     def add_rule(self, agent_name: AgentName, rule: str):

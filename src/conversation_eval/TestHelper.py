@@ -4,10 +4,10 @@ import json
 from typing import Dict, List, Tuple
 from statistics import mean
 
-from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
 
 sys.path.insert(0, "../..")
-from src.core.Conversation import Conversation
+from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
+from src.conversation_eval.Conversation import Conversation
 from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
 from src.conversation_eval.TestClasses import Term, TestCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
@@ -252,7 +252,7 @@ class TestHelper:
             raise ValueError("Min responses for consequent cannot be greater than max responses for consequent")
 
     @staticmethod
-    def run_unit_test(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> TestReport:
+    def run_conversation_eval(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> TestReport:
         # TODO TestHelper.validate_input(proposition)
         
         assistant_prompt_report = AssistantPromptTestReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)

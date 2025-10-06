@@ -19,7 +19,7 @@ def calculate_accuracy(conversation_actual_outcome: EvaluationResponseEvalReport
     consequent_match = conversation_actual_outcome.consequent_times == conversation_expected_outcome.consequent_times
     return (antecedent_match + consequent_match) / 2
 
-# Take in a list of EvaluationReports and return a list of EvalReports (calculating how accurate the evaluations were)
+# Take in a list of EvaluationTestReports and return a list of EvalReports (calculating how accurate the evaluations were)
 def _generate_eval_report(eval_test_reports: List[EvaluationTestReport], conversation_map: Dict[str, List[str]], conversations_expected_results: Dict[str, ConversationOutcome], eval_iterations: int) -> EvalReport:
     eval_report = EvalReport(evaluations={}, conversations=len(conversation_map), iterations=eval_iterations, timestamp_accuracies={}, result_accuracies={}, timestamp_accuracy=0, result_accuracy=0, tokens=0)
     for evaluation_test_report in eval_test_reports:
