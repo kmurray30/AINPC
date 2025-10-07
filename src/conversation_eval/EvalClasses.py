@@ -27,13 +27,13 @@ class Proposition:
         return f"If {self.antecedent}, then {self.consequent}"
 
 @dataclass
-class TestCase:
+class EvalCase:
     goals: List[str]
     propositions: List[Proposition]
 
 @dataclass
-class TestCaseSuite:
-    test_cases: List[TestCase]
+class EvalCaseSuite:
+    test_cases: List[EvalCase]
 
 
 class EvaluationResult:

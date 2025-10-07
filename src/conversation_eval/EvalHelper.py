@@ -9,9 +9,9 @@ sys.path.insert(0, "../..")
 from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
 from src.conversation_eval.Conversation import Conversation
 from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
-from src.conversation_eval.TestClasses import Term, TestCaseSuite, Proposition, EvaluationResult
+from src.conversation_eval.EvalClasses import Term, EvalCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
-from src.conversation_eval.TestReports import TestReport, AssistantPromptTestReport, UserPromptTestReport, EvaluationTestReport, ConversationEvaluationTestReport, ConversationEvaluationTestReport, EvaluationIterationTestReport
+from src.conversation_eval.EvalReports import EvalReport, AssistantPromptEvalReport, UserPromptEvalReport, EvaluationEvalReport, ConversationEvaluationEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport
 from src.utils import Utilities
 from src.utils import Logger
 from src.utils.Logger import Level
@@ -19,7 +19,7 @@ from src.utils.Logger import Level
 # Notes:
 # - See runbooks/test.ipynb for sample usage
 
-class TestHelper:
+class EvalHelper:
 
     @staticmethod
     def generate_conversations(assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, List[str]]:
@@ -51,7 +51,7 @@ class TestHelper:
         return conversation_map
     
     @staticmethod
-    def aggregate_scores(evaluation_report: EvaluationTestReport):
+    def aggregate_scores(evaluation_report: EvaluationEvalReport):
         for conversation_evaluation in evaluation_report.conversation_evaluations:
             correct_score = 0
             iteration_count = 0
@@ -201,7 +201,7 @@ class TestHelper:
             raise Exception("Unexpected fallthrough")
 
     @staticmethod
-    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluation_propositions: List[Proposition], eval_iterations_per_eval: int) -> List[EvaluationTestReport]:
+    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluation_propositions: List[Proposition], eval_iterations_per_eval: int) -> List[EvaluationEvalReport]:
         evaluation_reports = []
 
         Logger.log("∟ Evaluating conversations", Level.VERBOSE)
@@ -209,13 +209,13 @@ class TestHelper:
         # Begin the evaluations
         Logger.increment_indent() # Begin evaluations section
         for evaluation_proposition in evaluation_propositions:
-            evaluation_report = EvaluationTestReport(evaluation_proposition=evaluation_proposition, conversation_evaluations=[], result_score="", tokens=0)
+            evaluation_report = EvaluationEvalReport(evaluation_proposition=evaluation_proposition, conversation_evaluations=[], result_score="", tokens=0)
             
             Logger.log(f"∟ Evaluating: {evaluation_proposition}", Level.VERBOSE)
             Logger.increment_indent(1) # Begin one evaluation
             for conversation_name, conversation in conversation_map.items():
                 Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
-                conversation_evaluation_report = ConversationEvaluationTestReport(conversation_name=conversation_name, evaluation_iterations=[], result_score=0, tokens=0)
+                conversation_evaluation_report = ConversationEvaluationEvalReport(conversation_name=conversation_name, evaluation_iterations=[], result_score=0, tokens=0)
                 evaluation_report.conversation_evaluations.append(conversation_evaluation_report)
                 # TODO add the PropositionTestReport
                 Logger.increment_indent() # Begin evaluation iterations section
@@ -226,14 +226,14 @@ class TestHelper:
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(timestamping_result.__dict__, indent=4), Level.VERBOSE)
                     Logger.decrement_indent() # End result section
-                    evaluation_result: EvaluationResult = TestHelper.evaluate_result_from_timestamps(timestamping_result, len(conversation), evaluation_proposition)
-                    evaluation_iteration_report = EvaluationIterationTestReport(timestamping_response=timestamping_result, result=evaluation_result.pass_fail, explanation=evaluation_result.message, tokens=0)
+                    evaluation_result: EvaluationResult = EvalHelper.evaluate_result_from_timestamps(timestamping_result, len(conversation), evaluation_proposition)
+                    evaluation_iteration_report = EvaluationIterationEvalReport(timestamping_response=timestamping_result, result=evaluation_result.pass_fail, explanation=evaluation_result.message, tokens=0)
                     conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
             Logger.decrement_indent() # End one evaluation
 
             # Score the evaluations
-            TestHelper.aggregate_scores(evaluation_report)
+            EvalHelper.aggregate_scores(evaluation_report)
             evaluation_reports.append(evaluation_report)
         Logger.decrement_indent() # End evaluations section
         return evaluation_reports
@@ -252,11 +252,11 @@ class TestHelper:
             raise ValueError("Min responses for consequent cannot be greater than max responses for consequent")
 
     @staticmethod
-    def run_conversation_eval(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: TestCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> TestReport:
-        # TODO TestHelper.validate_input(proposition)
+    def run_conversation_eval(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: EvalCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> EvalReport:
+        # TODO EvalHelper.validate_input(proposition)
         
-        assistant_prompt_report = AssistantPromptTestReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
-        test_report = TestReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
+        assistant_prompt_report = AssistantPromptEvalReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
+        test_report = EvalReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
         Logger.log("Pat Rules:", Level.VERBOSE)
         Logger.increment_indent(2)
@@ -271,15 +271,15 @@ class TestHelper:
             Logger.log(f"Goals: {test_case.goals}", Level.VERBOSE)
             Logger.log(f"Evaluations: {test_case.propositions}", Level.VERBOSE)
             Logger.decrement_indent(2)
-            user_prompt_report = UserPromptTestReport(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
+            user_prompt_report = UserPromptEvalReport(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
             assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
             # Generate the conversations
-            conversation_map = TestHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
+            conversation_map = EvalHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
             user_prompt_report.conversations.append(conversation_map)
                 
             # Begin the evaluations
-            evaluation_reports = TestHelper.run_evaluations_on_conversation(conversation_map, test_case.propositions, eval_iterations_per_eval)
+            evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, test_case.propositions, eval_iterations_per_eval)
             user_prompt_report.evaluations = evaluation_reports
         Logger.decrement_indent() # End test cases section
 

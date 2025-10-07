@@ -18,21 +18,14 @@ class EvaluationResponseEvalReport:
 class EvaluationIterationEvalReport:
     timestamping_response: EvaluationResponseEvalReport
     result: PassFail
-    timestamp_accuracy: float
-    result_accuracy: int
     explanation: str
     tokens: int
 
 @dataclass
 class ConversationEvaluationEvalReport:
     conversation_name: str
-    conversation: List[str]
-    expected_antecedent_times: List[int]
-    expected_consequent_times: List[int]
-    expected_result: PassFail
     evaluation_iterations: List[EvaluationIterationEvalReport]
-    timestamp_accuracy: float
-    result_accuracy: float
+    result_score: float
     tokens: int
 
 @dataclass
@@ -55,22 +48,30 @@ class PropositionEvalReport:
     # Override the __str__ method to print the proposition in a human-readable format
     def __str__(self):
         return f"If {self.antecedent}, then {self.consequent}"
-    
+
 @dataclass
 class EvaluationEvalReport:
-    proposition: PropositionEvalReport
+    evaluation_proposition: PropositionEvalReport
     conversation_evaluations: List[ConversationEvaluationEvalReport]
-    timestamp_accuracy: float
-    result_accuracy: float
+    result_score: float
+    tokens: int
+
+@dataclass
+class UserPromptEvalReport:
+    user_prompt: List[str]
+    conversations: Dict[str,List[str]]
+    evaluations: List[EvaluationEvalReport]
+    tokens: int
+
+@dataclass
+class AssistantPromptEvalReport:
+    assistant_prompt: List[str]
+    deltas: List[Dict[str, str]]
+    user_prompt_cases: List[UserPromptEvalReport]
     tokens: int
 
 @dataclass
 class EvalReport:
-    evaluations: Dict[str, EvaluationEvalReport]
-    conversations: int
-    iterations: int
-    timestamp_accuracies: Dict[str, float]
-    result_accuracies: Dict[str, float]
-    timestamp_accuracy: float
-    result_accuracy: float
+    assistant_prompt_cases: List[AssistantPromptEvalReport]
+    takeaways: str
     tokens: int
