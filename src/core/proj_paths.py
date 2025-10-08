@@ -37,7 +37,7 @@ class SavePaths:
         return self.template_dir / "app_settings.yaml"
 
     def npc_template(self, npc_name: str) -> Path:
-        return self.npcs_templates_dir / npc_name / f"template_{self.version}.yaml"
+        return self.npcs_templates_dir / npc_name / f"template_v{self.version}.yaml"
 
     def npc_entities_template(self, npc_name: str) -> Path:
         return self.npcs_templates_dir / npc_name / "entities.yaml"
