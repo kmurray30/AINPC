@@ -40,3 +40,6 @@ initial_system_context: |
   Once you get to this point, you will say that you will be okay, and thanks for all the help. And you will close the app.
 
 initial_response: "Bye felicia"
+
+summarization_prompt: |
+  Please summarize the following conversation, focusing on key events and character development:

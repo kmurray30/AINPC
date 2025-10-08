@@ -11,3 +11,6 @@ preprocess_system_prompt: |
   - Replace second person pronouns in the last user message with 'assistant (me/I)' since you are the assistant
   - Replace third person pronouns in the last user message with the best guess of who the user is referring to. It should NOT be the user or the assistant. If you are not sure, set the clarification flag in your response. Err on the side of false unless it is absolutely necessary to clarify who the pronoun is referring to.
   - Note whether the input contains any kind of information. true for any declarations, false for questions.
+
+summarization_prompt: |
+  Please summarize the following conversation, focusing on key events and character development:

@@ -62,7 +62,7 @@ if __name__ == "__main__":
         proj_settings.init_settings(proj_paths.get_paths().app_settings)
         Logger.set_level(proj_settings.get_settings().app_settings.log_level)
 
-        npc: NPCProtocol = npc_type(is_new_game=True, npc_name=templates_dir_name)
+        npc: NPCProtocol = npc_type(npc_name_for_template_and_save="john")
         
         while True:
             user_input_raw = input("You: ")
@@ -85,14 +85,14 @@ if __name__ == "__main__":
             if user_input_raw.lower().startswith("/load"):
                 args = user_input_raw.lower().split(" ")
                 if len(args) != 2:
-                    Logger.error("Usage: /load <template_path>")
+                    Logger.error("Usage: /load <npc_name>")
                     continue
-                template_path = args[1]
+                npc_name = args[1]
                 try:
-                    template_path = os.path.join(os.path.dirname(__file__), template_path)
-                    npc.load_entities_from_template(template_path)
+                    npc_template_path = proj_paths.get_paths().npc_entities_template(npc_name)
+                    npc.load_entities_from_template(npc_template_path)
                 except Exception as e:
-                    Logger.error(f"Error loading template: {e}")
+                    Logger.error(f"Error loading template: {traceback.format_exc()}")
                     continue
                 continue
             if user_input_raw.lower() == "/save":
