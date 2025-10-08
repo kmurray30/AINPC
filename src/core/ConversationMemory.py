@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 import json
 from typing import Dict, List, Optional
-from src.core.schemas.Schemas import GameSettings
+from src.core.schemas.Schemas import AppSettings
 from src.utils import Utilities, Logger, llm_utils
 from src.utils.ChatBot import ChatBot
 from src.utils.Logger import Level
@@ -22,7 +22,7 @@ class ConversationMemory:
     summarization_prompt: str
     system_prompt_summary_suffix: str
 
-    game_settings: GameSettings
+    game_settings: AppSettings
 
     @classmethod
     def from_new(cls) -> 'ConversationMemory':
@@ -46,7 +46,7 @@ class ConversationMemory:
             self.chat_memory = state.chat_memory
             self.conversation_summary = state.conversation_summary
 
-        self.game_settings = proj_settings.get_settings().game_settings
+        self.game_settings = proj_settings.get_settings().app_settings
         self.system_prompt_summary_suffix = llm_utils.get_formatting_suffix(ChatSummary)
 
     def get_state(self) -> ConversationMemoryState:

@@ -1,0 +1,4 @@
+max_convo_mem_length: 10
+log_level: DEBUG
+model: gpt_4o_mini
+num_last_messages_to_retain_when_summarizing: 4

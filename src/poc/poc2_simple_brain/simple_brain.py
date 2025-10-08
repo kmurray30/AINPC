@@ -28,7 +28,7 @@ if __name__ == "__main__":
         # Initialize NPC
         proj_paths.set_paths(Path(__file__).resolve().parent, "poc2_simple_brain")
         proj_settings.init_settings()
-        Logger.set_level(proj_settings.get_settings().game_settings.log_level)
+        Logger.set_level(proj_settings.get_settings().app_settings.log_level)
 
         npc = NPC(is_new_game=True, npc_name="simple_brain")
         

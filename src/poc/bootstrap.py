@@ -12,4 +12,4 @@ def init_app(save_name: str, project_path: Path) -> None:
     proj_settings.init_settings()
 
     # Set the log level
-    Logger.set_level(proj_settings.get_settings().game_settings.log_level)
+    Logger.set_level(proj_settings.get_settings().app_settings.log_level)

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional
 
+from src.core.schemas.CollectionSchemas import Entity
 from src.core.schemas.Schemas import AppSettings
 from src.utils import io_utils, llm_utils
 from src.utils import Logger
@@ -26,32 +27,38 @@ class NPCTemplate:
     initial_response: str | None = None
 
 
-class NPC:
+# NPC1 has the following features:
+# - A static system prompt
+# - Conversation memory that can be summarized ad hoc
+class NPC1:
     # Stateful properties common to all NPCs
     conversation_memory: ConversationMemory
     user_prompt_wrapper: str = constants.user_message_placeholder
     response_agent: Agent
-    game_settings: AppSettings
+    app_settings: AppSettings
     npc_name: str
     is_new_game: bool
     save_paths: proj_paths.SavePaths
     template: NPCTemplate
 
-    def __init__(self, is_new_game: bool, npc_name: str):
+    def __init__(self, npc_name_for_template_and_save: str):
         self.save_paths = proj_paths.get_paths()
-        self.game_settings = proj_settings.get_settings().app_settings
-        self.npc_name = npc_name
-        self.is_new_game = is_new_game
+        self.app_settings = proj_settings.get_settings().app_settings
+        self.npc_name = npc_name_for_template_and_save
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
 
-        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
+        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
 
-        if not is_new_game:
+        existing_save_found = self.check_for_existing_save()
+        if existing_save_found:
             self.load_state()
         else:
             self.init_state()
 
-    # -------- Base overrides --------
+    # -------- Private API --------
+    def check_for_existing_save(self) -> bool:
+        return os.path.exists(self.save_paths.save_dir)
+
     def build_system_prompt(self) -> str:
         parts: List[str] = []
         parts.append("Context:\n" + self.template.initial_system_context)
@@ -61,26 +68,28 @@ class NPC:
     def get_initial_response(self) -> str:
         return self.template.initial_response or ""
 
-    def save_state(self) -> None:
-        os.makedirs(self.save_paths.npcs_save_dir(self.npc_name), exist_ok=True)
-        save_path = self.save_paths.npc_save_state(self.npc_name)
-        current_state = NPCState(
+    def get_state(self) -> NPCState:
+        return NPCState(
             conversation_memory=self.conversation_memory.get_state(),
             system_context=self.template.initial_system_context,
             user_prompt_wrapper=self.user_prompt_wrapper,
         )
+
+    def save_state(self) -> None:
+        os.makedirs(self.save_paths.npcs_save_dir(self.npc_name), exist_ok=True)
+        save_path = self.save_paths.npc_save_state(self.npc_name)
+        current_state = self.get_state()
         io_utils.save_to_yaml_file(current_state, save_path)
         Logger.log(f"Session saved successfully to {save_path}", Level.INFO)
 
     def load_state(self) -> None:
         try:
-            prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
-            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory)
-            self.user_prompt_wrapper = prior.user_prompt_wrapper
+            prior_state: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
+            self.conversation_memory = ConversationMemory.from_state(prior_state.conversation_memory)
+            self.user_prompt_wrapper = prior_state.user_prompt_wrapper
         except FileNotFoundError as e:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
-            Logger.log("Starting a new game.", Level.INFO)
-            self.init_state()
+            raise e
 
     def init_state(self) -> None:
         self.conversation_memory = ConversationMemory.from_new()
@@ -109,4 +118,11 @@ class NPC:
         )
         return response_obj
 
+    def get_all_memories(self) -> List[Entity]:
+        raise NotImplementedError("NPC1 does not have a get_all_memories method")
 
+    def load_entities_from_template(self, template_path: str) -> None:
+        raise NotImplementedError("NPC1 does not have a load_entities_from_template method")
+
+    def clear_brain_memory(self) -> None:
+        raise NotImplementedError("NPC1 does not have a clear_brain_memory method")

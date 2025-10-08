@@ -15,7 +15,7 @@ from src.poc.poc1_static_prompt.NPC import NPC
 from src.core.Constants import Constants as constants, Role
 from src.core import proj_paths, proj_settings
 from src.utils import TextToSpeech, io_utils
-from src.core.schemas.Schemas import GameSettings
+from src.core.schemas.Schemas import AppSettings
 from src.core.proj_paths import SavePaths
 
 class View(Protocol):
@@ -48,7 +48,7 @@ class Presenter:
     message_history: List[ChatMessage] = []
     chat_log_path: str
 
-    game_settings: GameSettings
+    game_settings: AppSettings
     project_paths: SavePaths
 
     # TODO Load settings from settings.txt as a dictionary
@@ -61,21 +61,21 @@ class Presenter:
     # Initialize the presenter with a reference to the view
     def __init__(self, view: View, force_new_game: bool = False) -> None:
         self.view = view
-        self.game_settings = proj_settings.get_settings().game_settings
+        self.game_settings = proj_settings.get_settings().app_settings
         self.project_paths = proj_paths.get_paths()
         self.max_convo_mem_length = self.game_settings.max_convo_mem_length
 
         # Check if the NPC save path exists, if not create it and flag that this is a new game
-        npc_names = self.project_paths.get_npc_names
+        npc_names = self.project_paths.list_npc_names
         if len(npc_names) != 1:
             raise ValueError("There must be exactly one npc in the save directory for this game.")
 
-        if force_new_game or not os.path.exists(self.project_paths.save_root):
-            if os.path.exists(self.project_paths.save_root):
-                shutil.rmtree(self.project_paths.save_root)
-            os.makedirs(self.project_paths.save_root, exist_ok=True)
+        if force_new_game or not os.path.exists(self.project_paths.save_dir):
+            if os.path.exists(self.project_paths.save_dir):
+                shutil.rmtree(self.project_paths.save_dir)
+            os.makedirs(self.project_paths.save_dir, exist_ok=True)
             for npc_name in npc_names:
-                os.makedirs(self.project_paths.npc_save(npc_name), exist_ok=True)
+                os.makedirs(self.project_paths.npcs_save_dir(npc_name), exist_ok=True)
             self.is_new_game = True
         else:
             self.is_new_game = False

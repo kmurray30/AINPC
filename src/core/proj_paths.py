@@ -5,62 +5,63 @@ from pathlib import Path
 @dataclass (frozen=True)
 class SavePaths:
     project_path: Path
+    templates_dir_name: str
+    version: float
     save_name: str
 
     @property
-    def game_settings(self) -> Path:
-        return self.project_path / "game_settings.yaml"
+    def template_dir(self) -> Path:
+        return self.project_path / "templates" / self.templates_dir_name
 
     @property
-    def templates_root(self) -> Path:
-        return self.project_path / "templates"
+    def npcs_templates_dir(self) -> Path:
+        return self.template_dir / "npcs"
 
     @property
-    def npc_templates_root(self) -> Path:
-        return self.templates_root / "npcs"
-
-    def npc_template(self, npc_name: str) -> Path:
-        return self.npc_templates_root / npc_name / "template.yaml"
-
-    def npc_entities_template(self, npc_name: str) -> Path:
-        return self.npc_templates_root / npc_name / "entities.yaml"
-
-    @property
-    def save_root(self) -> Path:
+    def save_dir(self) -> Path:
         return self.project_path / "saves" / self.save_name
 
     @property
-    def npc_save_root(self) -> Path:
-        return self.save_root / "npcs"
-
-    def npc_save(self, npc_name: str) -> Path:
-        return self.npc_save_root / npc_name
-
-    def audio_dir(self, npc_name: str) -> Path:
-        return self.npc_save(npc_name) / "audio"
-
-    def npc_save_state(self, npc_name: str) -> Path:
-        return self.npc_save(npc_name) / "npc_save_state.yaml"
-
-    def chat_log(self, npc_name: str) -> Path:
-        return self.npc_save(npc_name) / "chat_log.yaml"
-
-    def npc_entities_save(self, npc_name: str) -> Path:
-        return self.npc_save(npc_name) / "entities.yaml"
+    def audio_dir(self) -> Path:
+        return self.save_dir / "audio"
 
     @property
-    def get_npc_names(self) -> List[str]:
-        return [path.name for path in self.npc_templates_root.iterdir() if path.is_dir()]
+    def npcs_save_dir(self) -> Path:
+        return self.save_dir / "npcs"
+
+    @property
+    def app_settings(self) -> Path:
+        return self.template_dir / "app_settings.yaml"
+
+    def npc_template(self, npc_name: str) -> Path:
+        return self.npcs_templates_dir / npc_name / f"template_{self.version}.yaml"
+
+    def npc_entities_template(self, npc_name: str) -> Path:
+        return self.npcs_templates_dir / npc_name / "entities.yaml"
+
+    @property
+    def chat_log(self) -> Path:
+        return self.save_dir / "chat_log.yaml"
+
+    def npc_save_state(self, npc_name: str) -> Path:
+        return self.npcs_save_dir / npc_name / "npc_save_state.yaml"
+
+    def npc_entities_save(self, npc_name: str) -> Path:
+        return self.npcs_save_dir / npc_name / "entities.yaml"
+
+    @property
+    def list_npc_names(self) -> List[str]:
+        return [path.name for path in self.npcs_templates_dir.iterdir() if path.is_dir()]
 
 # Singleton instance
 _paths: Optional[SavePaths] = None
 _frozen: bool = False
 
-def set_paths(project_path: Path, save_name: str) -> None:
+def set_paths(project_path: Path, templates_dir_name: str, version: str, save_name: str) -> None:
     global _paths, _frozen
     if _frozen:
         raise RuntimeError("Paths have already been initialized and cannot be modified.")
-    _paths = SavePaths(project_path=project_path, save_name=save_name)
+    _paths = SavePaths(project_path=project_path, templates_dir_name=templates_dir_name, version=version, save_name=save_name)
     _frozen = True
 
 def get_paths() -> SavePaths:

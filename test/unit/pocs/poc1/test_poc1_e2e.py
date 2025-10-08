@@ -7,7 +7,7 @@ from typing import Any, List, Dict
 
 import pytest
 
-from src.core.schemas.Schemas import GameSettings
+from src.core.schemas.Schemas import AppSettings
 
 # Ensure src/ on sys.path
 PROJ_ROOT = Path(__file__).resolve().parents[4]  # Go up 4 levels from test/unit/pocs/poc1/test_poc1_e2e.py to project root
@@ -131,8 +131,8 @@ def test_poc1_e2e_flow(test_project: Path, monkeypatch):
 
     # Helper to fetch save paths
     paths = proj_paths.get_paths()
-    game_settings: GameSettings = proj_settings.get_settings().game_settings
-    npc_name = paths.get_npc_names[0]
+    game_settings: AppSettings = proj_settings.get_settings().app_settings
+    npc_name = paths.list_npc_names[0]
 
     # Serialize YAML appends across presenters to avoid interleaving writes
     # import threading

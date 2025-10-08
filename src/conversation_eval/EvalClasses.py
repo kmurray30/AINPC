@@ -33,7 +33,7 @@ class EvalCase:
 
 @dataclass
 class EvalCaseSuite:
-    test_cases: List[EvalCase]
+    eval_cases: List[EvalCase]
 
 
 class EvaluationResult:

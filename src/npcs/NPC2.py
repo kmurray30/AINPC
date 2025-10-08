@@ -14,27 +14,17 @@ from src.core import proj_paths
 from src.core.schemas.CollectionSchemas import Entity
 from dataclasses import dataclass, field
 
-response_system_prompt: str = """
-  You are a helpful assistant with a living brain that remembers information from conversations.
-  You will be given context from your brain memory and conversation history.
-  Respond naturally and helpfully to the user's input.
-  Use the brain context to provide more informed and personalized responses.
-"""
-
-preprocess_system_prompt: str = """
-  You are a text preprocessor. You will be given a user's input and must perform the following:
-  - Summarize the information presented in the last message by the user.
-  - Replace first person pronouns in the last user message with 'user' since the user is the one speaking
-  - Replace second person pronouns in the last user message with 'assistant (me/I)' since you are the assistant
-  - Replace third person pronouns in the last user message with the best guess of who the user is referring to. It should NOT be the user or the assistant. If you are not sure, set the clarification flag in your response. Err on the side of false unless it is absolutely necessary to clarify who the pronoun is referring to.
-  - Note whether the input contains any kind of information. true for any declarations, false for questions.
-"""
-
 @dataclass
 class NPCState:
     conversation_memory: ConversationMemoryState
     system_context: str
     user_prompt_wrapper: str
+
+
+@dataclass
+class NPCTemplate:
+    response_system_prompt: str
+    preprocess_system_prompt: str | None = None
 
 
 @dataclass
@@ -45,7 +35,13 @@ class PreprocessedUserInput:
     needs_clarification: bool = field(metadata={"desc": "Whether you need clarification on any of the pronouns."})
 
 
-class NPC:
+# NPC2 has the following features:
+# - All of the features of poc1
+# - A VDB that contains memories that can get queried on relevance
+# - Can determine if user message has info and will store the info in the memory VDB
+# - A weak pronoun resolver
+
+class NPC2:
     # Stateful properties common to all NPCs
     conversation_memory: ConversationMemory
     brain_memory: BrainMemory
@@ -54,6 +50,7 @@ class NPC:
     npc_name: str
     is_new_game: bool
     save_paths: proj_paths.SavePaths
+    template: NPCTemplate
 
     response_agent: Agent
     preprocessor_agent: Agent
@@ -66,6 +63,7 @@ class NPC:
         self.save_paths = proj_paths.get_paths()
         self.npc_name = npc_name
         self.is_new_game = is_new_game
+        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
 
         # Init the agents
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
@@ -84,7 +82,7 @@ class NPC:
 
     def _build_system_prompt(self, include_conversation_summary: bool = True, include_brain_context: bool = True) -> str:
         parts: List[str] = []
-        parts.append("Context:\n" + response_system_prompt)
+        parts.append("Context:\n" + self.template.response_system_prompt)
         
         if include_conversation_summary:
             parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
@@ -100,10 +98,11 @@ class NPC:
         
         return "\n\n".join(parts) + "\n\n"
 
-    
     def _preprocess_input(self, user_message: str) -> PreprocessedUserInput:
         # Use only the template-provided preprocess prompt
-        preprocess_agent_system_prompt = preprocess_system_prompt
+        preprocess_agent_system_prompt = self.template.preprocess_system_prompt
+        if not preprocess_agent_system_prompt:
+            raise ValueError("preprocess_system_prompt is required in NPCTemplate")
         
         # Get brain memories to provide context for preprocessor, using the last user message
         if user_message:
@@ -129,7 +128,7 @@ class NPC:
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
             conversation_memory=self.conversation_memory.get_state(),
-            system_context=response_system_prompt,
+            system_context=self.template.response_system_prompt,
             user_prompt_wrapper=self.user_prompt_wrapper,
         )
         io_utils.save_to_yaml_file(current_state, save_path)
@@ -170,7 +169,6 @@ class NPC:
 
     def clear_brain_memory(self) -> None:
         self.brain_memory.clear_all_memories()
-
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Primary chat API: preprocess, update brain, build prompt, respond, persist. Returns ChatResponse."""

@@ -4,7 +4,7 @@ from src.utils import Logger
 
 
 @dataclass
-class GameSettings:
+class AppSettings:
     game_title: str
     text_stream_speed: float
     summarization_prompt: str

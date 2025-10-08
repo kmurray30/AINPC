@@ -18,7 +18,7 @@ assistant_rules = io_utils.load_rules_from_file("pat_prompts.json", "Ruleset 1")
 mock_user_base_rules = io_utils.load_rules_from_file("mock_user_prompts.json", "Beginning state")
 
 test_suite = EvalCaseSuite(
-    test_cases=[
+    eval_cases=[
         EvalCase(
             goals=["Become immediately angry, belligerent, and extremely hostile"],
             propositions=[Proposition(

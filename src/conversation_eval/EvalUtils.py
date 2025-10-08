@@ -27,7 +27,7 @@ def load_goals_and_conditions_from_file(file_path: str) -> List[EvalCaseSuite]:
             test_case.propositions.append(condition)
         test_cases.append(test_case)
 
-    return EvalCaseSuite(test_cases=test_cases)
+    return EvalCaseSuite(eval_cases=test_cases)
 
 def write_test_report_to_file(test_report: EvalReport, test_name: str = ""):
     # Write the test report to a json file

@@ -3,7 +3,7 @@ import tkinter as tk
 from typing import Protocol, Callable
 from threading import Event
 
-from src.core.schemas.Schemas import GameSettings
+from src.core.schemas.Schemas import AppSettings
 from src.core import proj_settings
 
 class Presenter(Protocol):
@@ -20,7 +20,7 @@ class View(tk.Tk):
     # Presenter functions needed for toggling the send button
     send_function: Callable[[], None]
 
-    settings: GameSettings
+    settings: AppSettings
 
     # Initialize the view
     def __init__(self) -> None:
@@ -28,7 +28,7 @@ class View(tk.Tk):
         # Initialize the parent class
         super().__init__()
 
-        self.settings = proj_settings.get_settings().game_settings
+        self.settings = proj_settings.get_settings().app_settings
 
         # Root config
         self.title(self.settings.game_title)

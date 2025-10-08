@@ -18,20 +18,15 @@ class Conversation:
 
     agents: Dict[AgentName, EvalAgent]
 
-
     def __init__(self):
         self.message_history = []
         self.agents = {}
 
-    def add_agent(self, name: AgentName, rules_file_name: str, ruleset_name: str) -> EvalAgent:
-        agent_rules = io_utils.load_rules_from_file(rules_file_name, ruleset_name)
-
-        # Create the agent
-        self.add_agent(name, agent_rules)
-
-    def add_agent(self, name: AgentName, agent_rules: List[str]) -> EvalAgent:
+    def add_agent_simple(self, name: AgentName, agent_rules: List[str]) -> EvalAgent:
         agent = EvalAgent(name, "\n".join(agent_rules))
         self.agents[name] = agent
+
+    def add_agent_with_npc_protocol(self, name: AgentName, agent_rules: List[str], npc_protocol: NPCProtocol) -> EvalAgent:
 
     def add_rule(self, agent_name: AgentName, rule: str):
         if agent_name not in self.agents:

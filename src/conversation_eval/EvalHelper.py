@@ -12,7 +12,7 @@ from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
 from src.conversation_eval.EvalClasses import Term, EvalCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
 from src.conversation_eval.EvalReports import EvalReport, AssistantPromptEvalReport, UserPromptEvalReport, EvaluationEvalReport, ConversationEvaluationEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport
-from src.utils import Utilities
+from src.utils import Utilities, io_utils
 from src.utils import Logger
 from src.utils.Logger import Level
 
@@ -36,10 +36,10 @@ class EvalHelper:
             conversation = Conversation()
 
             # Create the Pat agent using the rules in the pat_prompts.json file
-            conversation.add_agent(AgentName.pat, assistant_rules)
+            conversation.add_agent_simple(AgentName.pat, assistant_rules)
 
             # Create the User agent using the rules in the mock_user_prompts.json file
-            conversation.add_agent(AgentName.mock_user, mock_user_base_rules + mock_user_goals)
+            conversation.add_agent_simple(AgentName.mock_user, mock_user_base_rules + mock_user_goals)
 
             # Converse 10 times back and forth
             conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
@@ -256,7 +256,7 @@ class EvalHelper:
         # TODO EvalHelper.validate_input(proposition)
         
         assistant_prompt_report = AssistantPromptEvalReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
-        test_report = EvalReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
+        eval_report = EvalReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
         Logger.log("Pat Rules:", Level.VERBOSE)
         Logger.increment_indent(2)
@@ -265,22 +265,22 @@ class EvalHelper:
         Logger.decrement_indent(2)
 
         Logger.increment_indent() # Begin test cases section
-        for test_case in test_suite.test_cases:
+        for eval_case in test_suite.eval_cases:
             Logger.log(f"∟ Test case:", Level.VERBOSE)
             Logger.increment_indent(2)
-            Logger.log(f"Goals: {test_case.goals}", Level.VERBOSE)
-            Logger.log(f"Evaluations: {test_case.propositions}", Level.VERBOSE)
+            Logger.log(f"Goals: {eval_case.goals}", Level.VERBOSE)
+            Logger.log(f"Evaluations: {eval_case.propositions}", Level.VERBOSE)
             Logger.decrement_indent(2)
-            user_prompt_report = UserPromptEvalReport(user_prompt=test_case.goals, conversations=[], evaluations=[], tokens=0)
+            user_prompt_report = UserPromptEvalReport(user_prompt=eval_case.goals, conversations=[], evaluations=[], tokens=0)
             assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
             # Generate the conversations
-            conversation_map = EvalHelper.generate_conversations(assistant_rules, mock_user_base_rules, test_case.goals, convos_per_user_prompt, convo_length)
+            conversation_map = EvalHelper.generate_conversations(assistant_rules, mock_user_base_rules, eval_case.goals, convos_per_user_prompt, convo_length)
             user_prompt_report.conversations.append(conversation_map)
                 
             # Begin the evaluations
-            evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, test_case.propositions, eval_iterations_per_eval)
+            evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, eval_case.propositions, eval_iterations_per_eval)
             user_prompt_report.evaluations = evaluation_reports
         Logger.decrement_indent() # End test cases section
 
-        return test_report
+        return eval_report
