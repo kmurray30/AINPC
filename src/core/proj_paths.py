@@ -26,8 +26,11 @@ class SavePaths:
         return self.save_dir / "audio"
 
     @property
-    def npcs_save_dir(self) -> Path:
+    def npcs_saves_dir(self) -> Path:
         return self.save_dir / "npcs"
+
+    def npc_save_dir(self, npc_name: str) -> Path:
+        return self.save_dir / "npcs" / npc_name
 
     @property
     def app_settings(self) -> Path:
@@ -44,10 +47,10 @@ class SavePaths:
         return self.save_dir / "chat_log.yaml"
 
     def npc_save_state(self, npc_name: str) -> Path:
-        return self.npcs_save_dir / npc_name / "npc_save_state.yaml"
+        return self.npc_save_dir(npc_name) / f"npc_save_state_v{self.version}.yaml"
 
     def npc_entities_save(self, npc_name: str) -> Path:
-        return self.npcs_save_dir / npc_name / "entities.yaml"
+        return self.npc_save_dir(npc_name) / "entities.yaml"
 
     @property
     def list_npc_names(self) -> List[str]:

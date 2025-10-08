@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Protocol, Optional
 from src.core.Constants import Role
 from src.core.schemas.CollectionSchemas import Entity
@@ -17,7 +18,7 @@ class NPCProtocol(Protocol):
     def get_all_memories(self) -> List[Entity]:
         ...
 
-    def load_entities_from_template(self, template_path: str) -> None:
+    def load_entities_from_template(self, template_path: Path) -> None:
         ...
 
     def clear_brain_memory(self) -> None:

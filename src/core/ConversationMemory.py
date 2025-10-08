@@ -25,20 +25,20 @@ class ConversationMemory:
     game_settings: AppSettings
 
     @classmethod
-    def from_new(cls) -> 'ConversationMemory':
+    def from_new(cls, summarization_prompt: str) -> 'ConversationMemory':
         """Creates a new instance of ConversationMemory for a new game."""
-        return cls(None)
+        return cls(None, summarization_prompt)
 
     @classmethod
-    def from_state(cls, state: ConversationMemoryState) -> 'ConversationMemory':
+    def from_state(cls, state: ConversationMemoryState, summarization_prompt: str) -> 'ConversationMemory':
         """Creates an instance of ConversationMemory from a given state."""
-        return cls(state)
+        return cls(state, summarization_prompt)
 
     def get_chat_memory_length(self) -> int:
         """Returns the length of the chat memory."""
         return len(self.chat_memory)
 
-    def __init__(self, state: ConversationMemoryState):
+    def __init__(self, state: ConversationMemoryState, summarization_prompt: str):
         if state is None:
             self.chat_memory = []
             self.conversation_summary = None
@@ -47,6 +47,7 @@ class ConversationMemory:
             self.conversation_summary = state.conversation_summary
 
         self.game_settings = proj_settings.get_settings().app_settings
+        self.summarization_prompt = summarization_prompt
         self.system_prompt_summary_suffix = llm_utils.get_formatting_suffix(ChatSummary)
 
     def get_state(self) -> ConversationMemoryState:
@@ -95,7 +96,7 @@ class ConversationMemory:
         # Next, start constructing the user message
         user_message_content = ""
         # First add the instructions
-        instructions = self.game_settings.summarization_prompt
+        instructions = self.summarization_prompt
         user_message_content += "Instructions:\n" + instructions + "\n\n"
         # Second, add the previous conversation summary if it exists
         if self.conversation_summary:

@@ -75,7 +75,7 @@ class Presenter:
                 shutil.rmtree(self.project_paths.save_dir)
             os.makedirs(self.project_paths.save_dir, exist_ok=True)
             for npc_name in npc_names:
-                os.makedirs(self.project_paths.npcs_save_dir(npc_name), exist_ok=True)
+                os.makedirs(self.project_paths.npcs_saves_dir(npc_name), exist_ok=True)
             self.is_new_game = True
         else:
             self.is_new_game = False

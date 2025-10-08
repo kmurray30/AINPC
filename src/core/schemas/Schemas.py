@@ -7,7 +7,6 @@ from src.utils import Logger
 class AppSettings:
     game_title: str
     text_stream_speed: float
-    summarization_prompt: str
     num_last_messages_to_retain_when_summarizing: int
     closing_enabled: bool
     model: Llm

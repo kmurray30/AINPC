@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 import os
+from pathlib import Path
 from typing import List, Optional
 
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.schemas.Schemas import AppSettings
-from src.utils import io_utils, llm_utils
+from src.utils import Utilities, io_utils, llm_utils
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
@@ -19,12 +20,15 @@ class NPCState:
     conversation_memory: ConversationMemoryState
     system_context: str
     user_prompt_wrapper: str
+    summarization_prompt: str
+    brain_entities: List[Entity]
 
 
 @dataclass
 class NPCTemplate:
     initial_system_context: str
     initial_response: str | None = None
+    summarization_prompt: str | None = None
 
 
 # NPC1 has the following features:
@@ -40,6 +44,7 @@ class NPC1:
     is_new_game: bool
     save_paths: proj_paths.SavePaths
     template: NPCTemplate
+    brain_entities: List[Entity]
 
     def __init__(self, npc_name_for_template_and_save: str):
         self.save_paths = proj_paths.get_paths()
@@ -62,6 +67,7 @@ class NPC1:
     def build_system_prompt(self) -> str:
         parts: List[str] = []
         parts.append("Context:\n" + self.template.initial_system_context)
+        parts.append("Brain context:\n" + "\n".join([e.content for e in self.brain_entities]))
         parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
         return "\n\n".join(parts) + "\n\n"
 
@@ -73,26 +79,33 @@ class NPC1:
             conversation_memory=self.conversation_memory.get_state(),
             system_context=self.template.initial_system_context,
             user_prompt_wrapper=self.user_prompt_wrapper,
+            summarization_prompt=self.template.summarization_prompt,
+            brain_entities=self.brain_entities,
         )
 
     def save_state(self) -> None:
-        os.makedirs(self.save_paths.npcs_save_dir(self.npc_name), exist_ok=True)
+        os.makedirs(self.save_paths.npc_save_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = self.get_state()
         io_utils.save_to_yaml_file(current_state, save_path)
         Logger.log(f"Session saved successfully to {save_path}", Level.INFO)
 
     def load_state(self) -> None:
+        Logger.log(f"Loading state from {self.save_paths.npc_save_state(self.npc_name)}", Level.INFO)
         try:
             prior_state: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
-            self.conversation_memory = ConversationMemory.from_state(prior_state.conversation_memory)
+            self.conversation_memory = ConversationMemory.from_state(prior_state.conversation_memory, summarization_prompt=self.template.summarization_prompt)
             self.user_prompt_wrapper = prior_state.user_prompt_wrapper
+            self.template.summarization_prompt = prior_state.summarization_prompt
+            self.brain_entities = prior_state.brain_entities
         except FileNotFoundError as e:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
             raise e
 
     def init_state(self) -> None:
-        self.conversation_memory = ConversationMemory.from_new()
+        Logger.log(f"Initializing state for {self.npc_name}", Level.INFO)
+        self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.template.summarization_prompt)
+        self.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
 
     # ---------- Public API ----------
     def maintain(self) -> None:
@@ -117,12 +130,16 @@ class NPC1:
             cot=response_obj.hidden_thought_process,
         )
         return response_obj
+    
+    def load_entities_from_template(self, template_path: Path) -> None:
+        Logger.log(f"Loading entities from {template_path}", Level.INFO)
+        entities_strs = io_utils.load_yaml_into_dataclass(template_path, List[str])
+        self.brain_entities = [
+            Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e))) for e in entities_strs
+        ]
 
-    def get_all_memories(self) -> List[Entity]:
-        raise NotImplementedError("NPC1 does not have a get_all_memories method")
-
-    def load_entities_from_template(self, template_path: str) -> None:
-        raise NotImplementedError("NPC1 does not have a load_entities_from_template method")
+    def get_all_memories(self) -> List[str]:
+        return [e.content for e in self.brain_entities]
 
     def clear_brain_memory(self) -> None:
-        raise NotImplementedError("NPC1 does not have a clear_brain_memory method")
+        self.brain_entities = []

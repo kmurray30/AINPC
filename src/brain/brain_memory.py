@@ -31,7 +31,7 @@ class BrainMemory:
                 key=preprocessed_user_text,
                 content=preprocessed_user_text,
                 tags=["memories"],
-                id=int(Utilities.generate_uuid_int64()),
+                id=int(Utilities.generate_hash_int64(preprocessed_user_text)),
             ),
         ]
         Logger.verbose(f"Updating memory with {preprocessed_user_text}")
@@ -57,20 +57,26 @@ class BrainMemory:
         Logger.verbose(f"All memories:")
         return all_memories
 
-    def load_entities_from_template(self, template_path: str) -> None:
+    def load_entities_from_template(self, template_path: Path) -> None:
         """API method for /load command"""
-        if not template_path.endswith(".yaml"):
+        if not template_path.suffix == ".yaml":
             raise ValueError("File must be a yaml file")
 
         # template_path = os.path.join(os.path.dirname(__file__), template_path)
-        if not os.path.exists(template_path):
+        if not template_path.exists():
             raise FileNotFoundError(f"File {template_path} does not exist")
 
-        entities = io_utils.load_yaml_into_dataclass(Path(template_path), List[Entity])
-        # Ensure each entity has an id for Qdrant
-        for e in entities:
-            if getattr(e, "id", None) is None:
-                e.id = int(Utilities.generate_uuid_int64())
+        entities_strs = io_utils.load_yaml_into_dataclass(template_path, List[str])
+        entities = List[Entity](
+            [
+                Entity(
+                    key=e,
+                    content=e,
+                    tags=["memories"],
+                    id=int(Utilities.generate_hash_int64(e)),
+                ) for e in entities_strs
+            ]
+        )
         self.collection.insert_dataclasses(entities)
         Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
 

@@ -62,7 +62,7 @@ class NPC:
         return self.template.initial_response or ""
 
     def save_state(self) -> None:
-        os.makedirs(self.save_paths.npcs_save_dir(self.npc_name), exist_ok=True)
+        os.makedirs(self.save_paths.npcs_saves_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
             conversation_memory=self.conversation_memory.get_state(),

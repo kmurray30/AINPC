@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import os
+from pathlib import Path
 from typing import List, Optional
 
 from src.brain.brain_memory import BrainMemory
@@ -25,6 +26,7 @@ class NPCState:
 class NPCTemplate:
     response_system_prompt: str
     preprocess_system_prompt: str | None = None
+    summarization_prompt: str | None = None
 
 
 @dataclass
@@ -124,7 +126,7 @@ class NPC2:
     # ---------- Private API - State Management ----------
 
     def _save_state(self) -> None:
-        os.makedirs(self.save_paths.npcs_save_dir(self.npc_name), exist_ok=True)
+        os.makedirs(self.save_paths.npcs_saves_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
             conversation_memory=self.conversation_memory.get_state(),
@@ -161,10 +163,10 @@ class NPC2:
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
 
-    def get_all_memories(self) -> List[Entity]:
-        return self.brain_memory.get_all_memories()
+    def get_all_memories(self) -> List[str]:
+        return [mem.content for mem in self.brain_memory.get_all_memories()]
 
-    def load_entities_from_template(self, template_path: str) -> None:
+    def load_entities_from_template(self, template_path: Path) -> None:
         self.brain_memory.load_entities_from_template(template_path)
 
     def clear_brain_memory(self) -> None:
@@ -208,5 +210,3 @@ class NPC2:
         )
 
         return response_obj
-
-
