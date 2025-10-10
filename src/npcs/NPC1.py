@@ -54,27 +54,27 @@ class NPC1:
 
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
 
-        existing_save_found = self.check_for_existing_save()
+        existing_save_found = self._check_for_existing_save()
         if existing_save_found:
-            self.load_state()
+            self._load_state()
         else:
-            self.init_state()
+            self._init_state()
 
     # -------- Private API --------
-    def check_for_existing_save(self) -> bool:
+    def _check_for_existing_save(self) -> bool:
         return os.path.exists(self.save_paths.save_dir)
 
-    def build_system_prompt(self) -> str:
+    def _build_system_prompt(self) -> str:
         parts: List[str] = []
         parts.append("Context:\n" + self.template.initial_system_context)
         parts.append("Brain context:\n" + "\n".join([e.content for e in self.brain_entities]))
         parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
         return "\n\n".join(parts) + "\n\n"
 
-    def get_initial_response(self) -> str:
+    def _get_initial_response(self) -> str:
         return self.template.initial_response or ""
 
-    def get_state(self) -> NPCState:
+    def _get_state(self) -> NPCState:
         return NPCState(
             conversation_memory=self.conversation_memory.get_state(),
             system_context=self.template.initial_system_context,
@@ -83,14 +83,14 @@ class NPC1:
             brain_entities=self.brain_entities,
         )
 
-    def save_state(self) -> None:
+    def _save_state(self) -> None:
         os.makedirs(self.save_paths.npc_save_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
-        current_state = self.get_state()
+        current_state = self._get_state()
         io_utils.save_to_yaml_file(current_state, save_path)
         Logger.log(f"Session saved successfully to {save_path}", Level.INFO)
 
-    def load_state(self) -> None:
+    def _load_state(self) -> None:
         Logger.log(f"Loading state from {self.save_paths.npc_save_state(self.npc_name)}", Level.INFO)
         try:
             prior_state: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
@@ -102,16 +102,16 @@ class NPC1:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
             raise e
 
-    def init_state(self) -> None:
+    def _init_state(self) -> None:
         Logger.log(f"Initializing state for {self.npc_name}", Level.INFO)
         self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.template.summarization_prompt)
         self.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
 
-    # ---------- Public API ----------
+    # ---------- Public API / Protocol ----------
     def maintain(self) -> None:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()
-        self.save_state()
+        self._save_state()
 
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
@@ -121,7 +121,7 @@ class NPC1:
         if user_message is not None:
             self.conversation_memory.append_chat(user_message, role=Role.user, off_switch=False)
 
-        self.response_agent.update_system_prompt(self.build_system_prompt())
+        self.response_agent.update_system_prompt(self._build_system_prompt())
         response_obj: ChatResponse = self.response_agent.chat_with_history(self.conversation_memory.chat_memory)
         self.conversation_memory.append_chat(
             response_obj.response,

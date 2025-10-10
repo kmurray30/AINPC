@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from src.brain.brain_memory import BrainMemory
-from src.utils import io_utils, Utilities
+from src.utils import io_utils
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core.ConversationMemory import ConversationMemory, ConversationMemoryState
@@ -12,7 +12,6 @@ from src.core.ResponseTypes import ChatResponse
 from src.core.Constants import Role, Constants as constants
 from src.core.Agent import Agent
 from src.core import proj_paths
-from src.core.schemas.CollectionSchemas import Entity
 from dataclasses import dataclass, field
 
 @dataclass
@@ -59,28 +58,30 @@ class NPC2:
 
     # Settings
     last_messages_to_retain_for_preprocessor: int = 4
-    
 
-    def __init__(self, is_new_game: bool, npc_name: str):
+    def __init__(self, npc_name_for_template_and_save: str):
         self.save_paths = proj_paths.get_paths()
-        self.npc_name = npc_name
-        self.is_new_game = is_new_game
-        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name), NPCTemplate)
+        self.npc_name = npc_name_for_template_and_save
+        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
 
         # Init the agents
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
 
         # Initialize the brain memory (backed by a persistent collection so doesn't matter if new game or not)
-        self.brain_memory = BrainMemory()
+        collection_name = f"{proj_paths.get_paths().save_name}_{self.npc_name}_brain"
+        self.brain_memory = BrainMemory(collection_name=collection_name)
 
-        # Initialize or load the brain memory and conversation memory
-        if is_new_game:
-            self._init_state()
-        else:
+        existing_save_found = self._check_for_existing_save()
+        if existing_save_found:
             self._load_state()
+        else:
+            self._init_state()
     
     # ---------- Private API - Helpers ---------
+
+    def _check_for_existing_save(self) -> bool:
+        return os.path.exists(self.save_paths.save_dir)
 
     def _build_system_prompt(self, include_conversation_summary: bool = True, include_brain_context: bool = True) -> str:
         parts: List[str] = []
@@ -126,7 +127,7 @@ class NPC2:
     # ---------- Private API - State Management ----------
 
     def _save_state(self) -> None:
-        os.makedirs(self.save_paths.npcs_saves_dir(self.npc_name), exist_ok=True)
+        os.makedirs(self.save_paths.npc_save_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
             conversation_memory=self.conversation_memory.get_state(),
@@ -150,10 +151,12 @@ class NPC2:
 
     def _init_state(self) -> None:
         # Create a fresh conversation memory
-        self.conversation_memory = ConversationMemory.from_new()
+        self.conversation_memory = ConversationMemory.from_new(self.template.summarization_prompt)
+        self.brain_memory.clear_all_memories()
+        self.brain_memory.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
 
 
-    # ---------- Public API ----------
+    # ---------- Public API / Protocol ----------
     def maintain(self) -> None:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()

@@ -13,11 +13,12 @@ from src.utils import io_utils
 
 class BrainMemory:
     collection: QdrantCollection
-    collection_name: str = "simple_brain"
     TEST_DIMENSION: int = 1536
+    collection_name: str
 
-    def __init__(self):
+    def __init__(self, collection_name: str):
         # Bind Qdrant collection wrapper to this NPC's brain collection
+        self.collection_name = collection_name
         self.collection = QdrantCollection(self.collection_name)
         self.collection.create(dim=self.TEST_DIMENSION)
 
@@ -67,16 +68,14 @@ class BrainMemory:
             raise FileNotFoundError(f"File {template_path} does not exist")
 
         entities_strs = io_utils.load_yaml_into_dataclass(template_path, List[str])
-        entities = List[Entity](
-            [
-                Entity(
-                    key=e,
-                    content=e,
-                    tags=["memories"],
-                    id=int(Utilities.generate_hash_int64(e)),
-                ) for e in entities_strs
-            ]
-        )
+        entities = [
+            Entity(
+                key=e,
+                content=e,
+                tags=["memories"],
+                id=int(Utilities.generate_hash_int64(e)),
+            ) for e in entities_strs
+        ]
         self.collection.insert_dataclasses(entities)
         Logger.verbose(f"Loaded {len(entities)} entities from {template_path}")
 

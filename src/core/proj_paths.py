@@ -19,7 +19,7 @@ class SavePaths:
 
     @property
     def save_dir(self) -> Path:
-        return self.project_path / "saves" / self.save_name
+        return self.project_path / "saves" / f"v{self.version}" / self.save_name
 
     @property
     def audio_dir(self) -> Path:
