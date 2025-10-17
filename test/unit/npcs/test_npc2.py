@@ -11,7 +11,7 @@ PROJ_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJ_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJ_ROOT))
 
-from src.poc.poc2_simple_brain.NPC import NPC, NPCTemplate, PreprocessedUserInput
+from src.npcs.NPC2 import NPC2, NPCTemplate, PreprocessedUserInput
 from src.core.ResponseTypes import ChatResponse
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.Constants import Role

@@ -1,6 +1,6 @@
 from typing import Optional
 from src.core.Constants import AgentName
-from src.core.npc_protocol import NPCProtocol
+from src.npcs.npc_protocol import NPCProtocol
 
 class EvalAgent:
     name: AgentName

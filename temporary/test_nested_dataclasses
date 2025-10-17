@@ -1,4 +1,0 @@
-field1: value3
-field2:
-  field1: nested_value
-  field2: 3

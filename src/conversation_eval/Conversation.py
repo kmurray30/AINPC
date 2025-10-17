@@ -7,6 +7,7 @@ from src.core.Constants import Role, AgentName
 from src.conversation_eval.EvalAgent import EvalAgent
 from src.core.ChatMessage import ChatMessageAgnostic
 from src.core.ResponseTypes import ChatResponse
+from src.npcs.npc_protocol import NPCProtocol
 
 DEBUG_LEVEL = ""
 
@@ -27,6 +28,7 @@ class Conversation:
         self.agents[name] = agent
 
     def add_agent_with_npc_protocol(self, name: AgentName, agent_rules: List[str], npc_protocol: NPCProtocol) -> EvalAgent:
+        ... # TODO
 
     def add_rule(self, agent_name: AgentName, rule: str):
         if agent_name not in self.agents:
