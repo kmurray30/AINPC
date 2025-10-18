@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from src.npcs.npc_protocol import NPCProtocol
 from src.npcs.NPC1 import NPC1
 from src.npcs.NPC2 import NPC2
+from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Logger
 from src.utils.Logger import Level
 from src.core import proj_paths, proj_settings
@@ -75,7 +76,7 @@ if __name__ == "__main__":
                     Logger.error(f"Error getting all memories: {e}")
                     continue
                 for memory in all_memories:
-                    Logger.verbose(f"Memory: {memory}")
+                    Logger.verbose(f"Memory: {memory.content}")
                 continue
             if user_input_raw.lower().startswith("/path"):
                 # Print the current path of the runtime environment

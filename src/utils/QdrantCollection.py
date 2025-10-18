@@ -60,9 +60,11 @@ class QdrantCollection:
     # Lifecycle
     def create(self, dim: int, metric: str = "COSINE") -> None:
         client = _get_client()
+        # Check if the collection exists in memory
         if client.collection_exists(collection_name=self.name):
             Logger.warning(f"Collection {self.name} already exists")
             return
+
         Logger.verbose(f"Creating Qdrant collection {self.name} (dim={dim}, metric={metric})")
         client.create_collection(
             collection_name=self.name,

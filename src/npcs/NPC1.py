@@ -138,8 +138,8 @@ class NPC1:
             Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e))) for e in entities_strs
         ]
 
-    def get_all_memories(self) -> List[str]:
-        return [e.content for e in self.brain_entities]
+    def get_all_memories(self) -> List[Entity]:
+        return self.brain_entities
 
     def clear_brain_memory(self) -> None:
         self.brain_entities = []

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from src.brain.brain_memory import BrainMemory
+from src.core.schemas.CollectionSchemas import Entity
 from src.utils import io_utils
 from src.utils import Logger
 from src.utils.Logger import Level
@@ -142,7 +143,7 @@ class NPC2:
         try:
             # Load the conversation memory and other metadata for the NPC
             prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
-            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory)
+            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory, self.template.summarization_prompt)
             self.user_prompt_wrapper = prior.user_prompt_wrapper
         except FileNotFoundError as e:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
@@ -166,8 +167,8 @@ class NPC2:
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)
 
-    def get_all_memories(self) -> List[str]:
-        return [mem.content for mem in self.brain_memory.get_all_memories()]
+    def get_all_memories(self) -> List[Entity]:
+        return self.brain_memory.get_all_memories()
 
     def load_entities_from_template(self, template_path: Path) -> None:
         self.brain_memory.load_entities_from_template(template_path)
