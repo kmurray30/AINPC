@@ -34,7 +34,7 @@ def _get_client() -> QdrantClient:
             _QDRANT_CLIENT.get_collections()
         except Exception as exc:
             _QDRANT_CLIENT = None
-            raise Exception(f"Failed to connect to Qdrant at {host}:{port}: {exc}")
+            raise Exception(f"Failed to connect to Qdrant at {host}:{port}: {exc}. Is the Qdrant container running?")
     return _QDRANT_CLIENT
 
 

@@ -64,13 +64,14 @@ class NPC2:
         self.save_paths = proj_paths.get_paths()
         self.npc_name = npc_name_for_template_and_save
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
-
+        
         # Init the agents
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
 
         # Initialize the brain memory (backed by a persistent collection so doesn't matter if new game or not)
-        collection_name = f"{proj_paths.get_paths().save_name}_{self.npc_name}_brain"
+        # For the collection name, include the version, save name and NPC name
+        collection_name = f"{self.save_paths.save_name}_{self.npc_name}_v{self.save_paths.version}"
         self.brain_memory = BrainMemory(collection_name=collection_name)
 
         existing_save_found = self._check_for_existing_save()
