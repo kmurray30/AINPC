@@ -15,18 +15,26 @@ class BrainMemory:
     collection: QdrantCollection
     TEST_DIMENSION: int = 1536
     collection_name: str
+    save_enabled: bool
 
-    def __init__(self, collection_name: str):
+    def __init__(self, collection_name: str, save_enabled: bool = True):
         # Bind Qdrant collection wrapper to this NPC's brain collection
         self.collection_name = collection_name
+        self.save_enabled = save_enabled
         self.collection = QdrantCollection(self.collection_name)
-        self.collection.create(dim=self.TEST_DIMENSION)
+        if save_enabled:
+            self.collection.create(dim=self.TEST_DIMENSION)
 
     def maintain(self) -> None:
         # Persist embedding cache associated with the collection
-        self.collection.maintain()
+        if self.save_enabled:
+            self.collection.maintain()
 
     def add_memory(self, preprocessed_user_text: str):
+        if not self.save_enabled:
+            Logger.verbose(f"Saving disabled, skipping memory addition: {preprocessed_user_text}")
+            return
+            
         rows = [
             Entity(
                 key=preprocessed_user_text,
@@ -39,6 +47,10 @@ class BrainMemory:
         self.collection.insert_dataclasses(rows)
 
     def get_memories(self, preprocessed_user_text: str, topk: int = 5, as_str: bool = False) -> Any:
+        if not self.save_enabled:
+            Logger.verbose(f"Saving disabled, returning empty memories for: {preprocessed_user_text}")
+            return [] if not as_str else ""
+            
         hits = self.collection.search_text(preprocessed_user_text, topk=topk)
         Logger.verbose(f"Found {len(hits)} memories for {preprocessed_user_text}")
         # Print the memories with their similarity scores
@@ -54,12 +66,20 @@ class BrainMemory:
 
     def get_all_memories(self) -> List[Entity]:
         """API method for /list command"""
+        if not self.save_enabled:
+            Logger.verbose("Saving disabled, returning empty memories list")
+            return []
+            
         all_memories = self.collection.export_entities()
         Logger.verbose(f"All memories:")
         return all_memories
 
     def load_entities_from_template(self, template_path: Path) -> None:
         """API method for /load command"""
+        if not self.save_enabled:
+            Logger.verbose(f"Saving disabled, skipping loading entities from {template_path}")
+            return
+            
         if not template_path.suffix == ".yaml":
             raise ValueError("File must be a yaml file")
 
@@ -81,5 +101,9 @@ class BrainMemory:
 
     def clear_all_memories(self) -> None:
         """API method for /clear command"""
+        if not self.save_enabled:
+            Logger.verbose("Saving disabled, skipping memory clearing")
+            return
+            
         self.collection.drop_if_exists()
         self.collection.create(dim=self.TEST_DIMENSION)

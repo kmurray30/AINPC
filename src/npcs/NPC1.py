@@ -45,19 +45,25 @@ class NPC1:
     save_paths: proj_paths.SavePaths
     template: NPCTemplate
     brain_entities: List[Entity]
+    save_enabled: bool
 
-    def __init__(self, npc_name_for_template_and_save: str):
+    def __init__(self, npc_name_for_template_and_save: str, *, save_enabled: bool = True):
         self.save_paths = proj_paths.get_paths()
         self.app_settings = proj_settings.get_settings().app_settings
         self.npc_name = npc_name_for_template_and_save
+        self.save_enabled = save_enabled
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
 
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
 
-        existing_save_found = self._check_for_existing_save()
-        if existing_save_found:
-            self._load_state()
+        if self.save_enabled:
+            existing_save_found = self._check_for_existing_save()
+            if existing_save_found:
+                self._load_state()
+            else:
+                self._init_state()
         else:
+            # When saving is disabled, always start fresh
             self._init_state()
 
     # -------- Private API --------
@@ -84,6 +90,10 @@ class NPC1:
         )
 
     def _save_state(self) -> None:
+        if not self.save_enabled:
+            Logger.log("Saving disabled, skipping state save", Level.DEBUG)
+            return
+        
         os.makedirs(self.save_paths.npc_save_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = self._get_state()
@@ -111,7 +121,8 @@ class NPC1:
     def maintain(self) -> None:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()
-        self._save_state()
+        if self.save_enabled:
+            self._save_state()
 
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:
         self.conversation_memory.append_chat(response, role=role, cot=cot, off_switch=off_switch)

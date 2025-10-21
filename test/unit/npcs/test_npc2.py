@@ -44,6 +44,14 @@ preprocess_system_prompt: "You are a text preprocessor."
 """
         (temp_path / "templates" / "npcs" / "test_npc" / "template.yaml").write_text(template_content)
         
+        # Create entities file
+        entities_content = """
+- "Test entity 1"
+- "Test entity 2"
+- "Test entity 3"
+"""
+        (temp_path / "templates" / "npcs" / "test_npc" / "entities.yaml").write_text(entities_content)
+        
         # Create game settings
         game_settings_content = """
 max_convo_mem_length: 10
@@ -74,7 +82,7 @@ def mock_qdrant():
 @pytest.fixture
 def mock_agent():
     """Mock Agent class"""
-    with patch('src.poc.poc2_simple_brain.NPC.Agent') as mock_agent_class:
+    with patch('src.npcs.NPC2.Agent') as mock_agent_class:
         def factory(*args, **kwargs):
             m = Mock()
             m.chat_with_history.return_value = "Mock response"
@@ -87,11 +95,28 @@ def mock_agent():
 @pytest.fixture
 def mock_io_utils():
     """Mock io_utils"""
-    with patch('src.poc.poc2_simple_brain.NPC.io_utils') as mock_io:
-        mock_io.load_yaml_into_dataclass.return_value = NPCTemplate(
-            response_system_prompt="You are a helpful test assistant.",
-            preprocess_system_prompt="You are a text preprocessor."
-        )
+    with patch('src.npcs.NPC2.io_utils') as mock_io:
+        def mock_load_yaml(path, data_type):
+            if "entities" in str(path):
+                return ["Test entity 1", "Test entity 2", "Test entity 3"]
+            elif "template" in str(path):
+                return NPCTemplate(
+                    response_system_prompt="You are a helpful test assistant.",
+                    preprocess_system_prompt="You are a text preprocessor."
+                )
+            elif "npc_save_state" in str(path):
+                # Mock NPCState for loading saved state
+                from src.npcs.NPC2 import NPCState
+                mock_state = NPCState(
+                    conversation_memory=Mock(),
+                    system_context="Test context",
+                    user_prompt_wrapper="Test wrapper"
+                )
+                return mock_state
+            else:
+                return None
+        
+        mock_io.load_yaml_into_dataclass.side_effect = mock_load_yaml
         mock_io.save_to_yaml_file.return_value = None
         
         yield mock_io
@@ -103,8 +128,10 @@ def mock_proj_paths(temp_project_dir):
     with patch('src.core.proj_paths.get_paths') as mock_get_paths:
         mock_paths = Mock()
         mock_paths.npc_template.return_value = temp_project_dir / "templates" / "npcs" / "test_npc" / "template.yaml"
-        mock_paths.npc_save.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc"
-        mock_paths.npc_save_state.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc" / "npc_save_state.yaml"
+        mock_paths.npc_entities_template.return_value = temp_project_dir / "templates" / "npcs" / "test_npc" / "entities.yaml"
+        mock_paths.save_dir = temp_project_dir / "saves" / "test_save"
+        mock_paths.npc_save_dir.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc"
+        mock_paths.npc_save_state.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc" / "npc_save_state_v2.0.yaml"
         mock_paths.chat_log.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc" / "chat_log.yaml"
         mock_get_paths.return_value = mock_paths
         
@@ -128,18 +155,26 @@ def mock_proj_settings():
 @pytest.fixture
 def mock_conversation_memory():
     """Mock ConversationMemory to avoid proj_settings dependency"""
-    with patch('src.poc.poc2_simple_brain.NPC.ConversationMemory') as mock_cm:
+    with patch('src.npcs.NPC2.ConversationMemory') as mock_cm:
         mock_instance = Mock()
         mock_instance.chat_memory = []
         
         def mock_append_chat(content, role=None, cot=None, off_switch=False):
-            mock_instance.chat_memory.append(Mock(content=content, role=role, cot=cot, off_switch=off_switch))
+            chat_msg = Mock()
+            chat_msg.content = content
+            chat_msg.role = role
+            chat_msg.cot = cot
+            chat_msg.off_switch = off_switch
+            mock_instance.chat_memory.append(chat_msg)
         
         mock_instance.append_chat = mock_append_chat
         mock_instance.get_state = Mock()
         mock_instance.maintain = Mock()
-        mock_instance.get_chat_summary_as_string = Mock(return_value="Mock conversation summary")
+        def mock_get_summary():
+            return "Mock conversation summary"
+        mock_instance.get_chat_summary_as_string = mock_get_summary
         mock_cm.from_new.return_value = mock_instance
+        mock_cm.from_state.return_value = mock_instance
         yield mock_cm
 
 
@@ -155,10 +190,15 @@ def npc_instance(temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_
     proj_paths_module._frozen = False
     
     # Set up paths
-    proj_paths.set_paths(temp_project_dir, "test_save")
+    proj_paths.set_paths(
+        project_path=temp_project_dir,
+        templates_dir_name="npcs",
+        version=2.0,
+        save_name="test_save"
+    )
     
-    # Create NPC instance
-    npc = NPC(is_new_game=True, npc_name="test_npc")
+    # Create NPC instance with saving enabled by default
+    npc = NPC2(npc_name_for_template_and_save="test_npc", save_enabled=True)
     return npc
 
 
@@ -168,7 +208,7 @@ class TestNPCInitialization:
     def test_npc_initialization(self, npc_instance):
         """Test that NPC initializes correctly"""
         assert npc_instance.npc_name == "test_npc"
-        assert npc_instance.is_new_game is True
+        assert npc_instance.save_enabled is True  # Default for tests
         assert npc_instance.conversation_memory is not None
         assert npc_instance.response_agent is not None
         assert npc_instance.preprocessor_agent is not None
@@ -214,11 +254,12 @@ class TestNPCConversationMemory:
         assert npc_instance.conversation_memory.chat_memory[0].content == "Test message"
         assert npc_instance.conversation_memory.chat_memory[0].role == Role.user
     
-    def test_maintain(self, npc_instance):
+    def test_maintain(self, npc_instance, mock_io_utils):
         """Test that maintenance is performed correctly"""
         npc_instance.maintain()
-        # Should call conversation memory maintain and save state
-        assert npc_instance.conversation_memory is not None
+        # Should call conversation memory maintain and save state (save enabled)
+        npc_instance.conversation_memory.maintain.assert_called_once()
+        mock_io_utils.save_to_yaml_file.assert_called_once()
 
 
 class TestNPCSystemPrompt:
@@ -346,24 +387,24 @@ class TestNPCBrainMemoryAPI:
     def test_load_entities_from_template(self, npc_instance, mock_qdrant):
         """Test loading entities from template"""
         with patch('src.utils.io_utils.load_yaml_into_dataclass') as mock_io_utils, \
-             patch('os.path.exists', return_value=True):
+             patch('pathlib.Path.exists', return_value=True):
             mock_io_utils.return_value = [
-                Entity(key="key1", content="content1", tags=["memories"])
+                "Test entity 1", "Test entity 2"
             ]
             
-            npc_instance.load_entities_from_template("test.yaml")
+            npc_instance.load_entities_from_template(Path("test.yaml"))
             mock_io_utils.assert_called_once()
             mock_qdrant.insert_dataclasses.assert_called_once()
     
     def test_load_entities_from_template_invalid_file(self, npc_instance):
         """Test loading entities with invalid file"""
         with pytest.raises(ValueError, match="File must be a yaml file"):
-            npc_instance.load_entities_from_template("test.txt")
+            npc_instance.load_entities_from_template(Path("test.txt"))
     
     def test_load_entities_from_template_file_not_found(self, npc_instance):
         """Test loading entities with non-existent file"""
         with pytest.raises(FileNotFoundError):
-            npc_instance.load_entities_from_template("nonexistent.yaml")
+            npc_instance.load_entities_from_template(Path("nonexistent.yaml"))
 
 
 class TestNPCPreprocessing:
@@ -485,6 +526,142 @@ class TestNPCChatFunctionality:
         assert isinstance(result, ChatResponse)
         assert result.response == "test response"
         assert len(npc_instance.conversation_memory.chat_memory) == 2  # user + assistant
+
+
+class TestNPCSaveFeature:
+    """Test NPC save feature with save_enabled flag"""
+    
+    def test_npc2_with_save_enabled_true(self, temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory):
+        """Test NPC2 with save_enabled=True"""
+        from src.core import proj_paths
+        import src.core.proj_paths as proj_paths_module
+        
+        # Reset proj_paths singleton state
+        proj_paths_module._paths = None
+        proj_paths_module._frozen = False
+        proj_paths.set_paths(
+            project_path=temp_project_dir,
+            templates_dir_name="npcs",
+            version=2.0,
+            save_name="test_save"
+        )
+        
+        # Create NPC with saving enabled
+        npc = NPC2(npc_name_for_template_and_save="test_npc", save_enabled=True)
+        
+        assert npc.save_enabled is True
+        
+        # Test that _save_state actually calls save operations
+        npc._save_state()
+        mock_io_utils.save_to_yaml_file.assert_called_once()
+        
+        # Test that maintain calls save operations
+        mock_io_utils.save_to_yaml_file.reset_mock()
+        npc.maintain()
+        mock_io_utils.save_to_yaml_file.assert_called_once()
+    
+    def test_npc2_with_save_enabled_false(self, temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory):
+        """Test NPC2 with save_enabled=False"""
+        from src.core import proj_paths
+        import src.core.proj_paths as proj_paths_module
+        
+        # Reset proj_paths singleton state
+        proj_paths_module._paths = None
+        proj_paths_module._frozen = False
+        proj_paths.set_paths(
+            project_path=temp_project_dir,
+            templates_dir_name="npcs",
+            version=2.0,
+            save_name="test_save"
+        )
+        
+        # Create NPC with saving disabled
+        npc = NPC2(npc_name_for_template_and_save="test_npc", save_enabled=False)
+        
+        assert npc.save_enabled is False
+        
+        # Test that _save_state does NOT call save operations
+        npc._save_state()
+        mock_io_utils.save_to_yaml_file.assert_not_called()
+        
+        # Test that maintain does NOT call save operations
+        npc.maintain()
+        mock_io_utils.save_to_yaml_file.assert_not_called()
+    
+    def test_npc2_save_state_file_operations(self, temp_project_dir):
+        """Test actual file operations with real temp directory"""
+        from src.core import proj_paths, proj_settings
+        import src.core.proj_paths as proj_paths_module
+        
+        # Reset proj_paths singleton state
+        proj_paths_module._paths = None
+        proj_paths_module._frozen = False
+        
+        # Set up real paths
+        proj_paths.set_paths(
+            project_path=temp_project_dir,
+            templates_dir_name="test_templates",
+            version=2.0,
+            save_name="test_save"
+        )
+        
+        # Create template and settings files
+        template_dir = temp_project_dir / "templates" / "test_templates" / "npcs" / "test_npc"
+        template_dir.mkdir(parents=True, exist_ok=True)
+        template_dir2 = temp_project_dir / "templates" / "test_templates" / "npcs" / "test_npc2"
+        template_dir2.mkdir(parents=True, exist_ok=True)
+        
+        # Create template file
+        template_content = """
+response_system_prompt: "You are a helpful test assistant."
+preprocess_system_prompt: "You are a text preprocessor."
+"""
+        (template_dir / "template_v2.0.yaml").write_text(template_content)
+        (template_dir2 / "template_v2.0.yaml").write_text(template_content)
+        
+        # Create entities file
+        entities_content = """
+- "Test entity 1"
+- "Test entity 2"
+- "Test entity 3"
+"""
+        (template_dir / "entities.yaml").write_text(entities_content)
+        (template_dir2 / "entities.yaml").write_text(entities_content)
+        
+        # Create game settings file
+        game_settings_path = temp_project_dir / "templates" / "test_templates" / "game_settings.yaml"
+        game_settings_content = """
+max_convo_mem_length: 10
+num_last_messages_to_retain_when_summarizing: 5
+log_level: DEBUG
+model: gpt_4o_mini
+game_title: "Test Game"
+text_stream_speed: 0.05
+closing_enabled: true
+"""
+        game_settings_path.write_text(game_settings_content)
+        
+        # Reset and initialize settings
+        import src.core.proj_settings as proj_settings_module
+        proj_settings_module._settings = None
+        proj_settings_module._frozen = False
+        proj_settings.init_settings(game_settings_path)
+        
+        # Test with save_enabled=True - should create files
+        npc_save_enabled = NPC2(npc_name_for_template_and_save="test_npc", save_enabled=True)
+        npc_save_enabled._save_state()
+        
+        # Check that save file was created
+        save_file_path = temp_project_dir / "saves" / "v2.0" / "test_save" / "npcs" / "test_npc" / "npc_save_state_v2.0.yaml"
+        assert save_file_path.exists(), f"Save file should exist at {save_file_path}"
+        
+        # Test with save_enabled=False - should NOT create files
+        npc_save_disabled = NPC2(npc_name_for_template_and_save="test_npc2", save_enabled=False)
+        npc_save_disabled._save_state()
+        
+        # Check that save file was NOT created
+        save_file_path_disabled = temp_project_dir / "saves" / "v2.0" / "test_save" / "npcs" / "test_npc2" / "npc_save_state_v2.0.yaml"
+        assert not save_file_path_disabled.exists(), f"Save file should NOT exist at {save_file_path_disabled}"
 
 
 if __name__ == "__main__":

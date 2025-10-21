@@ -31,8 +31,8 @@ if __name__ == "__main__":
     try:
         # Get the CLI arguments
         args = sys.argv[1:]
-        if len(args) != 3:
-            Logger.error("Usage: python simple_ui.py <npc_type> <templates_dir_name> <save_name>")
+        if len(args) < 3 or len(args) > 4:
+            Logger.error("Usage: python simple_ui.py <npc_type> <templates_dir_name> <save_name> [--no-save]")
             exit()
         npc_type_str = args[0].upper()
         if npc_type_str not in npc_options:
@@ -48,6 +48,16 @@ if __name__ == "__main__":
         if "/" in save_name:
             Logger.error("save_name is just the name of the save directory under saves/, not a full path")
             exit()
+        
+        # Check for --no-save flag
+        save_enabled = True
+        if len(args) == 4:
+            if args[3] == "--no-save":
+                save_enabled = False
+                Logger.info("Save mode disabled - no data will be persisted to disk")
+            else:
+                Logger.error(f"Unknown flag: {args[3]}. Use --no-save to disable saving.")
+                exit()
 
         # Initialize project path to point to this directory
         proj_paths.set_paths(
@@ -63,7 +73,7 @@ if __name__ == "__main__":
         proj_settings.init_settings(proj_paths.get_paths().app_settings)
         Logger.set_level(proj_settings.get_settings().app_settings.log_level)
 
-        npc: NPCProtocol = npc_type(npc_name_for_template_and_save="john")
+        npc: NPCProtocol = npc_type(npc_name_for_template_and_save="john", save_enabled=save_enabled)
         
         while True:
             user_input_raw = input("You: ")

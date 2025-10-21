@@ -53,6 +53,7 @@ class NPC2:
     is_new_game: bool
     save_paths: proj_paths.SavePaths
     template: NPCTemplate
+    save_enabled: bool
 
     response_agent: Agent
     preprocessor_agent: Agent
@@ -60,9 +61,10 @@ class NPC2:
     # Settings
     last_messages_to_retain_for_preprocessor: int = 4
 
-    def __init__(self, npc_name_for_template_and_save: str):
+    def __init__(self, npc_name_for_template_and_save: str, *, save_enabled: bool = True):
         self.save_paths = proj_paths.get_paths()
         self.npc_name = npc_name_for_template_and_save
+        self.save_enabled = save_enabled
         self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
         
         # Init the agents
@@ -72,12 +74,16 @@ class NPC2:
         # Initialize the brain memory (backed by a persistent collection so doesn't matter if new game or not)
         # For the collection name, include the version, save name and NPC name
         collection_name = f"{self.save_paths.save_name}_{self.npc_name}_v{self.save_paths.version}"
-        self.brain_memory = BrainMemory(collection_name=collection_name)
+        self.brain_memory = BrainMemory(collection_name=collection_name, save_enabled=save_enabled)
 
-        existing_save_found = self._check_for_existing_save()
-        if existing_save_found:
-            self._load_state()
+        if self.save_enabled:
+            existing_save_found = self._check_for_existing_save()
+            if existing_save_found:
+                self._load_state()
+            else:
+                self._init_state()
         else:
+            # When saving is disabled, always start fresh
             self._init_state()
     
     # ---------- Private API - Helpers ---------
@@ -129,6 +135,10 @@ class NPC2:
     # ---------- Private API - State Management ----------
 
     def _save_state(self) -> None:
+        if not self.save_enabled:
+            Logger.log("Saving disabled, skipping state save", Level.DEBUG)
+            return
+            
         os.makedirs(self.save_paths.npc_save_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
@@ -162,7 +172,8 @@ class NPC2:
     def maintain(self) -> None:
         """Perform periodic maintenance (e.g., summarization) and persist state."""
         self.conversation_memory.maintain()
-        self._save_state()
+        if self.save_enabled:
+            self._save_state()
         self.brain_memory.maintain()
 
     def inject_message(self, response: str, role: Role = Role.assistant, cot: Optional[str] = None, off_switch: bool = False) -> None:

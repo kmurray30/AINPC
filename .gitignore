@@ -14,3 +14,4 @@ src/test/EvalTests/reports/*
 milvus_data/
 cache/
 temp/
+temporary/
