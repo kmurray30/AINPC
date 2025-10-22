@@ -54,7 +54,7 @@ class NPC1:
         self.save_enabled = save_enabled
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
 
-        self.template = io_utils.load_yaml_into_dataclass(self.save_paths.npc_template(npc_name_for_template_and_save), NPCTemplate)
+        self.template = self.save_paths.load_npc_template_with_fallback(npc_name_for_template_and_save, NPCTemplate)
 
         if self.save_enabled:
             existing_save_found = self._check_for_existing_save()

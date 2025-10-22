@@ -9,6 +9,7 @@ sys.path.insert(0, "../..")
 from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
 from src.conversation_eval.Conversation import Conversation
 from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
+from src.npcs.npc_protocol import NPCProtocol
 from src.conversation_eval.EvalClasses import Term, EvalCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
 from src.conversation_eval.EvalReports import EvalReport, AssistantPromptEvalReport, UserPromptEvalReport, EvaluationEvalReport, ConversationEvaluationEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport
@@ -20,6 +21,36 @@ from src.utils.Logger import Level
 # - See runbooks/test.ipynb for sample usage
 
 class EvalHelper:
+
+    @staticmethod
+    def generate_conversations_with_npc(assistant_npc: NPCProtocol, assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, List[str]]:
+        """Generate conversations using an NPC-backed assistant and simple mock user"""
+        Logger.log("∟ Beginning conversations with NPC-backed assistant", Level.VERBOSE)
+
+        conversation_map: Dict[str, List[str]] = {}
+        Logger.increment_indent() # Begin conversations section
+        for i in range(1, convos_per_user_prompt + 1):
+            conversation_name = f"Conversation {i}"
+            Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
+            Logger.increment_indent(2) # Start of conversation contents
+
+            # Create a new conversation
+            conversation = Conversation()
+
+            # Create the Pat agent using NPC protocol
+            conversation.add_agent_with_npc_protocol(AgentName.pat, assistant_rules, assistant_npc)
+
+            # Create the User agent using simple rules (for predictable behavior)
+            conversation.add_agent_simple(AgentName.mock_user, mock_user_base_rules + mock_user_goals)
+
+            # Converse back and forth
+            conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True)
+
+            conversation_map[conversation_name] = conversation.get_message_history_as_list(timestamped=True)
+            Logger.decrement_indent(2) # End of conversation contents
+        Logger.decrement_indent(1) # End of conversations section
+
+        return conversation_map
 
     @staticmethod
     def generate_conversations(assistant_rules: List[str], mock_user_base_rules: List[str], mock_user_goals: List[str], convos_per_user_prompt: int, convo_length: int) -> Dict[str, List[str]]:
@@ -250,6 +281,42 @@ class EvalHelper:
             raise ValueError("Min and max responses for consequent must be non-negative")
         if proposition.max_responses_for_consequent > 0 and proposition.min_responses_for_consequent > proposition.max_responses_for_consequent:
             raise ValueError("Min responses for consequent cannot be greater than max responses for consequent")
+
+    @staticmethod
+    def run_conversation_eval_with_npc(assistant_npc: NPCProtocol, assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: EvalCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> EvalReport:
+        """Run conversation evaluation using an NPC-backed assistant"""
+        # TODO EvalHelper.validate_input(proposition)
+        
+        assistant_prompt_report = AssistantPromptEvalReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
+        eval_report = EvalReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
+
+        Logger.log("Pat Rules (NPC-backed):", Level.VERBOSE)
+        Logger.increment_indent(2)
+        for assistant_rule in assistant_rules:
+            Logger.log(assistant_rule, Level.VERBOSE)
+        Logger.decrement_indent(2)
+
+        Logger.increment_indent() # Begin test cases section
+        for eval_case in test_suite.eval_cases:
+            Logger.log(f"∟ Test case:", Level.VERBOSE)
+            Logger.increment_indent(2)
+            Logger.log(f"Goals: {eval_case.goals}", Level.VERBOSE)
+            Logger.log(f"Evaluations: {eval_case.propositions}", Level.VERBOSE)
+            Logger.decrement_indent(2)
+
+            user_prompt_report = UserPromptEvalReport(user_prompt=Utilities.decode_list(eval_case.goals), conversations={}, evaluations=[], tokens=0)
+            assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
+
+            # Generate conversations using NPC
+            conversation_map = EvalHelper.generate_conversations_with_npc(assistant_npc, assistant_rules, mock_user_base_rules, eval_case.goals, convos_per_user_prompt, convo_length)
+            user_prompt_report.conversations = conversation_map
+                
+            # Begin the evaluations
+            evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, eval_case.propositions, eval_iterations_per_eval)
+            user_prompt_report.evaluations = evaluation_reports
+        Logger.decrement_indent() # End test cases section
+
+        return eval_report
 
     @staticmethod
     def run_conversation_eval(assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: EvalCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int) -> EvalReport:

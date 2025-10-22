@@ -28,7 +28,10 @@ class Conversation:
         self.agents[name] = agent
 
     def add_agent_with_npc_protocol(self, name: AgentName, agent_rules: List[str], npc_protocol: NPCProtocol) -> EvalAgent:
-        ... # TODO
+        """Add an agent backed by an NPC protocol"""
+        agent = EvalAgent(name, "\n".join(agent_rules), npc_protocol)
+        self.agents[name] = agent
+        return agent
 
     def add_rule(self, agent_name: AgentName, rule: str):
         if agent_name not in self.agents:
@@ -54,30 +57,57 @@ class Conversation:
         if self_agent_name not in self.agents:
             raise ValueError(f"Agent {self_agent_name} not found in agents list.")
 
-        message_history_for_llm = self.assign_perspective_to_message_history(self_agent_name, other_agent_name)
-        
-        # Prepend the role rules to the message history
         self_agent = self.agents[self_agent_name]
-        message_history_for_llm = [{"role": Role.system.value, "content": self_agent.rules}] + message_history_for_llm
-
-        if not response_is_typed:
-            # Call the llm agent with the context, expecting a response of type str
-            response: str = ChatBot.call_llm(message_history_for_llm)
+        
+        if self_agent.is_npc_backed():
+            # Handle NPC-backed agent
+            # Get the last message from the other agent as user input
+            last_message = None
+            if self.message_history:
+                # Find the most recent message from the other agent
+                for msg in reversed(self.message_history):
+                    if msg.agent == other_agent_name:
+                        last_message = msg.content
+                        break
+            
+            # Call the NPC to generate response
+            response_obj: ChatResponse = self_agent.chat_with_npc(last_message)
+            response = response_obj.response
 
             # Print the response
             if isPrinting:
-                Logger.log(f"{self_agent_name.value}: {response}", Level.VERBOSE)
+                if response_is_typed and hasattr(response_obj, 'hidden_thought_process'):
+                    Logger.log(f"{self_agent_name.value}:", Level.VERBOSE)
+                    Logger.log(f"\tExplanation: {response_obj.hidden_thought_process}", Level.VERBOSE)
+                    Logger.log(f"\tResponse: {response}", Level.VERBOSE)
+                else:
+                    Logger.log(f"{self_agent_name.value}: {response}", Level.VERBOSE)
         else:
-            # Call the llm agent with the context, expecting a response of type ChatResponse
-            response_obj: ChatResponse = ChatBot.call_llm(message_history_for_llm, ChatResponse)
-            response = response_obj.response
+            # Handle simple agent (existing logic)
+            message_history_for_llm = self.assign_perspective_to_message_history(self_agent_name, other_agent_name)
+            
+            # Prepend the role rules to the message history
+            message_history_for_llm = [{"role": Role.system.value, "content": self_agent.rules}] + message_history_for_llm
 
-            # Print the explanation and the response
-            if isPrinting:
-                Logger.log(f"{self_agent_name.value}:", Level.VERBOSE)
-                Logger.log(f"\tExplanation: {response_obj.hidden_thought_process}", Level.VERBOSE)
-                Logger.log(f"\tResponse: {response}", Level.VERBOSE)
+            if not response_is_typed:
+                # Call the llm agent with the context, expecting a response of type str
+                response: str = ChatBot.call_llm(message_history_for_llm)
+
+                # Print the response
+                if isPrinting:
+                    Logger.log(f"{self_agent_name.value}: {response}", Level.VERBOSE)
+            else:
+                # Call the llm agent with the context, expecting a response of type ChatResponse
+                response_obj: ChatResponse = ChatBot.call_llm(message_history_for_llm, ChatResponse)
+                response = response_obj.response
+
+                # Print the explanation and the response
+                if isPrinting:
+                    Logger.log(f"{self_agent_name.value}:", Level.VERBOSE)
+                    Logger.log(f"\tExplanation: {response_obj.hidden_thought_process}", Level.VERBOSE)
+                    Logger.log(f"\tResponse: {response}", Level.VERBOSE)
         
+        # Add to conversation history (both simple and NPC agents)
         self.message_history.append(ChatMessageAgnostic(self_agent_name, response))
 
     def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False):

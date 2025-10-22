@@ -42,7 +42,7 @@ class Agent:
         full_message_history_dict = self._prepend_system_prompt(chat_history_dict, full_system_prompt)
 
         # Wrap the latest user message if requested
-        if self.user_prompt_wrapper and message_history[-1].role == Role.user:
+        if self.user_prompt_wrapper and message_history and message_history[-1].role == Role.user:
             user_message = message_history[-1].content
             user_prompt_wrapped = self.user_prompt_wrapper.replace(constants.user_message_placeholder, user_message)
             full_message_history_dict[-1]["content"] = user_prompt_wrapped

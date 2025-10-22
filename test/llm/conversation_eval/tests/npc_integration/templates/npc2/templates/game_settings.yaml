@@ -1,0 +1,7 @@
+max_convo_mem_length: 5
+num_last_messages_to_retain_when_summarizing: 3
+log_level: INFO
+model: gpt_4o_mini
+game_title: "NPC2 Test Environment"
+text_stream_speed: 0.05
+closing_enabled: false

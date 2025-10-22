@@ -37,10 +37,62 @@ class SavePaths:
         return self.template_dir / "app_settings.yaml"
 
     def npc_template(self, npc_name: str) -> Path:
-        return self.npcs_templates_dir / npc_name / f"template_v{self.version}.yaml"
+        """Get NPC template path with fallback to default"""
+        npc_specific_path = self.npcs_templates_dir / npc_name / f"template_v{self.version}.yaml"
+        if npc_specific_path.exists():
+            return npc_specific_path
+        # Fallback to default template
+        return self.npcs_templates_dir / "default" / f"template_v{self.version}.yaml"
 
     def npc_entities_template(self, npc_name: str) -> Path:
-        return self.npcs_templates_dir / npc_name / "entities.yaml"
+        """Get NPC entities template path with fallback to default"""
+        npc_specific_path = self.npcs_templates_dir / npc_name / "entities.yaml"
+        if npc_specific_path.exists():
+            return npc_specific_path
+        # Fallback to default entities
+        return self.npcs_templates_dir / "default" / "entities.yaml"
+    
+    def load_npc_template_with_fallback(self, npc_name: str, template_class):
+        """Load NPC template with field-level fallback to default template"""
+        from src.utils import io_utils
+        
+        # Load default template first
+        default_path = self.npcs_templates_dir / "default" / f"template_v{self.version}.yaml"
+        default_template = None
+        if default_path.exists():
+            try:
+                default_template = io_utils.load_yaml_into_dataclass(default_path, template_class)
+            except Exception:
+                pass  # If default fails, we'll just use NPC-specific
+        
+        # Load NPC-specific template
+        npc_specific_path = self.npcs_templates_dir / npc_name / f"template_v{self.version}.yaml"
+        if npc_specific_path.exists():
+            npc_template = io_utils.load_yaml_into_dataclass(npc_specific_path, template_class)
+            
+            # If we have a default template, merge fields
+            if default_template:
+                # For each field in the template class, use NPC-specific if present, otherwise default
+                merged_data = {}
+                for field_name in template_class.__dataclass_fields__.keys():
+                    npc_value = getattr(npc_template, field_name, None)
+                    default_value = getattr(default_template, field_name, None)
+                    
+                    # Use NPC-specific value if it exists and is not None, otherwise use default
+                    if npc_value is not None:
+                        merged_data[field_name] = npc_value
+                    elif default_value is not None:
+                        merged_data[field_name] = default_value
+                
+                return template_class(**merged_data)
+            else:
+                return npc_template
+        elif default_template:
+            # Only default template exists
+            return default_template
+        else:
+            # Neither exists, let the original method handle the error
+            return io_utils.load_yaml_into_dataclass(self.npc_template(npc_name), template_class)
 
     @property
     def chat_log(self) -> Path:
