@@ -62,8 +62,8 @@ def test_project():
     """Use in-repo test project at test/pocs/poc1 and let proj_paths generate all IO paths."""
     base = PROJ_ROOT / "test/unit/pocs/poc1"
     # Ensure expected files exist (user requested these be under repo)
-    assert (base / "game_settings.yaml").exists(), f"Missing {(base / 'game_settings.yaml')}"
-    assert (base / "templates/npcs/companion/template.yaml").exists(), f"Missing template at {(base / 'templates/npcs/companion/template.yaml')}"
+    assert (base / "templates/default/game_settings.yaml").exists(), f"Missing {(base / 'templates/default/game_settings.yaml')}"
+    assert (base / "templates/default/npcs/companion/template.yaml").exists(), f"Missing template at {(base / 'templates/default/npcs/companion/template.yaml')}"
     (base / "saves").mkdir(parents=True, exist_ok=True)
     return base
 
@@ -171,7 +171,7 @@ def test_poc1_e2e_flow(test_project: Path, monkeypatch):
     time.sleep(0.2)
 
     # Validate IO artifacts
-    chat_log_path = paths.chat_log(npc_name)
+    chat_log_path = paths.chat_log
     npc_state_path = paths.npc_save_state(npc_name)
     print(f"[E2E] chat_log_path={chat_log_path} exists={chat_log_path.exists()}\n[E2E] npc_state_path={npc_state_path} exists={npc_state_path.exists()}")
     assert chat_log_path.exists()

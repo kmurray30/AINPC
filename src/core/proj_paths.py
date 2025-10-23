@@ -38,11 +38,11 @@ class SavePaths:
 
     def npc_template(self, npc_name: str) -> Path:
         """Get NPC template path with fallback to default"""
-        npc_specific_path = self.npcs_templates_dir / npc_name / f"template_v{self.version}.yaml"
+        npc_specific_path = self.npcs_templates_dir / npc_name / "template.yaml"
         if npc_specific_path.exists():
             return npc_specific_path
         # Fallback to default template
-        return self.npcs_templates_dir / "default" / f"template_v{self.version}.yaml"
+        return self.npcs_templates_dir / "default" / "template.yaml"
 
     def npc_entities_template(self, npc_name: str) -> Path:
         """Get NPC entities template path with fallback to default"""
@@ -57,7 +57,7 @@ class SavePaths:
         from src.utils import io_utils
         
         # Load default template first
-        default_path = self.npcs_templates_dir / "default" / f"template_v{self.version}.yaml"
+        default_path = self.npcs_templates_dir / "default" / "template.yaml"
         default_template = None
         if default_path.exists():
             try:
@@ -66,7 +66,7 @@ class SavePaths:
                 pass  # If default fails, we'll just use NPC-specific
         
         # Load NPC-specific template
-        npc_specific_path = self.npcs_templates_dir / npc_name / f"template_v{self.version}.yaml"
+        npc_specific_path = self.npcs_templates_dir / npc_name / "template.yaml"
         if npc_specific_path.exists():
             npc_template = io_utils.load_yaml_into_dataclass(npc_specific_path, template_class)
             
@@ -92,7 +92,7 @@ class SavePaths:
             return default_template
         else:
             # Neither exists, let the original method handle the error
-            return io_utils.load_yaml_into_dataclass(self.npc_template(npc_name), template_class)
+            return io_utils.load_yaml_into_dataclass(npc_specific_path, template_class)
 
     @property
     def chat_log(self) -> Path:

@@ -18,15 +18,13 @@ from dataclasses import dataclass, field
 @dataclass
 class NPCState:
     conversation_memory: ConversationMemoryState
-    system_context: str
     user_prompt_wrapper: str
 
 
 @dataclass
 class NPCTemplate:
-    response_system_prompt: str
-    preprocess_system_prompt: str | None = None
-    summarization_prompt: str | None = None
+    system_prompt: str
+    initial_response: str | None = None
 
 
 @dataclass
@@ -67,6 +65,10 @@ class NPC2:
         self.save_enabled = save_enabled
         self.template = self.save_paths.load_npc_template_with_fallback(npc_name_for_template_and_save, NPCTemplate)
         
+        # Load global NPC configs
+        self.preprocess_system_prompt = self._load_global_config("preprocess_system_prompt.yaml")["preprocess_system_prompt"]
+        self.summarization_prompt = self._load_global_config("summarization_prompt.yaml")["summarization_prompt"]
+        
         # Init the agents
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
         self.preprocessor_agent = Agent(system_prompt=None, response_type=PreprocessedUserInput)
@@ -90,10 +92,18 @@ class NPC2:
 
     def _check_for_existing_save(self) -> bool:
         return os.path.exists(self.save_paths.save_dir)
+    
+    def _load_global_config(self, config_filename: str) -> dict:
+        """Load global NPC config from src/npcs/npc2/config/"""
+        import yaml
+        npc_config_dir = Path(__file__).parent / "config"
+        config_path = npc_config_dir / config_filename
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
 
     def _build_system_prompt(self, include_conversation_summary: bool = True, include_brain_context: bool = True) -> str:
         parts: List[str] = []
-        parts.append("Context:\n" + self.template.response_system_prompt)
+        parts.append("Context:\n" + self.template.system_prompt)
         
         if include_conversation_summary:
             parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
@@ -111,7 +121,7 @@ class NPC2:
 
     def _preprocess_input(self, user_message: str) -> PreprocessedUserInput:
         # Use only the template-provided preprocess prompt
-        preprocess_agent_system_prompt = self.template.preprocess_system_prompt
+        preprocess_agent_system_prompt = self.preprocess_system_prompt
         if not preprocess_agent_system_prompt:
             raise ValueError("preprocess_system_prompt is required in NPCTemplate")
         
@@ -143,7 +153,7 @@ class NPC2:
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
             conversation_memory=self.conversation_memory.get_state(),
-            system_context=self.template.response_system_prompt,
+            # system_context removed from NPCState
             user_prompt_wrapper=self.user_prompt_wrapper,
         )
         io_utils.save_to_yaml_file(current_state, save_path)
@@ -154,7 +164,7 @@ class NPC2:
         try:
             # Load the conversation memory and other metadata for the NPC
             prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
-            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory, self.template.summarization_prompt)
+            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory, self.summarization_prompt)
             self.user_prompt_wrapper = prior.user_prompt_wrapper
         except FileNotFoundError as e:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
@@ -163,7 +173,7 @@ class NPC2:
 
     def _init_state(self) -> None:
         # Create a fresh conversation memory
-        self.conversation_memory = ConversationMemory.from_new(self.template.summarization_prompt)
+        self.conversation_memory = ConversationMemory.from_new(self.summarization_prompt)
         self.brain_memory.clear_all_memories()
         self.brain_memory.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
 

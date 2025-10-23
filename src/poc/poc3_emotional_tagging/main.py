@@ -6,7 +6,7 @@ import traceback
 from typing import List
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) # Adjust the path to the project root
-from src.brain import template_processor
+# template_processor import removed - functionality moved to NPC.py
 from src.core.Constants import Role
 from src.core.ChatMessage import ChatMessage
 from src.utils import Utilities

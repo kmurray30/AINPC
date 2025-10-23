@@ -18,17 +18,14 @@ from src.core import proj_paths, proj_settings
 @dataclass
 class NPCState:
     conversation_memory: ConversationMemoryState
-    system_context: str
     user_prompt_wrapper: str
-    summarization_prompt: str
     brain_entities: List[Entity]
 
 
 @dataclass
 class NPCTemplate:
-    initial_system_context: str
+    system_prompt: str
     initial_response: str | None = None
-    summarization_prompt: str | None = None
 
 
 # NPC1 has the following features:
@@ -55,6 +52,9 @@ class NPC1:
         self.response_agent = Agent(system_prompt=None, response_type=ChatResponse)
 
         self.template = self.save_paths.load_npc_template_with_fallback(npc_name_for_template_and_save, NPCTemplate)
+        
+        # Load global NPC configs
+        self.summarization_prompt = self._load_global_config("summarization_prompt.yaml")["summarization_prompt"]
 
         if self.save_enabled:
             existing_save_found = self._check_for_existing_save()
@@ -69,10 +69,18 @@ class NPC1:
     # -------- Private API --------
     def _check_for_existing_save(self) -> bool:
         return os.path.exists(self.save_paths.save_dir)
+    
+    def _load_global_config(self, config_filename: str) -> dict:
+        """Load global NPC config from src/npcs/npc1/config/"""
+        import yaml
+        npc_config_dir = Path(__file__).parent / "config"
+        config_path = npc_config_dir / config_filename
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
 
     def _build_system_prompt(self) -> str:
         parts: List[str] = []
-        parts.append("Context:\n" + self.template.initial_system_context)
+        parts.append("Context:\n" + self.template.system_prompt)
         parts.append("Brain context:\n" + "\n".join([e.content for e in self.brain_entities]))
         parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
         return "\n\n".join(parts) + "\n\n"
@@ -83,9 +91,7 @@ class NPC1:
     def _get_state(self) -> NPCState:
         return NPCState(
             conversation_memory=self.conversation_memory.get_state(),
-            system_context=self.template.initial_system_context,
             user_prompt_wrapper=self.user_prompt_wrapper,
-            summarization_prompt=self.template.summarization_prompt,
             brain_entities=self.brain_entities,
         )
 
@@ -104,9 +110,9 @@ class NPC1:
         Logger.log(f"Loading state from {self.save_paths.npc_save_state(self.npc_name)}", Level.INFO)
         try:
             prior_state: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
-            self.conversation_memory = ConversationMemory.from_state(prior_state.conversation_memory, summarization_prompt=self.template.summarization_prompt)
+            self.conversation_memory = ConversationMemory.from_state(prior_state.conversation_memory, summarization_prompt=self.summarization_prompt)
             self.user_prompt_wrapper = prior_state.user_prompt_wrapper
-            self.template.summarization_prompt = prior_state.summarization_prompt
+            # summarization_prompt is now loaded from global config, no need to override
             self.brain_entities = prior_state.brain_entities
         except FileNotFoundError as e:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
@@ -114,7 +120,7 @@ class NPC1:
 
     def _init_state(self) -> None:
         Logger.log(f"Initializing state for {self.npc_name}", Level.INFO)
-        self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.template.summarization_prompt)
+        self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.summarization_prompt)
         self.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
 
     # ---------- Public API / Protocol ----------

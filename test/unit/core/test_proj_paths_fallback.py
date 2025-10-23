@@ -14,9 +14,8 @@ from src.core.proj_paths import SavePaths
 @dataclass
 class MockNPCTemplate:
     """Mock template class for fallback testing"""
-    response_system_prompt: str
-    preprocess_system_prompt: Optional[str] = None
-    summarization_prompt: Optional[str] = None
+    system_prompt: str
+    initial_response: Optional[str] = None
 
 
 class TestProjPathsFallback:
@@ -38,16 +37,15 @@ class TestProjPathsFallback:
             test_npc_dir.mkdir(parents=True, exist_ok=True)
             
             # Create default template (has all fields)
-            default_template = """response_system_prompt: "Default response prompt"
-preprocess_system_prompt: "Default preprocess prompt"
-summarization_prompt: "Default summary prompt"
+            default_template = """system_prompt: "Default system prompt"
+initial_response: "Default initial response"
 """
-            (default_dir / "template_v2.0.yaml").write_text(default_template)
+            (default_dir / "template.yaml").write_text(default_template)
             
-            # Create assistant template (overrides response_system_prompt only)
-            assistant_template = """response_system_prompt: "Assistant-specific response prompt"
+            # Create assistant template (overrides system_prompt only)
+            assistant_template = """system_prompt: "Assistant-specific system prompt"
 """
-            (assistant_dir / "template_v2.0.yaml").write_text(assistant_template)
+            (assistant_dir / "template.yaml").write_text(assistant_template)
             
             # Create entities files
             default_entities = """- "Default entity 1"
@@ -81,12 +79,11 @@ model: gpt_4o_mini
         # Load assistant template (should merge with default)
         template = save_paths.load_npc_template_with_fallback("assistant", MockNPCTemplate)
         
-        # Should have assistant-specific response prompt
-        assert template.response_system_prompt == "Assistant-specific response prompt"
+        # Should have assistant-specific system prompt
+        assert template.system_prompt == "Assistant-specific system prompt"
         
-        # Should have default values for other fields
-        assert template.preprocess_system_prompt == "Default preprocess prompt"
-        assert template.summarization_prompt == "Default summary prompt"
+        # Should have default value for initial_response
+        assert template.initial_response == "Default initial response"
     
     def test_fallback_template_loading_default_only(self, temp_project_dir):
         """Test loading when only default template exists"""
@@ -101,9 +98,8 @@ model: gpt_4o_mini
         template = save_paths.load_npc_template_with_fallback("test_npc", MockNPCTemplate)
         
         # Should have all default values
-        assert template.response_system_prompt == "Default response prompt"
-        assert template.preprocess_system_prompt == "Default preprocess prompt"
-        assert template.summarization_prompt == "Default summary prompt"
+        assert template.system_prompt == "Default system prompt"
+        assert template.initial_response == "Default initial response"
     
     def test_fallback_template_loading_npc_specific_only(self, temp_project_dir):
         """Test loading when only NPC-specific template exists (no default)"""
@@ -115,17 +111,16 @@ model: gpt_4o_mini
         )
         
         # Remove default template
-        (temp_project_dir / "templates" / "default" / "npcs" / "default" / "template_v2.0.yaml").unlink()
+        (temp_project_dir / "templates" / "default" / "npcs" / "default" / "template.yaml").unlink()
         
         # Load assistant template (should work without default)
         template = save_paths.load_npc_template_with_fallback("assistant", MockNPCTemplate)
         
-        # Should have assistant-specific response prompt
-        assert template.response_system_prompt == "Assistant-specific response prompt"
+        # Should have assistant-specific system prompt
+        assert template.system_prompt == "Assistant-specific system prompt"
         
         # Other fields should be None (dataclass defaults)
-        assert template.preprocess_system_prompt is None
-        assert template.summarization_prompt is None
+        assert template.initial_response is None
     
     def test_npc_template_path_fallback(self, temp_project_dir):
         """Test that npc_template() method falls back to default"""
@@ -138,13 +133,13 @@ model: gpt_4o_mini
         
         # For assistant (has specific template)
         assistant_path = save_paths.npc_template("assistant")
-        expected_assistant = temp_project_dir / "templates" / "default" / "npcs" / "assistant" / "template_v2.0.yaml"
+        expected_assistant = temp_project_dir / "templates" / "default" / "npcs" / "assistant" / "template.yaml"
         assert assistant_path == expected_assistant
         assert assistant_path.exists()
         
         # For test_npc (no specific template, should fallback to default)
         test_npc_path = save_paths.npc_template("test_npc")
-        expected_default = temp_project_dir / "templates" / "default" / "npcs" / "default" / "template_v2.0.yaml"
+        expected_default = temp_project_dir / "templates" / "default" / "npcs" / "default" / "template.yaml"
         assert test_npc_path == expected_default
         assert test_npc_path.exists()
     
@@ -182,20 +177,19 @@ model: gpt_4o_mini
         partial_dir = temp_project_dir / "templates" / "default" / "npcs" / "partial_npc"
         partial_dir.mkdir(parents=True, exist_ok=True)
         
-        partial_template = """response_system_prompt: "Partial response prompt"
-# Missing preprocess_system_prompt and summarization_prompt
+        partial_template = """system_prompt: "Partial system prompt"
+# Missing initial_response
 """
-        (partial_dir / "template_v2.0.yaml").write_text(partial_template)
+        (partial_dir / "template.yaml").write_text(partial_template)
         
         # Load template
         template = save_paths.load_npc_template_with_fallback("partial_npc", MockNPCTemplate)
         
-        # Should have NPC-specific response prompt
-        assert template.response_system_prompt == "Partial response prompt"
+        # Should have NPC-specific system prompt
+        assert template.system_prompt == "Partial system prompt"
         
         # Should fall back to default for missing fields
-        assert template.preprocess_system_prompt == "Default preprocess prompt"
-        assert template.summarization_prompt == "Default summary prompt"
+        assert template.initial_response == "Default initial response"
 
 
 if __name__ == "__main__":

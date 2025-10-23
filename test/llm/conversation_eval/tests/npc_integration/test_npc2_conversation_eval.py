@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from src.conversation_eval.EvalClasses import Proposition, Term, EvalCase, EvalCaseSuite
 from src.conversation_eval.EvalHelper import EvalHelper
-from src.npcs.NPC2 import NPC2
+from src.npcs.npc2.npc2 import NPC2
 from src.core import proj_paths, proj_settings
 from src.utils import io_utils
 

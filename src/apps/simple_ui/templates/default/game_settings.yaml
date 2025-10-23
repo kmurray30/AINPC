@@ -1,0 +1,7 @@
+max_convo_mem_length: 10
+num_last_messages_to_retain_when_summarizing: 5
+log_level: DEBUG
+model: gpt_4o_mini
+game_title: "Simple UI Test"
+text_stream_speed: 0.05
+closing_enabled: true

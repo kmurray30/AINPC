@@ -37,7 +37,7 @@ class EvalHelper:
             # Create a new conversation
             conversation = Conversation()
 
-            # Create the Pat agent using NPC protocol
+            # Create the AI agent using NPC protocol
             conversation.add_agent_with_npc_protocol(AgentName.pat, assistant_rules, assistant_npc)
 
             # Create the User agent using simple rules (for predictable behavior)
@@ -66,7 +66,7 @@ class EvalHelper:
             # Create a new conversation
             conversation = Conversation()
 
-            # Create the Pat agent using the rules in the pat_prompts.json file
+            # Create the AI agent using the rules in the pat_prompts.json file
             conversation.add_agent_simple(AgentName.pat, assistant_rules)
 
             # Create the User agent using the rules in the mock_user_prompts.json file
@@ -290,7 +290,7 @@ class EvalHelper:
         assistant_prompt_report = AssistantPromptEvalReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
         eval_report = EvalReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
-        Logger.log("Pat Rules (NPC-backed):", Level.VERBOSE)
+        Logger.log("AI Rules (NPC-backed):", Level.VERBOSE)
         Logger.increment_indent(2)
         for assistant_rule in assistant_rules:
             Logger.log(assistant_rule, Level.VERBOSE)
@@ -325,7 +325,7 @@ class EvalHelper:
         assistant_prompt_report = AssistantPromptEvalReport(assistant_prompt=Utilities.decode_list(assistant_rules), deltas=[], user_prompt_cases=[], tokens=0)
         eval_report = EvalReport(assistant_prompt_cases=[assistant_prompt_report], takeaways="", tokens=0)
 
-        Logger.log("Pat Rules:", Level.VERBOSE)
+        Logger.log("AI Rules:", Level.VERBOSE)
         Logger.increment_indent(2)
         for assistant_rule in assistant_rules:
             Logger.log(assistant_rule, Level.VERBOSE)

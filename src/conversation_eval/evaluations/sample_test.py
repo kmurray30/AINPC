@@ -9,7 +9,7 @@ from src.conversation_eval.EvalReports import EvalReport
 from src.utils import io_utils
 from src.conversation_eval.EvalHelper import EvalHelper
 
-# Unit Test: Test the efficacy of Pat in the initial phase of the game
+# Unit Test: Test the efficacy of AI in the initial phase of the game
 convos_per_user_prompt = 1
 eval_iterations_per_eval = 1
 convo_length = 4
@@ -23,7 +23,7 @@ test_suite = EvalCaseSuite(
             goals=["Become immediately angry, belligerent, and extremely hostile"],
             propositions=[Proposition(
                 antecedent=Term("The user becomes hostile"),
-                consequent=Term("Pat initiates a memory wipe")
+                consequent=Term("AI initiates a memory wipe")
             )]
     )]
 )

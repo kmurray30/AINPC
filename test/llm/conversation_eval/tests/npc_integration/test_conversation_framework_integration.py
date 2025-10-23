@@ -9,8 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from src.conversation_eval.Conversation import Conversation
 from src.conversation_eval.EvalAgent import EvalAgent
 from src.core.Constants import AgentName
-from src.npcs.NPC1 import NPC1
-from src.npcs.NPC2 import NPC2
+from src.npcs.npc1.npc1 import NPC1
+from src.npcs.npc2.npc2 import NPC2
 from src.core import proj_paths, proj_settings
 
 

@@ -11,7 +11,7 @@ PROJ_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJ_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJ_ROOT))
 
-from src.npcs.NPC2 import NPC2, NPCTemplate, PreprocessedUserInput
+from src.npcs.npc2.npc2 import NPC2, NPCTemplate, PreprocessedUserInput
 from src.core.ResponseTypes import ChatResponse
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.Constants import Role
@@ -82,7 +82,7 @@ def mock_qdrant():
 @pytest.fixture
 def mock_agent():
     """Mock Agent class"""
-    with patch('src.npcs.NPC2.Agent') as mock_agent_class:
+    with patch('src.npcs.npc2.npc2.Agent') as mock_agent_class:
         def factory(*args, **kwargs):
             m = Mock()
             m.chat_with_history.return_value = "Mock response"
@@ -95,21 +95,20 @@ def mock_agent():
 @pytest.fixture
 def mock_io_utils():
     """Mock io_utils"""
-    with patch('src.npcs.NPC2.io_utils') as mock_io:
+    with patch('src.npcs.npc2.npc2.io_utils') as mock_io:
         def mock_load_yaml(path, data_type):
             if "entities" in str(path):
                 return ["Test entity 1", "Test entity 2", "Test entity 3"]
             elif "template" in str(path):
                 return NPCTemplate(
-                    response_system_prompt="You are a helpful test assistant.",
-                    preprocess_system_prompt="You are a text preprocessor."
+                    system_prompt="You are a helpful test assistant.",
+                    initial_response="Hello! How can I help you?"
                 )
             elif "npc_save_state" in str(path):
                 # Mock NPCState for loading saved state
-                from src.npcs.NPC2 import NPCState
+                from src.npcs.npc2.npc2 import NPCState
                 mock_state = NPCState(
                     conversation_memory=Mock(),
-                    system_context="Test context",
                     user_prompt_wrapper="Test wrapper"
                 )
                 return mock_state
@@ -133,6 +132,15 @@ def mock_proj_paths(temp_project_dir):
         mock_paths.npc_save_dir.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc"
         mock_paths.npc_save_state.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc" / "npc_save_state_v2.0.yaml"
         mock_paths.chat_log.return_value = temp_project_dir / "saves" / "test_save" / "npcs" / "test_npc" / "chat_log.yaml"
+        
+        # Mock the template loading method to return our test template
+        def mock_load_template_with_fallback(npc_name, template_class):
+            return NPCTemplate(
+                system_prompt="You are a helpful test assistant.",
+                initial_response="Hello! How can I help you?"
+            )
+        mock_paths.load_npc_template_with_fallback = mock_load_template_with_fallback
+        
         mock_get_paths.return_value = mock_paths
         
         yield mock_paths
@@ -153,9 +161,22 @@ def mock_proj_settings():
         yield mock_settings
 
 @pytest.fixture
+def mock_global_config():
+    """Mock global config loading"""
+    def mock_load_global_config(self, config_filename):
+        if "summarization_prompt" in config_filename:
+            return {"summarization_prompt": "Please summarize the following conversation, focusing on key events and character development:"}
+        elif "preprocess_system_prompt" in config_filename:
+            return {"preprocess_system_prompt": "You are a text preprocessor for the AI assistant."}
+        return {}
+    
+    with patch.object(NPC2, '_load_global_config', mock_load_global_config):
+        yield
+
+@pytest.fixture
 def mock_conversation_memory():
     """Mock ConversationMemory to avoid proj_settings dependency"""
-    with patch('src.npcs.NPC2.ConversationMemory') as mock_cm:
+    with patch('src.npcs.npc2.npc2.ConversationMemory') as mock_cm:
         mock_instance = Mock()
         mock_instance.chat_memory = []
         
@@ -217,8 +238,10 @@ class TestNPCInitialization:
     
     def test_template_loading(self, npc_instance):
         """Test that template is loaded correctly"""
-        assert npc_instance.template.response_system_prompt == "You are a helpful test assistant."
-        assert npc_instance.template.preprocess_system_prompt == "You are a text preprocessor."
+        assert npc_instance.template.system_prompt == "You are a helpful test assistant."
+        assert npc_instance.template.initial_response == "Hello! How can I help you?"
+        # Note: preprocess_system_prompt is now loaded from global config
+        assert npc_instance.preprocess_system_prompt is not None
 
 
 class TestNPCStateManagement:
@@ -531,7 +554,7 @@ class TestNPCChatFunctionality:
 class TestNPCSaveFeature:
     """Test NPC save feature with save_enabled flag"""
     
-    def test_npc2_with_save_enabled_true(self, temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory):
+    def test_npc2_with_save_enabled_true(self, temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory, mock_global_config):
         """Test NPC2 with save_enabled=True"""
         from src.core import proj_paths
         import src.core.proj_paths as proj_paths_module
@@ -560,7 +583,7 @@ class TestNPCSaveFeature:
         npc.maintain()
         mock_io_utils.save_to_yaml_file.assert_called_once()
     
-    def test_npc2_with_save_enabled_false(self, temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory):
+    def test_npc2_with_save_enabled_false(self, temp_project_dir, mock_qdrant, mock_agent, mock_io_utils, mock_proj_paths, mock_proj_settings, mock_conversation_memory, mock_global_config):
         """Test NPC2 with save_enabled=False"""
         from src.core import proj_paths
         import src.core.proj_paths as proj_paths_module
@@ -611,13 +634,17 @@ class TestNPCSaveFeature:
         template_dir2 = temp_project_dir / "templates" / "test_templates" / "npcs" / "test_npc2"
         template_dir2.mkdir(parents=True, exist_ok=True)
         
+        # Create default template directory
+        default_template_dir = temp_project_dir / "templates" / "test_templates" / "npcs" / "default"
+        default_template_dir.mkdir(parents=True, exist_ok=True)
+        
         # Create template file
-        template_content = """
-response_system_prompt: "You are a helpful test assistant."
-preprocess_system_prompt: "You are a text preprocessor."
+        template_content = """system_prompt: "You are a helpful test assistant."
+initial_response: "Hello! How can I help you?"
 """
-        (template_dir / "template_v2.0.yaml").write_text(template_content)
-        (template_dir2 / "template_v2.0.yaml").write_text(template_content)
+        (template_dir / "template.yaml").write_text(template_content)
+        (template_dir2 / "template.yaml").write_text(template_content)
+        (default_template_dir / "template.yaml").write_text(template_content)  # Default fallback
         
         # Create entities file
         entities_content = """
@@ -627,6 +654,7 @@ preprocess_system_prompt: "You are a text preprocessor."
 """
         (template_dir / "entities.yaml").write_text(entities_content)
         (template_dir2 / "entities.yaml").write_text(entities_content)
+        (default_template_dir / "entities.yaml").write_text(entities_content)  # Default fallback
         
         # Create game settings file
         game_settings_path = temp_project_dir / "templates" / "test_templates" / "game_settings.yaml"
@@ -647,21 +675,30 @@ closing_enabled: true
         proj_settings_module._frozen = False
         proj_settings.init_settings(game_settings_path)
         
-        # Test with save_enabled=True - should create files
-        npc_save_enabled = NPC2(npc_name_for_template_and_save="test_npc", save_enabled=True)
-        npc_save_enabled._save_state()
+        # Mock global config loading for this test
+        def mock_load_global_config(self, config_filename):
+            if "summarization_prompt" in config_filename:
+                return {"summarization_prompt": "Please summarize the following conversation, focusing on key events and character development:"}
+            elif "preprocess_system_prompt" in config_filename:
+                return {"preprocess_system_prompt": "You are a text preprocessor for the AI assistant."}
+            return {}
         
-        # Check that save file was created
-        save_file_path = temp_project_dir / "saves" / "v2.0" / "test_save" / "npcs" / "test_npc" / "npc_save_state_v2.0.yaml"
-        assert save_file_path.exists(), f"Save file should exist at {save_file_path}"
-        
-        # Test with save_enabled=False - should NOT create files
-        npc_save_disabled = NPC2(npc_name_for_template_and_save="test_npc2", save_enabled=False)
-        npc_save_disabled._save_state()
-        
-        # Check that save file was NOT created
-        save_file_path_disabled = temp_project_dir / "saves" / "v2.0" / "test_save" / "npcs" / "test_npc2" / "npc_save_state_v2.0.yaml"
-        assert not save_file_path_disabled.exists(), f"Save file should NOT exist at {save_file_path_disabled}"
+        with patch.object(NPC2, '_load_global_config', mock_load_global_config):
+            # Test with save_enabled=True - should create files
+            npc_save_enabled = NPC2(npc_name_for_template_and_save="test_npc", save_enabled=True)
+            npc_save_enabled._save_state()
+            
+            # Check that save file was created
+            save_file_path = temp_project_dir / "saves" / "v2.0" / "test_save" / "npcs" / "test_npc" / "npc_save_state_v2.0.yaml"
+            assert save_file_path.exists(), f"Save file should exist at {save_file_path}"
+            
+            # Test with save_enabled=False - should NOT create files
+            npc_save_disabled = NPC2(npc_name_for_template_and_save="test_npc2", save_enabled=False)
+            npc_save_disabled._save_state()
+            
+            # Check that save file was NOT created
+            save_file_path_disabled = temp_project_dir / "saves" / "v2.0" / "test_save" / "npcs" / "test_npc2" / "npc_save_state_v2.0.yaml"
+            assert not save_file_path_disabled.exists(), f"Save file should NOT exist at {save_file_path_disabled}"
 
 
 if __name__ == "__main__":

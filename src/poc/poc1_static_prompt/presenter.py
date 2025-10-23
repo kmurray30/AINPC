@@ -75,7 +75,7 @@ class Presenter:
                 shutil.rmtree(self.project_paths.save_dir)
             os.makedirs(self.project_paths.save_dir, exist_ok=True)
             for npc_name in npc_names:
-                os.makedirs(self.project_paths.npcs_saves_dir(npc_name), exist_ok=True)
+                os.makedirs(self.project_paths.npc_save_dir(npc_name), exist_ok=True)
             self.is_new_game = True
         else:
             self.is_new_game = False
@@ -276,7 +276,7 @@ class Presenter:
             )
             
             # Append to the chat_log.yaml file
-            io_utils.append_to_yaml_file(message, self.project_paths.chat_log(self.npc.npc_name))
+            io_utils.append_to_yaml_file(message, self.project_paths.chat_log)
 
         except Exception as e:
             print("An error occurred while appending the chat logs")

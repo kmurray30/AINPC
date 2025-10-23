@@ -16,13 +16,12 @@ from src.core import proj_paths, proj_settings
 @dataclass
 class NPCState:
     conversation_memory: ConversationMemoryState
-    system_context: str
     user_prompt_wrapper: str
 
 
 @dataclass
 class NPCTemplate:
-    initial_system_context: str
+    system_prompt: str
     initial_response: str | None = None
 
 
@@ -54,7 +53,7 @@ class NPC:
     # -------- Base overrides --------
     def build_system_prompt(self) -> str:
         parts: List[str] = []
-        parts.append("Context:\n" + self.template.initial_system_context)
+        parts.append("Context:\n" + self.template.system_prompt)
         parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
         return "\n\n".join(parts) + "\n\n"
 
@@ -62,11 +61,11 @@ class NPC:
         return self.template.initial_response or ""
 
     def save_state(self) -> None:
-        os.makedirs(self.save_paths.npcs_saves_dir(self.npc_name), exist_ok=True)
+        os.makedirs(self.save_paths.npc_save_dir(self.npc_name), exist_ok=True)
         save_path = self.save_paths.npc_save_state(self.npc_name)
         current_state = NPCState(
             conversation_memory=self.conversation_memory.get_state(),
-            system_context=self.template.initial_system_context,
+            # system_context removed from NPCState
             user_prompt_wrapper=self.user_prompt_wrapper,
         )
         io_utils.save_to_yaml_file(current_state, save_path)
@@ -75,7 +74,9 @@ class NPC:
     def load_state(self) -> None:
         try:
             prior: NPCState = io_utils.load_yaml_into_dataclass(self.save_paths.npc_save_state(self.npc_name), NPCState)
-            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory)
+            # Use the same summarization prompt as in init_state
+            summarization_prompt = "Please summarize the following conversation, focusing on key events and character development:"
+            self.conversation_memory = ConversationMemory.from_state(prior.conversation_memory, summarization_prompt)
             self.user_prompt_wrapper = prior.user_prompt_wrapper
         except FileNotFoundError as e:
             Logger.log(f"NPC state file not found: {e}", Level.ERROR)
@@ -83,7 +84,9 @@ class NPC:
             self.init_state()
 
     def init_state(self) -> None:
-        self.conversation_memory = ConversationMemory.from_new()
+        # Use a simple summarization prompt for POC1
+        summarization_prompt = "Please summarize the following conversation, focusing on key events and character development:"
+        self.conversation_memory = ConversationMemory.from_new(summarization_prompt)
 
     # ---------- Public API ----------
     def maintain(self) -> None:

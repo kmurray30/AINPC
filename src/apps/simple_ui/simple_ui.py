@@ -7,8 +7,8 @@ import traceback
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))) # Adjust the path to the project root
 
 from src.npcs.npc_protocol import NPCProtocol
-from src.npcs.NPC1 import NPC1
-from src.npcs.NPC2 import NPC2
+from src.npcs.npc1.npc1 import NPC1
+from src.npcs.npc2.npc2 import NPC2
 from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Logger
 from src.utils.Logger import Level
