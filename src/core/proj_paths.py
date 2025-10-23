@@ -106,7 +106,7 @@ class SavePaths:
 
     @property
     def list_npc_names(self) -> List[str]:
-        return [path.name for path in self.npcs_templates_dir.iterdir() if path.is_dir()]
+        return [path.name for path in self.npcs_templates_dir.iterdir() if path.is_dir() and path.name != "default"]
 
 # Singleton instance
 _paths: Optional[SavePaths] = None

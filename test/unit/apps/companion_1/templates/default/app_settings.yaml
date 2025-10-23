@@ -1,0 +1,7 @@
+game_title: Companion-1 [Decommissioned]
+text_stream_speed: 0.01
+closing_enabled: true
+num_last_messages_to_retain_when_summarizing: 4
+model: gpt_4o_mini
+log_level: DEBUG
+max_convo_mem_length: 10

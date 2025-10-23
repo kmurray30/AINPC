@@ -323,6 +323,8 @@ class TestNPCBrainMemory:
     
     def test_update_memory(self, npc_instance, mock_qdrant):
         """Test that memory can be updated"""
+        # Reset call count after initialization
+        mock_qdrant.insert_dataclasses.reset_mock()
         npc_instance.brain_memory.add_memory("Test memory content")
         mock_qdrant.insert_dataclasses.assert_called_once()
     
@@ -403,12 +405,17 @@ class TestNPCBrainMemoryAPI:
     
     def test_clear_brain_memory(self, npc_instance, mock_qdrant):
         """Test clearing brain memory"""
+        # Reset call count after initialization
+        mock_qdrant.drop_if_exists.reset_mock()
+        mock_qdrant.create.reset_mock()
         npc_instance.clear_brain_memory()
         mock_qdrant.drop_if_exists.assert_called_once()
         mock_qdrant.create.assert_called()
     
     def test_load_entities_from_template(self, npc_instance, mock_qdrant):
         """Test loading entities from template"""
+        # Reset call count after initialization
+        mock_qdrant.insert_dataclasses.reset_mock()
         with patch('src.utils.io_utils.load_yaml_into_dataclass') as mock_io_utils, \
              patch('pathlib.Path.exists', return_value=True):
             mock_io_utils.return_value = [

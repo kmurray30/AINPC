@@ -68,7 +68,7 @@ class NPC1:
 
     # -------- Private API --------
     def _check_for_existing_save(self) -> bool:
-        return os.path.exists(self.save_paths.save_dir)
+        return os.path.exists(self.save_paths.npc_save_state(self.npc_name))
     
     def _load_global_config(self, config_filename: str) -> dict:
         """Load global NPC config from src/npcs/npc1/config/"""
