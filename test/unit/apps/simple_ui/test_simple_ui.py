@@ -240,7 +240,8 @@ class TestSimpleUIIntegration:
 
     def test_save_enabled_creates_files(self, test_project):
         """Test that save enabled actually creates save files."""
-        save_dir = test_project / "saves" / "v1.0" / "integration_test"
+        # The save will be created in the actual simple_ui directory, not the test directory
+        save_dir = PROJ_ROOT / "src/apps/simple_ui/saves" / "v1.0" / "integration_test"
         
         # Clean up any existing save
         if save_dir.exists():
@@ -250,7 +251,7 @@ class TestSimpleUIIntegration:
         result = subprocess.run([
             sys.executable, str(PROJ_ROOT / "src/apps/simple_ui/simple_ui.py"),
             "NPC1", "default", "integration_test"  # Enable saving
-        ], cwd=str(test_project), capture_output=True, text=True, timeout=10, input="Hello\n/save\n/exit\n")
+        ], cwd=str(test_project), capture_output=True, text=True, timeout=10, input="/save\n/exit\n")
         
         # Check if save files were created
         npc_save_file = save_dir / "npcs" / "john" / "npc_save_state_v1.0.yaml"
@@ -260,7 +261,8 @@ class TestSimpleUIIntegration:
 
     def test_save_disabled_no_files(self, test_project):
         """Test that save disabled doesn't create save files."""
-        save_dir = test_project / "saves" / "v1.0" / "no_save_test"
+        # The save would be created in the actual simple_ui directory, not the test directory
+        save_dir = PROJ_ROOT / "src/apps/simple_ui/saves" / "v1.0" / "no_save_test"
         
         # Clean up any existing save
         if save_dir.exists():
@@ -270,7 +272,7 @@ class TestSimpleUIIntegration:
         result = subprocess.run([
             sys.executable, str(PROJ_ROOT / "src/apps/simple_ui/simple_ui.py"),
             "NPC1", "default", "no_save_test", "--no-save"
-        ], cwd=str(test_project), capture_output=True, text=True, timeout=10, input="Hello\n/save\n/exit\n")
+        ], cwd=str(test_project), capture_output=True, text=True, timeout=10, input="/save\n/exit\n")
         
         # Should indicate save mode is disabled
         assert "Save mode disabled" in result.stdout

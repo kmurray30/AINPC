@@ -108,6 +108,7 @@ class ChatBot:
         else:
             exception = None
             for _ in range(ChatBot.llm_formatting_retries):
+                response_raw = None
                 try:
                     response_raw = ChatBot._call_llm_internal(message_history_for_llm, chat_model)
                     Logger.log(f"Raw response from LLM: {response_raw}", Level.DEBUG)
@@ -116,7 +117,10 @@ class ChatBot:
                     # Extract the object from the response
                     return llm_utils.extract_obj_from_llm_response(response_raw, response_type)
                 except Exception as e:
-                    Logger.log(f"Error extracting object from LLM response {response_raw}:\n{e}", Level.ERROR)
+                    if response_raw is not None:
+                        Logger.log(f"Error extracting object from LLM response {response_raw}:\n{e}", Level.ERROR)
+                    else:
+                        Logger.log(f"Error calling LLM:\n{e}", Level.ERROR)
                     exception = e
             raise(exception)
 

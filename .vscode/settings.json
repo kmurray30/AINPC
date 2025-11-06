@@ -1,13 +1,8 @@
 {
-  "python.analysis.typecheckingMode": "basic",
-  "python.testing.pytestArgs": [
-    "src",
-    "test",
-    "--ignore=test/unit/utils/test_milvus_utils.py"
-  ],
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit"
-  }
+    "python.testing.pytestArgs": [
+        "test",
+        "--ignore=test/unit/utils/test_milvus_utils.py"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
