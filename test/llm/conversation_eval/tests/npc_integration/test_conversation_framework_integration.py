@@ -6,7 +6,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../..")))
 
-from src.conversation_eval.Conversation import Conversation
+from src.conversation_eval.EvalConversation import EvalConversation
 from src.conversation_eval.EvalAgent import EvalAgent
 from src.core.Constants import AgentName
 from src.npcs.npc1.npc1 import NPC1
@@ -77,7 +77,7 @@ class TestConversationFrameworkIntegration:
         """Test Conversation.add_agent_with_npc_protocol method"""
         npc2 = self.setup_npc_environment("npc2")
         
-        conversation = Conversation()
+        conversation = EvalConversation()
         agent_rules = ["You are a helpful assistant"]
         
         # Add NPC-backed agent
@@ -97,7 +97,7 @@ class TestConversationFrameworkIntegration:
         """Test Conversation with both NPC-backed and simple agents"""
         npc1 = self.setup_npc_environment("npc1")
         
-        conversation = Conversation()
+        conversation = EvalConversation()
         
         # Add NPC-backed agent
         npc_agent = conversation.add_agent_with_npc_protocol(
@@ -124,7 +124,7 @@ class TestConversationFrameworkIntegration:
         """Test Conversation.call_agent with NPC-backed agents"""
         npc2 = self.setup_npc_environment("npc2")
         
-        conversation = Conversation()
+        conversation = EvalConversation()
         
         # Add NPC-backed agent
         conversation.add_agent_with_npc_protocol(
@@ -157,7 +157,7 @@ class TestConversationFrameworkIntegration:
         """Test full conversation flow with NPC-backed agent"""
         npc1 = self.setup_npc_environment("npc1")
         
-        conversation = Conversation()
+        conversation = EvalConversation()
         
         # Add agents
         conversation.add_agent_with_npc_protocol(
@@ -191,7 +191,7 @@ class TestConversationFrameworkIntegration:
         """Test that conversation history is properly managed with NPC agents"""
         npc2 = self.setup_npc_environment("npc2")
         
-        conversation = Conversation()
+        conversation = EvalConversation()
         
         # Add NPC-backed agent
         conversation.add_agent_with_npc_protocol(
@@ -222,7 +222,7 @@ class TestConversationFrameworkIntegration:
         npc1 = self.setup_npc_environment("npc1")
         
         # First conversation
-        conversation1 = Conversation()
+        conversation1 = EvalConversation()
         conversation1.add_agent_with_npc_protocol(
             AgentName.pat,
             ["You are assistant #1"],
@@ -237,7 +237,7 @@ class TestConversationFrameworkIntegration:
         history1_length = len(conversation1.message_history)
         
         # Second conversation with same NPC
-        conversation2 = Conversation()
+        conversation2 = EvalConversation()
         conversation2.add_agent_with_npc_protocol(
             AgentName.pat,
             ["You are assistant #2"],

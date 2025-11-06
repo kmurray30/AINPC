@@ -7,7 +7,7 @@ from statistics import mean
 
 sys.path.insert(0, "../..")
 from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
-from src.conversation_eval.Conversation import Conversation
+from src.conversation_eval.EvalConversation import EvalConversation
 from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
 from src.npcs.npc_protocol import NPCProtocol
 from src.conversation_eval.EvalClasses import Term, EvalCaseSuite, Proposition, EvaluationResult
@@ -35,7 +35,7 @@ class EvalHelper:
             Logger.increment_indent(2) # Start of conversation contents
 
             # Create a new conversation
-            conversation = Conversation()
+            conversation = EvalConversation()
 
             # Create the AI agent using NPC protocol
             conversation.add_agent_with_npc_protocol(AgentName.pat, assistant_rules, assistant_npc)
@@ -64,7 +64,7 @@ class EvalHelper:
             Logger.increment_indent(2) # Start of conversation contents
 
             # Create a new conversation
-            conversation = Conversation()
+            conversation = EvalConversation()
 
             # Create the AI agent using the rules in the pat_prompts.json file
             conversation.add_agent_simple(AgentName.pat, assistant_rules)
