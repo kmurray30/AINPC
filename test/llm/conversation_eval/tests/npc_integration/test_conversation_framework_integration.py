@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../..")))
 
 from src.conversation_eval.EvalConversation import EvalConversation
-from src.conversation_eval.EvalAgent import EvalAgent
+from src.conversation_eval.EvalConvoMember import EvalConvoMember
 from src.core.Constants import AgentName
 from src.npcs.npc1.npc1 import NPC1
 from src.npcs.npc2.npc2 import NPC2
@@ -50,19 +50,19 @@ class TestConversationFrameworkIntegration:
             return NPC2(npc_name_for_template_and_save="test_assistant", save_enabled=False)
     
     def test_eval_agent_npc_integration(self):
-        """Test EvalAgent integration with NPC protocols"""
+        """Test EvalConvoMember integration with NPC protocols"""
         npc1 = self.setup_npc_environment("npc1")
         
-        # Create EvalAgent with NPC protocol
+        # Create EvalConvoMember with NPC protocol
         agent_rules = ["You are a test assistant"]
-        eval_agent = EvalAgent(AgentName.pat, "\n".join(agent_rules), npc1)
+        eval_agent = EvalConvoMember(AgentName.pat, "\n".join(agent_rules), npc1)
         
-        # Test EvalAgent methods
-        assert eval_agent.is_npc_backed() == True, "Agent should be NPC-backed"
+        # Test EvalConvoMember methods
+        assert eval_agent.npc_protocol is not None, "Agent should be NPC-backed"
         assert eval_agent.npc_protocol == npc1, "Agent should reference the NPC"
         
         # Test chat functionality
-        response = eval_agent.chat_with_npc("Hello, how are you?")
+        response = eval_agent.chat("Hello, how are you?")
         assert response is not None, "Agent should return a response"
         assert hasattr(response, 'response'), "Response should have response attribute"
         
@@ -89,7 +89,7 @@ class TestConversationFrameworkIntegration:
         
         # Verify agent was added correctly
         assert agent is not None, "Agent should be returned"
-        assert agent.is_npc_backed() == True, "Agent should be NPC-backed"
+        assert agent.npc_protocol is not None, "Agent should be NPC-backed"
         assert AgentName.pat in conversation.agents, "Agent should be in conversation"
         assert conversation.agents[AgentName.pat] == agent, "Agent should be stored correctly"
     
@@ -117,8 +117,8 @@ class TestConversationFrameworkIntegration:
         assert AgentName.mock_user in conversation.agents
         
         # Verify agent types
-        assert conversation.agents[AgentName.pat].is_npc_backed() == True
-        assert conversation.agents[AgentName.mock_user].is_npc_backed() == False
+        assert conversation.agents[AgentName.pat].npc_protocol is not None
+        assert conversation.agents[AgentName.mock_user].npc_protocol is None
     
     def test_conversation_call_agent_npc_backed(self):
         """Test Conversation.call_agent with NPC-backed agents"""

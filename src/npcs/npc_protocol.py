@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Protocol, Optional
+from typing import List, Protocol, Optional, Dict
 from src.core.Constants import Role
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.ResponseTypes import ChatResponse
@@ -22,4 +22,12 @@ class NPCProtocol(Protocol):
         ...
 
     def clear_brain_memory(self) -> None:
+        ...
+    
+    def inject_memories(self, memories: List[str]) -> None:
+        """Inject a list of memory strings into the NPC's memory system"""
+        ...
+    
+    def inject_conversation_history(self, history: List[Dict[str, str]]) -> None:
+        """Inject conversation history where each dict has 'role' and 'content' keys"""
         ...

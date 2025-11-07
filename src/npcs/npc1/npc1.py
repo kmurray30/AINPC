@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from src.core.schemas.CollectionSchemas import Entity
 from src.core.schemas.Schemas import AppSettings
@@ -81,7 +81,7 @@ class NPC1:
     def _build_system_prompt(self) -> str:
         parts: List[str] = []
         parts.append("Context:\n" + self.template.system_prompt)
-        parts.append("Brain context:\n" + "\n".join([e.content for e in self.brain_entities]))
+        parts.append("Background knowledge:\n" + "\n".join([e.content for e in self.brain_entities]))
         parts.append("Prior conversation summary:\n" + self.conversation_memory.get_chat_summary_as_string())
         return "\n\n".join(parts) + "\n\n"
 
@@ -160,3 +160,39 @@ class NPC1:
 
     def clear_brain_memory(self) -> None:
         self.brain_entities = []
+    
+    def inject_memories(self, memories: List[str]) -> None:
+        """
+        Inject a list of memory strings into the NPC's memory system
+        For NPC1, these are added as brain entities
+        
+        Args:
+            memories: List of memory strings to inject
+        """
+        for memory in memories:
+            entity = Entity(
+                key=memory, 
+                content=memory, 
+                tags=["injected_memory"], 
+                id=int(Utilities.generate_hash_int64(memory))
+            )
+            self.brain_entities.append(entity)
+    
+    def inject_conversation_history(self, history: List[Dict[str, str]]) -> None:
+        """
+        Inject conversation history where each dict has 'role' and 'content' keys
+        
+        Args:
+            history: List of message dictionaries with 'role' and 'content' keys
+        """
+        from src.core.ChatMessage import ChatMessage
+        for message in history:
+            if 'role' in message and 'content' in message:
+                role = Role.user if message['role'] == 'user' else Role.assistant
+                chat_message = ChatMessage(
+                    role=role,
+                    content=message['content'],
+                    cot=None,
+                    off_switch=False
+                )
+                self.conversation_memory.chat_memory.append(chat_message)

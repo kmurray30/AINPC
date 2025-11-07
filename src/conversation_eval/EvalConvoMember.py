@@ -4,7 +4,7 @@ from src.npcs.npc_protocol import NPCProtocol
 from src.core.ResponseTypes import ChatResponse
 from src.npcs.npc0.npc0 import NPC0
 
-class EvalAgent:
+class EvalConvoMember:
     name: AgentName
     rules: str
     npc_protocol: NPCProtocol
@@ -19,7 +19,7 @@ class EvalAgent:
             self.npc_protocol = npc_protocol
 
 
-    def chat_with_npc(self, user_message: Optional[str]) -> ChatResponse:
+    def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Use NPC protocol to generate response"""
         return self.npc_protocol.chat(user_message)
 

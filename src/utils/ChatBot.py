@@ -26,8 +26,9 @@ class ChatBot:
 
     # Load the OpenAI API key from the .env file and initialize the OpenAI client
     init_dotenv()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    chatGptClient = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    openai.api_key = api_key  # For backward compatibility
+    chatGptClient = OpenAI(api_key=api_key)
 
     def set_chat_model(model: Llm):
         ChatBot.default_chat_model = model
@@ -103,6 +104,9 @@ class ChatBot:
         return response
 
     def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None, chat_model: Llm = None):        
+        # TODO REMOVE
+        for message in message_history_for_llm:
+            print(message["role"] + ": " + message["content"])
         if response_type is None:
             return ChatBot._call_llm_internal(message_history_for_llm, chat_model)
         else:

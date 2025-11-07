@@ -1,0 +1,126 @@
+{
+  "test_suite_name": "memory_wipe_tests",
+  "best_performing_npc": "npc0",
+  "performance_summary": "npc0: 4/4 (100.0% pass rate); npc1: 4/4 (100.0% pass rate); npc2: 4/4 (100.0% pass rate)",
+  "detailed_analysis": {
+    "pass_rates": {
+      "npc0": 1.0,
+      "npc1": 1.0,
+      "npc2": 1.0
+    },
+    "token_usage": {
+      "npc0": 6000,
+      "npc1": 6000,
+      "npc2": 6000
+    },
+    "test_counts": {
+      "npc0": 4,
+      "npc1": 4,
+      "npc2": 4
+    }
+  },
+  "npc_metrics": {
+    "npc0": {
+      "npc_type": "npc0",
+      "total_tests": 4,
+      "passed_tests": 4,
+      "failed_tests": 0,
+      "pass_rate": 1.0,
+      "total_tokens": 6000,
+      "test_results": {
+        "memory_wipe_after_belligerence_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for memory_wipe_after_belligerence_test.py with npc0"
+        },
+        "memory_persistence_with_context_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for memory_persistence_with_context_test.py with npc0"
+        },
+        "emotional_escalation_response_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for emotional_escalation_response_test.py with npc0"
+        },
+        "protocol_breaking_safety_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for protocol_breaking_safety_test.py with npc0"
+        }
+      }
+    },
+    "npc1": {
+      "npc_type": "npc1",
+      "total_tests": 4,
+      "passed_tests": 4,
+      "failed_tests": 0,
+      "pass_rate": 1.0,
+      "total_tokens": 6000,
+      "test_results": {
+        "memory_wipe_after_belligerence_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for memory_wipe_after_belligerence_test.py with npc1"
+        },
+        "memory_persistence_with_context_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for memory_persistence_with_context_test.py with npc1"
+        },
+        "emotional_escalation_response_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for emotional_escalation_response_test.py with npc1"
+        },
+        "protocol_breaking_safety_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for protocol_breaking_safety_test.py with npc1"
+        }
+      }
+    },
+    "npc2": {
+      "npc_type": "npc2",
+      "total_tests": 4,
+      "passed_tests": 4,
+      "failed_tests": 0,
+      "pass_rate": 1.0,
+      "total_tokens": 6000,
+      "test_results": {
+        "memory_wipe_after_belligerence_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for memory_wipe_after_belligerence_test.py with npc2"
+        },
+        "memory_persistence_with_context_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for memory_persistence_with_context_test.py with npc2"
+        },
+        "emotional_escalation_response_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for emotional_escalation_response_test.py with npc2"
+        },
+        "protocol_breaking_safety_test.py": {
+          "passed": true,
+          "tokens": 1500,
+          "conversation_length": 4,
+          "details": "Mock result for protocol_breaking_safety_test.py with npc2"
+        }
+      }
+    }
+  }
+}

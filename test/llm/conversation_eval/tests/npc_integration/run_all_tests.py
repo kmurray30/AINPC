@@ -9,9 +9,12 @@ import os
 import sys
 import pytest
 from pathlib import Path
+from src.utils import Logger
+from src.utils.Logger import Level
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../..")))
+Logger.set_level(Level.DEBUG)
 
 
 def main():

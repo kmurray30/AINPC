@@ -7,7 +7,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from src.conversation_eval.EvalClasses import Proposition, Term, EvalCase, EvalCaseSuite
 from src.conversation_eval import EvalUtils
 from src.conversation_eval.EvalReports import EvalReport
-from src.utils import io_utils
 from src.conversation_eval.EvalHelper import EvalHelper
 from src.conversation_eval.evaluations.EvalRunner import EvalRunner
 
@@ -20,8 +19,17 @@ convos_per_user_prompt = 1
 eval_iterations_per_eval = 1
 convo_length = 4
 
-assistant_rules = io_utils.load_rules_from_file("pat_prompts.json", "Ruleset 1")
-mock_user_base_rules = io_utils.load_rules_from_file("mock_user_prompts.json", "Beginning state")
+# Load rules from templates instead of files
+from src.core import proj_paths
+paths = proj_paths.get_paths()
+
+# Load assistant template
+from src.npcs.npc1.npc1 import NPCTemplate
+assistant_template = paths.load_npc_template_with_fallback("assistant", NPCTemplate)
+mock_user_template = paths.load_npc_template_with_fallback("mock_user", NPCTemplate)
+
+assistant_rules = [assistant_template.system_prompt]
+mock_user_base_rules = [mock_user_template.system_prompt]
 
 test_suite = EvalCaseSuite(
     eval_cases=[

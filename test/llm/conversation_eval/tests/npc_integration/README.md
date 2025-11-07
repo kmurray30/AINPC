@@ -27,7 +27,7 @@ This test suite validates the integration of NPC1 and NPC2 with the conversation
    - Compares conversation generation between NPCs
 
 4. **`test_conversation_framework_integration.py`**
-   - Tests EvalAgent integration with NPC protocols
+   - Tests EvalConvoMember integration with NPC protocols
    - Validates Conversation class NPC support methods
    - Tests mixed agent types (NPC + simple agents)
    - Verifies conversation flow and history management
@@ -113,7 +113,7 @@ python -m pytest test/llm/conversation_eval/tests/npc_integration/test_npc1_conv
 - ✅ Advanced chat capabilities
 
 ### Framework Integration
-- ✅ EvalAgent NPC support methods
+- ✅ EvalConvoMember NPC support methods
 - ✅ Conversation.add_agent_with_npc_protocol()
 - ✅ Conversation.call_agent() dual mode
 - ✅ NPCProtocol interface compliance

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from src.brain.brain_memory import BrainMemory
 from src.core.schemas.CollectionSchemas import Entity
@@ -197,6 +197,36 @@ class NPC2:
 
     def clear_brain_memory(self) -> None:
         self.brain_memory.clear_all_memories()
+    
+    def inject_memories(self, memories: List[str]) -> None:
+        """
+        Inject a list of memory strings into the NPC's memory system
+        For NPC2, these are added to the brain memory VDB
+        
+        Args:
+            memories: List of memory strings to inject
+        """
+        for memory in memories:
+            self.brain_memory.add_memory(preprocessed_user_text=memory)
+    
+    def inject_conversation_history(self, history: List[Dict[str, str]]) -> None:
+        """
+        Inject conversation history where each dict has 'role' and 'content' keys
+        
+        Args:
+            history: List of message dictionaries with 'role' and 'content' keys
+        """
+        from src.core.ChatMessage import ChatMessage
+        for message in history:
+            if 'role' in message and 'content' in message:
+                role = Role.user if message['role'] == 'user' else Role.assistant
+                chat_message = ChatMessage(
+                    role=role,
+                    content=message['content'],
+                    cot=None,
+                    off_switch=False
+                )
+                self.conversation_memory.chat_memory.append(chat_message)
 
     def chat(self, user_message: Optional[str]) -> ChatResponse:
         """Primary chat API: preprocess, update brain, build prompt, respond, persist. Returns ChatResponse."""
