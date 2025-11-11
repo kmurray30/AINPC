@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 import json
 
 from src.conversation_eval.EvalReports import EvalReport
-from src.conversation_eval.evaluations.EvalRunner import EvalRunner
+from src.conversation_eval.EvalRunner import EvalRunner
 from src.conversation_eval import EvalUtils
 
 

@@ -11,6 +11,8 @@ from src.npcs.npc1.npc1 import NPC1
 from src.npcs.npc2.npc2 import NPC2
 from src.core import proj_paths, proj_settings
 from src.conversation_eval.InitialState import InitialStateLoader
+from src.core.schemas.CollectionSchemas import Entity
+from src.utils import Utilities
 
 
 class EvalRunner:
@@ -62,6 +64,12 @@ class EvalRunner:
                 from src.npcs.npc1.npc1 import NPCTemplate  # Reuse the template class
                 template = proj_paths.get_paths().load_npc_template_with_fallback(npc_name, NPCTemplate)
                 npc = npc_class(system_prompt=template.system_prompt)
+                # Load entities from template if they exist
+                if template.entities:
+                    npc.brain_entities = [
+                        Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e)))
+                        for e in template.entities
+                    ]
             else:
                 npc = npc_class()
         else:

@@ -18,3 +18,9 @@ system_prompt: |
   You should respond naturally as someone who is genuinely confused and seeking answers.
 
 initial_response: null
+
+entities:
+  - "Basic conversational patterns"
+  - "Question-asking behaviors"
+  - "Confusion responses"
+  - "Memory retention patterns"

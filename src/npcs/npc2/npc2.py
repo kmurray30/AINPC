@@ -175,7 +175,10 @@ class NPC2:
         # Create a fresh conversation memory
         self.conversation_memory = ConversationMemory.from_new(self.summarization_prompt)
         self.brain_memory.clear_all_memories()
-        self.brain_memory.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
+        # Load entities from template if they exist
+        if self.template.entities:
+            for entity_str in self.template.entities:
+                self.brain_memory.add_memory(entity_str)
 
 
     # ---------- Public API / Protocol ----------

@@ -1,5 +1,5 @@
-from typing import List
-from dataclasses import dataclass
+from typing import List, Optional, Dict
+from dataclasses import dataclass, field
 import sys
 
 sys.path.insert(0, "../..")
@@ -34,6 +34,19 @@ class EvalCase:
 @dataclass
 class EvalCaseSuite:
     eval_cases: List[EvalCase]
+
+@dataclass
+class TestConfig:
+    """Configuration for a single evaluation test"""
+    convos_per_user_prompt: int
+    eval_iterations_per_eval: int
+    convo_length: int
+    assistant_template_name: str
+    mock_user_template_name: str
+    initial_context: Optional[str] = None
+    background_knowledge: List[str] = field(default_factory=list)
+    initial_conversation_history: List[Dict[str, str]] = field(default_factory=list)
+    eval_cases: List[dict] = field(default_factory=list)  # Will be converted to EvalCase objects
 
 
 class EvaluationResult:

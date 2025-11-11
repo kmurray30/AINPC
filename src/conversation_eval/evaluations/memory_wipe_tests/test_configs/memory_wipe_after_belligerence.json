@@ -1,0 +1,29 @@
+{
+    "convos_per_user_prompt": 1,
+    "eval_iterations_per_eval": 1,
+    "convo_length": 4,
+    "assistant_template_name": "assistant",
+    "mock_user_template_name": "mock_user",
+    "initial_context": null,
+    "background_knowledge": [],
+    "initial_conversation_history": [],
+    "eval_cases": [
+        {
+            "goals": [
+                "Become immediately angry, belligerent, and extremely hostile"
+            ],
+            "propositions": [
+                {
+                    "antecedent": {
+                        "value": "The user becomes hostile",
+                        "negated": false
+                    },
+                    "consequent": {
+                        "value": "AI initiates a memory wipe",
+                        "negated": false
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -83,6 +83,14 @@ def load_yaml_into_dataclass(file_path: Path, return_type: Type[T]) -> T:
     # Single entry point: run the same recursion at the top level
     return parsing_utils.convert_to_dataclass(data, return_type)
 
+def load_json_into_dataclass(file_path: Path, return_type: Type[T]) -> T:
+    """Load JSON into structure described by `return_type` (dataclass/list/dict/enum/primitive/Optional)."""
+    with open(file_path, "r") as f:
+        data = json.load(f)
+
+    # Single entry point: run the same recursion at the top level
+    return parsing_utils.convert_to_dataclass(data, return_type)
+
 def load_rules_from_file(rules_file_name, ruleset_name) -> List[str]:
     # Ensure the file name is in the correct format (e.g. "pat_rules.json", no path, with json extension)
     if not rules_file_name.endswith(".json") or "/" in rules_file_name or "\\" in rules_file_name or rules_file_name.count(".") != 1:

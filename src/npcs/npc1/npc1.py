@@ -26,6 +26,7 @@ class NPCState:
 class NPCTemplate:
     system_prompt: str
     initial_response: str | None = None
+    entities: List[str] = None
 
 
 # NPC1 has the following features:
@@ -121,7 +122,14 @@ class NPC1:
     def _init_state(self) -> None:
         Logger.log(f"Initializing state for {self.npc_name}", Level.INFO)
         self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.summarization_prompt)
-        self.load_entities_from_template(self.save_paths.npc_entities_template(self.npc_name))
+        # Load entities from template if they exist
+        if self.template.entities:
+            self.brain_entities = [
+                Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e)))
+                for e in self.template.entities
+            ]
+        else:
+            self.brain_entities = []
 
     # ---------- Public API / Protocol ----------
     def maintain(self) -> None:
