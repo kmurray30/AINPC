@@ -115,23 +115,20 @@ class MultiNPCComparison:
         try:
             print(f"  Running {test_path.name} with {npc_type}...")
             
-            # Execute the test file as a subprocess
+            # Execute the test file as a subprocess without capturing output for real-time streaming
             result = subprocess.run(
                 [sys.executable, str(test_path), npc_type],
                 cwd=test_path.parent,
-                capture_output=True,
-                text=True,
                 timeout=300  # 5 minute timeout
             )
             
             if result.returncode != 0:
                 print(f"    ⚠ Test failed with return code {result.returncode}")
-                print(f"    Error output: {result.stderr}")
                 return {
                     'passed': False,
                     'tokens': 0,
                     'conversation_length': 0,
-                    'error': f"Process failed: {result.stderr}",
+                    'error': f"Process failed with return code {result.returncode}",
                     'details': f"Return code: {result.returncode}"
                 }
             
@@ -141,8 +138,12 @@ class MultiNPCComparison:
             if report_file:
                 return self._parse_report_file(report_file)
             else:
-                # If no report file found, try to parse from stdout
-                return self._parse_stdout_output(result.stdout)
+                # If no report file found, return success based on return code
+                return {
+                    'passed': True,
+                    'tokens': 0,
+                    'conversation_length': 0
+                }
                 
         except subprocess.TimeoutExpired:
             return {

@@ -5,12 +5,14 @@ Script for running all memory wipe tests across multiple NPCs
 import os
 import sys
 import subprocess
+import time
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
 from src.conversation_eval.MultiNPCComparison import MultiNPCComparison
+from src.conversation_eval.StreamingEvalDisplay import get_streaming_display
 
 
 def run_simple_sequential():
@@ -47,25 +49,30 @@ def run_simple_sequential():
                 print(f"  ⚠ {test_file} not found, skipping...")
                 continue
             
-            print(f"  Running {test_file}...")
+            # Display test start with streaming display
+            streaming_display = get_streaming_display()
+            streaming_display.display_npc_test_start(npc_type, test_file)
+            
+            start_time = time.time()
             
             try:
+                # Don't capture output - let it stream directly to terminal for real-time display
                 result = subprocess.run(
                     [sys.executable, str(test_path), npc_type],
                     cwd=test_path.parent,
-                    capture_output=True,
-                    text=True,
                     timeout=300  # 5 minute timeout
                 )
                 
+                duration = time.time() - start_time
+                
                 if result.returncode == 0:
-                    print(f"    ✅ Completed successfully")
+                    print(f"\n✅ Test completed successfully")
                     results[npc_type][test_file] = "PASS"
+                    streaming_display.display_test_summary(True, duration=duration)
                 else:
-                    print(f"    ❌ Failed (return code {result.returncode})")
-                    if result.stderr:
-                        print(f"    Error: {result.stderr[:100]}...")
+                    print(f"\n❌ Test failed (return code {result.returncode})")
                     results[npc_type][test_file] = "FAIL"
+                    streaming_display.display_test_summary(False, duration=duration)
                     
             except subprocess.TimeoutExpired:
                 print(f"    ⏰ Timed out after 5 minutes")

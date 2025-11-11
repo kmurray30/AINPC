@@ -9,6 +9,10 @@ from src.conversation_eval import EvalUtils
 from src.conversation_eval.EvalReports import EvalReport
 from src.conversation_eval.EvalHelper import EvalHelper
 from src.conversation_eval.evaluations.EvalRunner import EvalRunner
+from src.conversation_eval.StreamingEvalDisplay import set_streaming_enabled
+
+# Enable streaming display for real-time feedback
+set_streaming_enabled(True)
 
 # Setup NPC environment and get assistant
 eval_dir = Path(__file__).parent

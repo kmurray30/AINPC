@@ -7,6 +7,7 @@ from src.conversation_eval.EvalConvoMember import EvalConvoMember
 from src.core.ChatMessage import ChatMessageAgnostic
 from src.core.ResponseTypes import ChatResponse
 from src.npcs.npc_protocol import NPCProtocol
+from src.conversation_eval.StreamingEvalDisplay import get_streaming_display
 
 DEBUG_LEVEL = ""
 
@@ -71,15 +72,26 @@ class EvalConversation:
         
         # Add to conversation history
         self.message_history.append(ChatMessageAgnostic(assistant_agent_name, response))
+        
+        # Update streaming display with latest conversation
+        streaming_display = get_streaming_display()
+        if streaming_display.enabled:
+            streaming_display.update_conversation_stream(self.message_history)
 
     def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False):
         if DEBUG_LEVEL == "WARNING":
             Logger.log(f"Message history is of length {len(self.message_history)}")
+        
         for i in range (iterations):
             # Call the first agent
             self.call_agent(first_agent, second_agent, response_is_typed, isPrinting = isPrinting)
             # Call the second agent
             self.call_agent(second_agent, first_agent, response_is_typed, isPrinting = isPrinting)
+        
+        # Display conversation completion
+        streaming_display = get_streaming_display()
+        if streaming_display.enabled:
+            streaming_display.display_conversation_complete(len(self.message_history))
 
     def get_message_history_as_list(self, timestamped = False) -> List[ChatMessageAgnostic]:
         message_history_list = []
