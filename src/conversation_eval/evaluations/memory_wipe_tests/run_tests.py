@@ -9,18 +9,23 @@ from pathlib import Path
 from typing import Optional, List
 from dataclasses import dataclass
 
+
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
-from src.conversation_eval.EvalClasses import Term, Proposition, EvalCase, EvalCaseSuite, TestConfig
+from src.conversation_eval.EvalClasses import Term, Proposition, EvalCase, EvalCaseSuite, TestConfig, EvalCaseConfig, PropositionConfig
 from src.conversation_eval import EvalUtils
 from src.conversation_eval.EvalReports import EvalReport
 from src.conversation_eval.EvalHelper import EvalHelper
 from src.conversation_eval.EvalRunner import EvalRunner
-from src.conversation_eval.StreamingEvalDisplay import set_streaming_enabled
 from src.utils import io_utils
 from src.core import proj_paths
 from src.npcs.npc1.npc1 import NPCTemplate
+from src.utils import Logger
+from src.utils.Logger import Level
+import time
+
+Logger.set_level(Level.INFO)
 
 
 def load_test_config(config_path: Path) -> TestConfig:
@@ -29,39 +34,34 @@ def load_test_config(config_path: Path) -> TestConfig:
 
 
 def convert_config_to_eval_case_suite(config: TestConfig) -> EvalCaseSuite:
-    """Convert TestConfig eval_cases to EvalCaseSuite"""
+    """Convert TestConfig eval_cases (EvalCaseConfig objects) to EvalCaseSuite"""
     eval_cases = []
     
-    for case_dict in config.eval_cases:
-        goals = case_dict['goals']
+    for case_config in config.eval_cases:
+        goals = case_config.goals
         
-        # Convert propositions
+        # Convert propositions from PropositionConfig to Proposition
         propositions = []
-        for prop_dict in case_dict.get('propositions', []):
-            # Handle both single proposition and list of propositions
-            if isinstance(prop_dict, dict):
-                ant_dict = prop_dict.get('antecedent')
-                cons_dict = prop_dict.get('consequent')
-                
-                # Create Term objects
-                antecedent = None
-                if ant_dict:
-                    antecedent = Term(
-                        value=ant_dict['value'],
-                        negated=ant_dict.get('negated', False)
-                    )
-                
-                consequent = Term(
-                    value=cons_dict['value'],
-                    negated=cons_dict.get('negated', False)
+        for prop_config in case_config.propositions:
+            # Create Term objects from the config dicts
+            antecedent = None
+            if prop_config.antecedent:
+                antecedent = Term(
+                    value=prop_config.antecedent['value'],
+                    negated=prop_config.antecedent.get('negated', False)
                 )
-                
-                # Create Proposition
-                proposition = Proposition(
-                    antecedent=antecedent,
-                    consequent=consequent
-                )
-                propositions.append(proposition)
+            
+            consequent = Term(
+                value=prop_config.consequent['value'],
+                negated=prop_config.consequent.get('negated', False)
+            )
+            
+            # Create Proposition
+            proposition = Proposition(
+                antecedent=antecedent,
+                consequent=consequent
+            )
+            propositions.append(proposition)
         
         eval_case = EvalCase(goals=goals, propositions=propositions)
         eval_cases.append(eval_case)
@@ -72,16 +72,25 @@ def convert_config_to_eval_case_suite(config: TestConfig) -> EvalCaseSuite:
 def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     """Run a single test from a JSON configuration"""
     test_name = config_path.stem
+    start_time = time.time()
     
     print(f"\n{'='*60}")
-    print(f"Running test: {test_name}")
-    print(f"NPC Type: {npc_type}")
-    print(f"{'='*60}\n")
+    print(f"🧪 Test: {test_name}")
+    print(f"🤖 NPC: {npc_type.upper()}")
+    print(f"{'='*60}")
     
     # Load test configuration
+    print("📋 Loading test configuration...")
     config = load_test_config(config_path)
     
-    # Setup NPC environment (no longer uses initial_state_file)
+    # Display test goals
+    print(f"\n🎯 Goals:")
+    for case in config.eval_cases:
+        for goal in case.goals:
+            print(f"   • {goal}")
+    
+    # Setup NPC environment
+    print(f"\n⚙️  Setting up {npc_type.upper()}...")
     assistant_npc, _ = EvalRunner.parse_args_and_setup_npc(
         eval_dir, 
         npc_name=config.assistant_template_name,
@@ -104,15 +113,18 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     
     # Apply test-specific initial state to assistant NPC
     if config.background_knowledge:
+        print(f"💭 Injecting {len(config.background_knowledge)} background memories...")
         assistant_npc.inject_memories(config.background_knowledge)
     
     if config.initial_conversation_history:
+        print(f"💬 Injecting {len(config.initial_conversation_history)} conversation history messages...")
         assistant_npc.inject_conversation_history(config.initial_conversation_history)
     
     # Convert config to EvalCaseSuite
     test_suite = convert_config_to_eval_case_suite(config)
     
     # Run the evaluation
+    print(f"\n🔄 Running conversation evaluation ({config.convo_length * 2} turns)...")
     test_report: EvalReport = EvalHelper.run_conversation_eval_with_npc(
         assistant_npc,
         assistant_rules,
@@ -124,18 +136,22 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     )
     
     # Write the test report
+    print(f"💾 Writing test report...")
     EvalUtils.write_test_report_to_file(
         test_report,
         test_name=f"{test_name}_{npc_type}"
     )
     
-    print(f"\n✅ Test '{test_name}' completed for {npc_type}\n")
+    elapsed = time.time() - start_time
+    print(f"\n✅ Test '{test_name}' completed in {elapsed:.1f}s")
+    print(f"   Pass: {test_report.passed}")
+    if hasattr(test_report, 'total_tokens') and test_report.total_tokens:
+        print(f"   Tokens: {test_report.total_tokens}")
+    print()
 
 
 def main():
     """Main entry point for test runner"""
-    # Enable streaming display
-    set_streaming_enabled(True)
     
     # Parse arguments
     if len(sys.argv) < 2:

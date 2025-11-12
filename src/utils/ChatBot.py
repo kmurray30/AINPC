@@ -104,9 +104,6 @@ class ChatBot:
         return response
 
     def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None, chat_model: Llm = None):        
-        # TODO REMOVE
-        for message in message_history_for_llm:
-            print(message["role"] + ": " + message["content"])
         if response_type is None:
             return ChatBot._call_llm_internal(message_history_for_llm, chat_model)
         else:

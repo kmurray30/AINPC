@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
 import sys
 
@@ -36,6 +36,18 @@ class EvalCaseSuite:
     eval_cases: List[EvalCase]
 
 @dataclass
+class PropositionConfig:
+    """JSON-level proposition configuration (before conversion to Proposition with Term objects)"""
+    antecedent: Optional[Dict[str, Any]] = None  # {"value": str, "negated": bool}
+    consequent: Dict[str, Any] = None  # {"value": str, "negated": bool}
+
+@dataclass
+class EvalCaseConfig:
+    """JSON-level eval case configuration (before conversion to EvalCase)"""
+    goals: List[str]
+    propositions: List[PropositionConfig]
+
+@dataclass
 class TestConfig:
     """Configuration for a single evaluation test"""
     convos_per_user_prompt: int
@@ -46,7 +58,7 @@ class TestConfig:
     initial_context: Optional[str] = None
     background_knowledge: List[str] = field(default_factory=list)
     initial_conversation_history: List[Dict[str, str]] = field(default_factory=list)
-    eval_cases: List[dict] = field(default_factory=list)  # Will be converted to EvalCase objects
+    eval_cases: List[EvalCaseConfig] = field(default_factory=list)
 
 
 class EvaluationResult:

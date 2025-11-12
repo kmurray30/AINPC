@@ -8,8 +8,8 @@
       "name": "Python Debugger: Current File",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/src/conversation_eval/evaluations/memory_wipe_tests/run_all_tests.py",
-      "args": [],
+      "program": "${workspaceFolder}/src/conversation_eval/evaluations/memory_wipe_tests/run_tests.py",
+      "args": ["npc0"],
       "console": "integratedTerminal"
     }
   ]

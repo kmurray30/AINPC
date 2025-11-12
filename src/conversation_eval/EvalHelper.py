@@ -16,7 +16,6 @@ from src.conversation_eval.EvalReports import EvalReport, AssistantPromptEvalRep
 from src.utils import Utilities, io_utils
 from src.utils import Logger
 from src.utils.Logger import Level
-from src.conversation_eval.StreamingEvalDisplay import get_streaming_display
 
 # Notes:
 # - See runbooks/test.ipynb for sample usage
@@ -305,14 +304,6 @@ class EvalHelper:
             Logger.log(f"Evaluations: {eval_case.propositions}", Level.VERBOSE)
             Logger.decrement_indent(2)
 
-            # Display test case information in streaming display
-            streaming_display = get_streaming_display()
-            if streaming_display.enabled:
-                # Display each proposition in the test case
-                for proposition in eval_case.propositions:
-                    streaming_display.display_proposition_info(proposition)
-                    streaming_display.clear_conversation_history()
-
             user_prompt_report = UserPromptEvalReport(user_prompt=Utilities.decode_list(eval_case.goals), conversations={}, evaluations=[], tokens=0)
             assistant_prompt_report.user_prompt_cases.append(user_prompt_report)
 
@@ -321,8 +312,6 @@ class EvalHelper:
             user_prompt_report.conversations = conversation_map
                 
             # Begin the evaluations
-            if streaming_display.enabled:
-                streaming_display.display_evaluation_start()
             evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, eval_case.propositions, eval_iterations_per_eval)
             user_prompt_report.evaluations = evaluation_reports
         Logger.decrement_indent() # End test cases section
