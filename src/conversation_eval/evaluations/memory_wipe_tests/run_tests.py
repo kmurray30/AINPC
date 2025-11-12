@@ -18,6 +18,7 @@ from src.conversation_eval.core import EvalUtils
 from src.conversation_eval.core.EvalReports import EvalReport
 from src.conversation_eval.core.EvalHelper import EvalHelper
 from src.conversation_eval.core.EvalRunner import EvalRunner
+from src.conversation_eval.core.ReportGenerator import generate_csv_summary
 from src.utils import io_utils
 from src.core import proj_paths
 from src.core.JsonUtils import EnumEncoder
@@ -76,7 +77,7 @@ def convert_config_to_eval_case_suite(config: TestConfig) -> EvalCaseSuite:
     return EvalCaseSuite(eval_cases=eval_cases)
 
 
-def run_test(config_path: Path, npc_type: str, eval_dir: Path):
+def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path):
     """Run a single test from a JSON configuration"""
     test_name = config_path.stem
     start_time = time.time()
@@ -149,7 +150,7 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
         
         def progress_callback(current: int, total: int):
             # Print progress on same line using carriage return
-            print(f"\rTurn {current}/{total}...", end='', flush=True)
+            print(f"\rConversing {current}/{total}...", end='', flush=True)
         
         # Create a suite with just this one case
         single_case_suite = EvalCaseSuite(eval_cases=[eval_case])
@@ -180,13 +181,8 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     # Write the test report
     print(f"💾 Writing test report...")
     
-    # Ensure reports directory exists
-    reports_dir = eval_dir / "reports"
-    reports_dir.mkdir(exist_ok=True)
-    
-    # Write report to the test suite's reports folder
-    current_time = time.strftime("%Y%m%d_%H%M%S")
-    report_path = reports_dir / f"EvalReport_{test_name}_{npc_type}_{current_time}.json"
+    # Write report to the run folder (no timestamp suffix needed - folder is already timestamped)
+    report_path = run_folder / f"EvalReport_{test_name}_{npc_type}.json"
     
     with open(report_path, "w") as f:
         json.dump(asdict(test_report), f, indent=4, cls=EnumEncoder)
@@ -240,6 +236,14 @@ def main():
     
     print(f"\n🧪 Running {len(test_paths)} test(s) for {npc_type.upper()}")
     
+    # Create timestamped run folder
+    reports_base_dir = eval_dir / "reports"
+    reports_base_dir.mkdir(exist_ok=True)
+    run_timestamp = time.strftime("%Y%m%d_%H%M%S")
+    run_folder = reports_base_dir / f"run_{run_timestamp}"
+    run_folder.mkdir(exist_ok=True)
+    print(f"📁 Reports will be saved to: {run_folder.name}\n")
+    
     # Initialize paths once for all tests
     templates_dir = EvalRunner._find_templates_dir(eval_dir)
     npc_class, version = EvalRunner.NPC_TYPES[npc_type]
@@ -253,7 +257,7 @@ def main():
     # Run tests
     for test_path in test_paths:
         try:
-            run_test(test_path, npc_type, eval_dir)
+            run_test(test_path, npc_type, eval_dir, run_folder)
         except Exception as e:
             print(f"\n❌ Error running test {test_path.stem}: {e}")
             import traceback
@@ -261,6 +265,14 @@ def main():
             sys.exit(1)
     
     print(f"\n🎉 All tests completed successfully for {npc_type.upper()}!\n")
+    
+    # Generate CSV summary report
+    print(f"📊 Generating CSV summary report...")
+    try:
+        csv_path = generate_csv_summary(run_folder)
+        print(f"   Saved summary to: {csv_path.name}\n")
+    except Exception as e:
+        print(f"   ⚠️  Warning: Could not generate CSV summary: {e}\n")
 
 
 if __name__ == "__main__":
