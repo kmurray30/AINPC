@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Callable
 from src.utils import Utilities, Logger
 from src.utils.Logger import Level
 from src.core.Constants import AgentName
-from src.conversation_eval.EvalConvoMember import EvalConvoMember
+from src.conversation_eval.core.EvalConvoMember import EvalConvoMember
 from src.core.ChatMessage import ChatMessageAgnostic
 from src.core.ResponseTypes import ChatResponse
 from src.npcs.npc_protocol import NPCProtocol

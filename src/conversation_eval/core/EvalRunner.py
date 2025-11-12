@@ -10,7 +10,7 @@ from src.npcs.npc0.npc0 import NPC0
 from src.npcs.npc1.npc1 import NPC1
 from src.npcs.npc2.npc2 import NPC2
 from src.core import proj_paths, proj_settings
-from src.conversation_eval.InitialState import InitialStateLoader
+from src.conversation_eval.core.InitialState import InitialStateLoader
 from src.core.schemas.CollectionSchemas import Entity
 from src.utils import Utilities
 

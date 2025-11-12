@@ -6,13 +6,13 @@ from statistics import mean
 
 
 sys.path.insert(0, "../..")
-from src.conversation_eval.ConversationParsingBot import ConversationParsingBot
-from src.conversation_eval.EvalConversation import EvalConversation
+from src.conversation_eval.core.ConversationParsingBot import ConversationParsingBot
+from src.conversation_eval.core.EvalConversation import EvalConversation
 from src.core.Constants import AgentName, Constants, EvaluationError, PassFail
 from src.npcs.npc_protocol import NPCProtocol
-from src.conversation_eval.EvalClasses import Term, EvalCaseSuite, Proposition, EvaluationResult
+from src.conversation_eval.core.EvalClasses import Term, EvalCaseSuite, Proposition, EvaluationResult
 from src.core.ResponseTypes import EvaluationResponse
-from src.conversation_eval.EvalReports import EvalReport, AssistantPromptEvalReport, UserPromptEvalReport, EvaluationEvalReport, ConversationEvaluationEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport
+from src.conversation_eval.core.EvalReports import EvalReport, AssistantPromptEvalReport, UserPromptEvalReport, EvaluationEvalReport, ConversationEvaluationEvalReport, ConversationEvaluationEvalReport, EvaluationIterationEvalReport
 from src.utils import Utilities, io_utils
 from src.utils import Logger
 from src.utils.Logger import Level

@@ -13,11 +13,11 @@ from dataclasses import dataclass
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
-from src.conversation_eval.EvalClasses import Term, Proposition, EvalCase, EvalCaseSuite, TestConfig, EvalCaseConfig, PropositionConfig
-from src.conversation_eval import EvalUtils
-from src.conversation_eval.EvalReports import EvalReport
-from src.conversation_eval.EvalHelper import EvalHelper
-from src.conversation_eval.EvalRunner import EvalRunner
+from src.conversation_eval.core.EvalClasses import Term, Proposition, EvalCase, EvalCaseSuite, TestConfig, EvalCaseConfig, PropositionConfig
+from src.conversation_eval.core import EvalUtils
+from src.conversation_eval.core.EvalReports import EvalReport
+from src.conversation_eval.core.EvalHelper import EvalHelper
+from src.conversation_eval.core.EvalRunner import EvalRunner
 from src.utils import io_utils
 from src.core import proj_paths
 from src.core.JsonUtils import EnumEncoder
@@ -124,6 +124,15 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     # Convert config to EvalCaseSuite
     test_suite = convert_config_to_eval_case_suite(config)
     total_cases = len(test_suite.eval_cases)
+    
+    # Validate: only one proposition per eval case is currently supported
+    for case_idx, eval_case in enumerate(test_suite.eval_cases, 1):
+        if len(eval_case.propositions) > 1:
+            raise NotImplementedError(
+                f"Case {case_idx} has {len(eval_case.propositions)} propositions. "
+                f"Multiple propositions per eval case are not yet supported. "
+                f"Please split into separate eval cases with one proposition each."
+            )
     
     # Run evaluation for each case separately with progress tracking
     all_case_reports = []
