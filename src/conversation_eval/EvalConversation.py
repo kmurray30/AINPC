@@ -1,5 +1,5 @@
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Callable
 from src.utils import Utilities, Logger
 from src.utils.Logger import Level
 from src.core.Constants import AgentName
@@ -74,14 +74,24 @@ class EvalConversation:
         
         # No conversation printing - just progress signals via streaming display
 
-    def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False):
+    def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False, progress_callback: Optional[Callable[[int, int], None]] = None):
         if DEBUG_LEVEL == "WARNING":
             Logger.log(f"Message history is of length {len(self.message_history)}")
         
+        total_turns = iterations * 2
+        current_turn = 0
+        
         for i in range (iterations):
             # Call the first agent
+            current_turn += 1
+            if progress_callback:
+                progress_callback(current_turn, total_turns)
             self.call_agent(first_agent, second_agent, response_is_typed, isPrinting = isPrinting)
+            
             # Call the second agent
+            current_turn += 1
+            if progress_callback:
+                progress_callback(current_turn, total_turns)
             self.call_agent(second_agent, first_agent, response_is_typed, isPrinting = isPrinting)
 
     def get_message_history_as_list(self, timestamped = False) -> List[ChatMessageAgnostic]:

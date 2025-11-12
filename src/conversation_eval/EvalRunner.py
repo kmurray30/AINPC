@@ -44,17 +44,28 @@ class EvalRunner:
         
         # Setup paths - use robust path handling that works regardless of folder names
         templates_dir = cls._find_templates_dir(eval_dir)
-        proj_paths.set_paths(
-            project_path=eval_dir,
-            templates_dir_name=templates_dir.name,
-            version=version,
-            save_name="eval_test"
-        )
         
-        # Initialize settings if game_settings.yaml exists
+        # Only set paths if not already initialized (for multi-test runs)
+        try:
+            proj_paths.get_paths()
+            # Paths already initialized, skip set_paths
+        except ValueError:
+            # Paths not initialized yet, set them
+            proj_paths.set_paths(
+                project_path=eval_dir,
+                templates_dir_name=templates_dir.name,
+                version=version,
+                save_name="eval_test"
+            )
+        
+        # Initialize settings if game_settings.yaml exists (skip if already initialized)
         settings_path = templates_dir / "game_settings.yaml"
         if settings_path.exists():
-            proj_settings.init_settings(settings_path)
+            try:
+                proj_settings.init_settings(settings_path)
+            except RuntimeError:
+                # Settings already initialized, skip
+                pass
         
         # Create NPC instance
         if npc_type == "npc0":

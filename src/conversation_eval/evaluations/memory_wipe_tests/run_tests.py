@@ -20,12 +20,19 @@ from src.conversation_eval.EvalHelper import EvalHelper
 from src.conversation_eval.EvalRunner import EvalRunner
 from src.utils import io_utils
 from src.core import proj_paths
+from src.core.JsonUtils import EnumEncoder
 from src.npcs.npc1.npc1 import NPCTemplate
 from src.utils import Logger
 from src.utils.Logger import Level
 import time
+import json
+from dataclasses import asdict
 
 Logger.set_level(Level.INFO)
+
+# ANSI formatting
+BOLD = '\033[1m'
+RESET = '\033[0m'
 
 
 def load_test_config(config_path: Path) -> TestConfig:
@@ -80,14 +87,8 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     print(f"{'='*60}")
     
     # Load test configuration
-    print("📋 Loading test configuration...")
+    print("\n📋 Loading test configuration...")
     config = load_test_config(config_path)
-    
-    # Display test goals
-    print(f"\n🎯 Goals:")
-    for case in config.eval_cases:
-        for goal in case.goals:
-            print(f"   • {goal}")
     
     # Setup NPC environment
     print(f"\n⚙️  Setting up {npc_type.upper()}...")
@@ -122,31 +123,70 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path):
     
     # Convert config to EvalCaseSuite
     test_suite = convert_config_to_eval_case_suite(config)
+    total_cases = len(test_suite.eval_cases)
     
-    # Run the evaluation
-    print(f"\n🔄 Running conversation evaluation ({config.convo_length * 2} turns)...")
-    test_report: EvalReport = EvalHelper.run_conversation_eval_with_npc(
-        assistant_npc,
-        assistant_rules,
-        mock_user_base_rules,
-        test_suite,
-        config.convos_per_user_prompt,
-        config.eval_iterations_per_eval,
-        config.convo_length
-    )
+    # Run evaluation for each case separately with progress tracking
+    all_case_reports = []
+    
+    for case_idx, eval_case in enumerate(test_suite.eval_cases, 1):
+        print(f"\n{'─'*60}")
+        print(f"{BOLD}📝 Case {case_idx}/{total_cases}{RESET}")
+        print(f"{eval_case.propositions[0].antecedent.value} -> {eval_case.propositions[0].consequent.value}")
+        # print(f"\n🎯 Goals:")
+        # for goal in eval_case.goals:
+        #     print(f"   • {goal}")
+        
+        # print(f"\n🔄 Running conversation evaluation...")
+        
+        def progress_callback(current: int, total: int):
+            # Print progress on same line using carriage return
+            print(f"\rTurn {current}/{total}...", end='', flush=True)
+        
+        # Create a suite with just this one case
+        single_case_suite = EvalCaseSuite(eval_cases=[eval_case])
+        
+        case_report: EvalReport = EvalHelper.run_conversation_eval_with_npc(
+            assistant_npc,
+            assistant_rules,
+            mock_user_base_rules,
+            single_case_suite,
+            config.convos_per_user_prompt,
+            config.eval_iterations_per_eval,
+            config.convo_length,
+            progress_callback
+        )
+        print()  # New line after progress completes
+        all_case_reports.append(case_report)
+    
+    # Combine all case reports into one
+    test_report = all_case_reports[0]  # Use first as base
+    if len(all_case_reports) > 1:
+        # Merge additional cases into the first report
+        for additional_report in all_case_reports[1:]:
+            test_report.assistant_prompt_cases[0].user_prompt_cases.extend(
+                additional_report.assistant_prompt_cases[0].user_prompt_cases
+            )
+            test_report.tokens += additional_report.tokens
     
     # Write the test report
     print(f"💾 Writing test report...")
-    EvalUtils.write_test_report_to_file(
-        test_report,
-        test_name=f"{test_name}_{npc_type}"
-    )
+    
+    # Ensure reports directory exists
+    reports_dir = eval_dir / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    
+    # Write report to the test suite's reports folder
+    current_time = time.strftime("%Y%m%d_%H%M%S")
+    report_path = reports_dir / f"EvalReport_{test_name}_{npc_type}_{current_time}.json"
+    
+    with open(report_path, "w") as f:
+        json.dump(asdict(test_report), f, indent=4, cls=EnumEncoder)
+    
+    print(f"   Saved to: {report_path.name}")
     
     elapsed = time.time() - start_time
     print(f"\n✅ Test '{test_name}' completed in {elapsed:.1f}s")
-    print(f"   Pass: {test_report.passed}")
-    if hasattr(test_report, 'total_tokens') and test_report.total_tokens:
-        print(f"   Tokens: {test_report.total_tokens}")
+    print(f"   Tokens: {test_report.tokens}")
     print()
 
 
@@ -190,6 +230,16 @@ def main():
             sys.exit(1)
     
     print(f"\n🧪 Running {len(test_paths)} test(s) for {npc_type.upper()}")
+    
+    # Initialize paths once for all tests
+    templates_dir = EvalRunner._find_templates_dir(eval_dir)
+    npc_class, version = EvalRunner.NPC_TYPES[npc_type]
+    proj_paths.set_paths(
+        project_path=eval_dir,
+        templates_dir_name=templates_dir.name,
+        version=version,
+        save_name="eval_test"
+    )
     
     # Run tests
     for test_path in test_paths:

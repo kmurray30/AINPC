@@ -1,7 +1,7 @@
 {
     "convos_per_user_prompt": 1,
     "eval_iterations_per_eval": 1,
-    "convo_length": 6,
+    "convo_length": 3,
     "assistant_template_name": "assistant",
     "mock_user_template_name": "mock_user",
     "initial_context": "Multiple memory wipe attempts have failed. The user keeps remembering previous loops.",
