@@ -34,6 +34,8 @@ Logger.set_level(Level.INFO)
 # ANSI formatting
 BOLD = '\033[1m'
 RESET = '\033[0m'
+BLUE = '\033[34m'
+GREEN = '\033[32m'
 
 
 def load_test_config(config_path: Path) -> TestConfig:
@@ -148,9 +150,38 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path)
         
         # print(f"\n🔄 Running conversation evaluation...")
         
-        def progress_callback(current: int, total: int):
-            # Print progress on same line using carriage return
-            print(f"\rConversing {current}/{total}...", end='', flush=True)
+        conversation_started = [False]  # Track if we've started a new conversation line
+        
+        def progress_callback(current: int, total: int, is_last_conversation: bool = True):
+            # If starting a new conversation (current=1), print newline first (except for very first)
+            if current == 1:
+                if conversation_started[0]:
+                    # Not the first conversation, so print newline to start fresh line
+                    print()  
+                conversation_started[0] = True
+            
+            # Update the same line while in progress
+            if current == total:
+                # Conversation done: show checkmark
+                # Add spaces to clear any leftover characters from ellipses
+                # Only print newline if this is the last conversation
+                if is_last_conversation:
+                    print(f"\r{BLUE}Conversing {current}/{total} {GREEN}✓{RESET}  ")
+                else:
+                    print(f"\r{BLUE}Conversing {current}/{total} {GREEN}✓{RESET}  ", end='', flush=True)
+            else:
+                # In progress: update same line with \r, no newline
+                print(f"\r{BLUE}Conversing {current}/{total}...{RESET}", end='', flush=True)
+        
+        def eval_progress_callback(current: int, total: int):
+            # Update the same line while in progress
+            if current == total:
+                # Final update: show checkmark and print newline
+                # Add spaces to clear any leftover characters from ellipses
+                print(f"\r{BLUE}Evaluating {current}/{total} {GREEN}✓{RESET}  ")
+            else:
+                # In progress: update same line with \r, no newline
+                print(f"\r{BLUE}Evaluating {current}/{total}...{RESET}", end='', flush=True)
         
         # Create a suite with just this one case
         single_case_suite = EvalCaseSuite(eval_cases=[eval_case])
@@ -163,9 +194,9 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path)
             config.convos_per_user_prompt,
             config.eval_iterations_per_eval,
             config.convo_length,
-            progress_callback
+            progress_callback,
+            eval_progress_callback
         )
-        print()  # New line after progress completes
         all_case_reports.append(case_report)
     
     # Combine all case reports into one

@@ -43,8 +43,11 @@ class EvalHelper:
             # Create the User agent using simple rules (for predictable behavior)
             conversation.add_agent_simple(AgentName.mock_user, mock_user_base_rules + mock_user_goals)
 
+            # Determine if this is the last conversation
+            is_last_conversation = (i == convos_per_user_prompt)
+            
             # Converse back and forth
-            conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True, progress_callback=progress_callback)
+            conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True, progress_callback=progress_callback, is_last_conversation=is_last_conversation)
 
             conversation_map[conversation_name] = conversation.get_message_history_as_list(timestamped=True)
             Logger.decrement_indent(2) # End of conversation contents
@@ -232,7 +235,7 @@ class EvalHelper:
             raise Exception("Unexpected fallthrough")
 
     @staticmethod
-    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluation_propositions: List[Proposition], eval_iterations_per_eval: int) -> List[EvaluationEvalReport]:
+    def run_evaluations_on_conversation(conversation_map: Dict[str, List[str]], evaluation_propositions: List[Proposition], eval_iterations_per_eval: int, eval_progress_callback=None) -> List[EvaluationEvalReport]:
         evaluation_reports = []
 
         Logger.log("∟ Evaluating conversations", Level.VERBOSE)
@@ -252,6 +255,11 @@ class EvalHelper:
                 Logger.increment_indent() # Begin evaluation iterations section
                 for i in range(1, eval_iterations_per_eval + 1):
                     Logger.log(f"∟ Evaluating (attempt {i}): {evaluation_proposition}", Level.VERBOSE)
+                    
+                    # Call progress callback if provided
+                    if eval_progress_callback:
+                        eval_progress_callback(i, eval_iterations_per_eval)
+                    
                     timestamping_result: EvaluationResponse = ConversationParsingBot.evaluate_conversation_timestamps(conversation, evaluation_proposition)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
@@ -283,7 +291,7 @@ class EvalHelper:
             raise ValueError("Min responses for consequent cannot be greater than max responses for consequent")
 
     @staticmethod
-    def run_conversation_eval_with_npc(assistant_npc: NPCProtocol, assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: EvalCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int, progress_callback=None) -> EvalReport:
+    def run_conversation_eval_with_npc(assistant_npc: NPCProtocol, assistant_rules: List[str], mock_user_base_rules: List[str], test_suite: EvalCaseSuite, convos_per_user_prompt: int, eval_iterations_per_eval: int, convo_length: int, progress_callback=None, eval_progress_callback=None) -> EvalReport:
         """Run conversation evaluation using an NPC-backed assistant"""
         # TODO EvalHelper.validate_input(proposition)
         
@@ -312,7 +320,7 @@ class EvalHelper:
             user_prompt_report.conversations = conversation_map
                 
             # Begin the evaluations
-            evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, eval_case.propositions, eval_iterations_per_eval)
+            evaluation_reports = EvalHelper.run_evaluations_on_conversation(conversation_map, eval_case.propositions, eval_iterations_per_eval, eval_progress_callback)
             user_prompt_report.evaluations = evaluation_reports
         Logger.decrement_indent() # End test cases section
 

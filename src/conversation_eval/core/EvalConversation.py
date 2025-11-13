@@ -74,7 +74,7 @@ class EvalConversation:
         
         # No conversation printing - just progress signals via streaming display
 
-    def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False, progress_callback: Optional[Callable[[int, int], None]] = None):
+    def converse(self, first_agent: AgentName, second_agent: AgentName, iterations = 1, response_is_typed = False, isPrinting = False, progress_callback: Optional[Callable[[int, int], None]] = None, is_last_conversation: bool = True):
         if DEBUG_LEVEL == "WARNING":
             Logger.log(f"Message history is of length {len(self.message_history)}")
         
@@ -85,13 +85,13 @@ class EvalConversation:
             # Call the first agent
             current_turn += 1
             if progress_callback:
-                progress_callback(current_turn, total_turns)
+                progress_callback(current_turn, total_turns, is_last_conversation)
             self.call_agent(first_agent, second_agent, response_is_typed, isPrinting = isPrinting)
             
             # Call the second agent
             current_turn += 1
             if progress_callback:
-                progress_callback(current_turn, total_turns)
+                progress_callback(current_turn, total_turns, is_last_conversation)
             self.call_agent(second_agent, first_agent, response_is_typed, isPrinting = isPrinting)
 
     def get_message_history_as_list(self, timestamped = False) -> List[ChatMessageAgnostic]:
