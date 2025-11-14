@@ -19,6 +19,7 @@ from src.conversation_eval.core.EvalReports import EvalReport
 from src.conversation_eval.core.EvalHelper import EvalHelper
 from src.conversation_eval.core.EvalRunner import EvalRunner
 from src.conversation_eval.core.ReportGenerator import generate_csv_summary
+from src.conversation_eval.core.ParallelEvalRunner import ParallelEvalRunner
 from src.utils import io_utils
 from src.core import proj_paths
 from src.core.JsonUtils import EnumEncoder
@@ -79,28 +80,55 @@ def convert_config_to_eval_case_suite(config: TestConfig) -> EvalCaseSuite:
     return EvalCaseSuite(eval_cases=eval_cases)
 
 
+def create_npc_factory(npc_type: str, eval_dir: Path, config: TestConfig):
+    """
+    Create a factory function that produces thread-safe NPC instances.
+    Each call to the factory creates a fresh NPC with initial state applied.
+    """
+    # Get NPC class and version
+    npc_class, version = EvalRunner.NPC_TYPES[npc_type]
+    
+    # Load templates
+    paths = proj_paths.get_paths()
+    assistant_template = paths.load_npc_template_with_fallback(config.assistant_template_name, NPCTemplate)
+    
+    def factory():
+        """Create a new NPC instance with initial state"""
+        # Create NPC instance
+        if npc_type == "npc0":
+            from src.core.schemas.CollectionSchemas import Entity
+            from src.utils import Utilities
+            
+            npc = npc_class(system_prompt=assistant_template.system_prompt)
+            
+            # Load entities from template if they exist
+            if assistant_template.entities:
+                npc.brain_entities = [
+                    Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e)))
+                    for e in assistant_template.entities
+                ]
+        else:
+            npc = npc_class(npc_name_for_template_and_save=config.assistant_template_name, save_enabled=False)
+        
+        # Apply test-specific initial state
+        if config.background_knowledge:
+            npc.inject_memories(config.background_knowledge)
+        
+        if config.initial_conversation_history:
+            npc.inject_conversation_history(config.initial_conversation_history)
+        
+        return npc
+    
+    return factory
+
+
 def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path):
-    """Run a single test from a JSON configuration"""
+    """Run a single test from a JSON configuration using parallel execution"""
     test_name = config_path.stem
     start_time = time.time()
     
-    print(f"\n{'='*60}")
-    print(f"🧪 Test: {test_name}")
-    print(f"🤖 NPC: {npc_type.upper()}")
-    print(f"{'='*60}")
-    
     # Load test configuration
-    print("\n📋 Loading test configuration...")
     config = load_test_config(config_path)
-    
-    # Setup NPC environment
-    print(f"\n⚙️  Setting up {npc_type.upper()}...")
-    assistant_npc, _ = EvalRunner.parse_args_and_setup_npc(
-        eval_dir, 
-        npc_name=config.assistant_template_name,
-        save_enabled=False,
-        initial_state_file=None
-    )
     
     # Load templates for rules
     paths = proj_paths.get_paths()
@@ -115,15 +143,6 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path)
     
     mock_user_base_rules = [mock_user_template.system_prompt]
     
-    # Apply test-specific initial state to assistant NPC
-    if config.background_knowledge:
-        print(f"💭 Injecting {len(config.background_knowledge)} background memories...")
-        assistant_npc.inject_memories(config.background_knowledge)
-    
-    if config.initial_conversation_history:
-        print(f"💬 Injecting {len(config.initial_conversation_history)} conversation history messages...")
-        assistant_npc.inject_conversation_history(config.initial_conversation_history)
-    
     # Convert config to EvalCaseSuite
     test_suite = convert_config_to_eval_case_suite(config)
     total_cases = len(test_suite.eval_cases)
@@ -137,77 +156,21 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path)
                 f"Please split into separate eval cases with one proposition each."
             )
     
-    # Run evaluation for each case separately with progress tracking
-    all_case_reports = []
+    # Create NPC factory for thread-safe instance creation
+    npc_factory = create_npc_factory(npc_type, eval_dir, config)
     
-    for case_idx, eval_case in enumerate(test_suite.eval_cases, 1):
-        print(f"\n{'─'*60}")
-        print(f"{BOLD}📝 Case {case_idx}/{total_cases}{RESET}")
-        print(f"{eval_case.propositions[0].antecedent.value} -> {eval_case.propositions[0].consequent.value}")
-        # print(f"\n🎯 Goals:")
-        # for goal in eval_case.goals:
-        #     print(f"   • {goal}")
-        
-        # print(f"\n🔄 Running conversation evaluation...")
-        
-        conversation_started = [False]  # Track if we've started a new conversation line
-        
-        def progress_callback(current: int, total: int, is_last_conversation: bool = True):
-            # If starting a new conversation (current=1), print newline first (except for very first)
-            if current == 1:
-                if conversation_started[0]:
-                    # Not the first conversation, so print newline to start fresh line
-                    print()  
-                conversation_started[0] = True
-            
-            # Update the same line while in progress
-            if current == total:
-                # Conversation done: show checkmark
-                # Add spaces to clear any leftover characters from ellipses
-                # Only print newline if this is the last conversation
-                if is_last_conversation:
-                    print(f"\r{BLUE}Conversing {current}/{total} {GREEN}✓{RESET}  ")
-                else:
-                    print(f"\r{BLUE}Conversing {current}/{total} {GREEN}✓{RESET}  ", end='', flush=True)
-            else:
-                # In progress: update same line with \r, no newline
-                print(f"\r{BLUE}Conversing {current}/{total}...{RESET}", end='', flush=True)
-        
-        def eval_progress_callback(current: int, total: int):
-            # Update the same line while in progress
-            if current == total:
-                # Final update: show checkmark and print newline
-                # Add spaces to clear any leftover characters from ellipses
-                print(f"\r{BLUE}Evaluating {current}/{total} {GREEN}✓{RESET}  ")
-            else:
-                # In progress: update same line with \r, no newline
-                print(f"\r{BLUE}Evaluating {current}/{total}...{RESET}", end='', flush=True)
-        
-        # Create a suite with just this one case
-        single_case_suite = EvalCaseSuite(eval_cases=[eval_case])
-        
-        case_report: EvalReport = EvalHelper.run_conversation_eval_with_npc(
-            assistant_npc,
-            assistant_rules,
-            mock_user_base_rules,
-            single_case_suite,
-            config.convos_per_user_prompt,
-            config.eval_iterations_per_eval,
-            config.convo_length,
-            progress_callback,
-            eval_progress_callback
-        )
-        all_case_reports.append(case_report)
-    
-    # Combine all case reports into one
-    test_report = all_case_reports[0]  # Use first as base
-    if len(all_case_reports) > 1:
-        # Merge additional cases into the first report
-        for additional_report in all_case_reports[1:]:
-            test_report.assistant_prompt_cases[0].user_prompt_cases.extend(
-                additional_report.assistant_prompt_cases[0].user_prompt_cases
-            )
-            test_report.tokens += additional_report.tokens
+    # Run parallel evaluation with real-time terminal UI
+    test_report: EvalReport = ParallelEvalRunner.run_parallel_eval(
+        test_name=test_name,
+        npc_type=npc_type,
+        npc_factory=npc_factory,
+        assistant_rules=assistant_rules,
+        mock_user_base_rules=mock_user_base_rules,
+        eval_cases=test_suite.eval_cases,
+        convos_per_user_prompt=config.convos_per_user_prompt,
+        eval_iterations_per_eval=config.eval_iterations_per_eval,
+        convo_length=config.convo_length
+    )
     
     # Write the test report
     print(f"💾 Writing test report...")
