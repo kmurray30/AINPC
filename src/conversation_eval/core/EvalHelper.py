@@ -45,7 +45,7 @@ class EvalHelper:
 
             # Determine if this is the last conversation
             is_last_conversation = (i == convos_per_user_prompt)
-            
+
             # Converse back and forth
             conversation.converse(AgentName.pat, AgentName.mock_user, convo_length, isPrinting=True, progress_callback=progress_callback, is_last_conversation=is_last_conversation)
 

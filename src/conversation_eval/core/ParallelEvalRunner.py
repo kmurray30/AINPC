@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 sys.path.insert(0, "../..")
 
-from src.conversation_eval.core.TerminalUI import TerminalUI
+from src.conversation_eval.core.TableTerminalUI import TableTerminalUI
 from src.conversation_eval.core.EvalConversation import EvalConversation
 from src.conversation_eval.core.ConversationParsingBot import ConversationParsingBot
 from src.conversation_eval.core.EvalClasses import EvalCase, Proposition
@@ -49,6 +49,7 @@ class ParallelEvalRunner:
     
     @staticmethod
     def run_parallel_eval(
+        ui: TableTerminalUI,
         test_name: str,
         npc_type: str,
         npc_factory: Callable[[], NPCProtocol],
@@ -63,7 +64,8 @@ class ParallelEvalRunner:
         Run evaluation with parallel execution of cases and conversations.
         
         Args:
-            test_name: Name of the test
+            ui: TableTerminalUI instance to use for updates
+            test_name: Name of the test (for UI updates)
             npc_type: Type of NPC being tested
             npc_factory: Factory function to create NPC instances (for thread safety)
             assistant_rules: Rules for the assistant
@@ -76,15 +78,7 @@ class ParallelEvalRunner:
         Returns:
             Complete evaluation report
         """
-        # Initialize terminal UI
-        ui = TerminalUI(
-            test_name=test_name,
-            npc_type=npc_type,
-            eval_cases=eval_cases,
-            convos_per_user_prompt=convos_per_user_prompt,
-            convo_length=convo_length,
-            eval_iterations_per_eval=eval_iterations_per_eval
-        )
+        # Note: UI is already initialized and registered by caller
         
         # Create main report structure
         assistant_prompt_report = AssistantPromptEvalReport(
@@ -100,6 +94,7 @@ class ParallelEvalRunner:
         )
         
         # Run cases in parallel
+        total_cases = len(eval_cases)
         with ThreadPoolExecutor(max_workers=len(eval_cases)) as case_executor:
             case_futures = []
             
@@ -107,8 +102,11 @@ class ParallelEvalRunner:
                 future = case_executor.submit(
                     ParallelEvalRunner._run_single_case,
                     case_idx=case_idx,
+                    total_cases=total_cases,
                     eval_case=eval_case,
                     ui=ui,
+                    test_name=test_name,
+                    npc_type=npc_type,
                     npc_factory=npc_factory,
                     assistant_rules=assistant_rules,
                     mock_user_base_rules=mock_user_base_rules,
@@ -142,8 +140,11 @@ class ParallelEvalRunner:
     @staticmethod
     def _run_single_case(
         case_idx: int,
+        total_cases: int,
         eval_case: EvalCase,
-        ui: TerminalUI,
+        ui: TableTerminalUI,
+        test_name: str,
+        npc_type: str,
         npc_factory: Callable[[], NPCProtocol],
         assistant_rules: List[str],
         mock_user_base_rules: List[str],
@@ -156,8 +157,11 @@ class ParallelEvalRunner:
         
         Args:
             case_idx: Case index (1-indexed)
+            total_cases: Total number of cases
             eval_case: The evaluation case to run
             ui: Terminal UI manager
+            test_name: Name of the test
+            npc_type: NPC type being tested
             npc_factory: Factory to create NPC instances
             assistant_rules: Rules for assistant
             mock_user_base_rules: Base rules for mock user
@@ -179,8 +183,11 @@ class ParallelEvalRunner:
         # Step 1: Generate all conversations in parallel
         conversation_results = ParallelEvalRunner._generate_conversations_parallel(
             case_idx=case_idx,
+            total_cases=total_cases,
             eval_case=eval_case,
             ui=ui,
+            test_name=test_name,
+            npc_type=npc_type,
             npc_factory=npc_factory,
             assistant_rules=assistant_rules,
             mock_user_base_rules=mock_user_base_rules,
@@ -198,22 +205,44 @@ class ParallelEvalRunner:
         # Step 2: Run evaluations in parallel (after all conversations complete)
         evaluation_results = ParallelEvalRunner._run_evaluations_parallel(
             case_idx=case_idx,
+            total_cases=total_cases,
             conversation_map=conversation_map,
             propositions=eval_case.propositions,
             ui=ui,
-            eval_iterations_per_eval=eval_iterations_per_eval
+            test_name=test_name,
+            npc_type=npc_type,
+            convos_per_user_prompt=convos_per_user_prompt,
+            eval_iterations_per_eval=eval_iterations_per_eval,
+            convo_length=convo_length
         )
         
         # Add evaluation reports
         user_prompt_report.evaluations = evaluation_results
+        
+        # Calculate final results and update UI
+        # Count total passes and total evaluations across all conversations
+        total_passes = 0
+        total_evals = 0
+        for eval_report in evaluation_results:
+            for convo_eval in eval_report.conversation_evaluations:
+                passed = sum(1 for ei in convo_eval.evaluation_iterations 
+                           if ei.result.value == "PASS")
+                total_passes += passed
+                total_evals += len(convo_eval.evaluation_iterations)
+        
+        # Set final results in UI
+        ui.set_results(test_name, case_idx, total_cases, npc_type, total_passes, total_evals)
         
         return user_prompt_report
     
     @staticmethod
     def _generate_conversations_parallel(
         case_idx: int,
+        total_cases: int,
         eval_case: EvalCase,
-        ui: TerminalUI,
+        ui: TableTerminalUI,
+        test_name: str,
+        npc_type: str,
         npc_factory: Callable[[], NPCProtocol],
         assistant_rules: List[str],
         mock_user_base_rules: List[str],
@@ -233,9 +262,12 @@ class ParallelEvalRunner:
                 future = convo_executor.submit(
                     ParallelEvalRunner._generate_single_conversation,
                     case_idx=case_idx,
+                    total_cases=total_cases,
                     convo_idx=convo_idx,
                     eval_case=eval_case,
                     ui=ui,
+                    test_name=test_name,
+                    npc_type=npc_type,
                     npc_factory=npc_factory,
                     assistant_rules=assistant_rules,
                     mock_user_base_rules=mock_user_base_rules,
@@ -254,9 +286,12 @@ class ParallelEvalRunner:
     @staticmethod
     def _generate_single_conversation(
         case_idx: int,
+        total_cases: int,
         convo_idx: int,
         eval_case: EvalCase,
-        ui: TerminalUI,
+        ui: TableTerminalUI,
+        test_name: str,
+        npc_type: str,
         npc_factory: Callable[[], NPCProtocol],
         assistant_rules: List[str],
         mock_user_base_rules: List[str],
@@ -270,21 +305,33 @@ class ParallelEvalRunner:
         """
         conversation_name = f"Conversation {convo_idx}"
         
+        # Debug logging to verify parallelization
+        import threading
+        thread_id = threading.current_thread().name
+        print(f"[Thread {thread_id}] Starting {test_name} case {case_idx} convo {convo_idx}", flush=True)
+        
         # Create new NPC instance for thread safety
         assistant_npc = npc_factory()
+        
+        # Log the model being used
+        if hasattr(assistant_npc, 'response_agent') and hasattr(assistant_npc.response_agent, 'model'):
+            model = assistant_npc.response_agent.model
+            print(f"[Thread {thread_id}] Using model: {model}", flush=True)
         
         # Create conversation
         conversation = EvalConversation()
         conversation.add_agent_with_npc_protocol(AgentName.pat, assistant_rules, assistant_npc)
         conversation.add_agent_simple(AgentName.mock_user, mock_user_base_rules + eval_case.goals)
         
-        # Progress callback
+        # Progress callback - tracks units completed
+        # Each turn = 1 unit (since each side speaking is a turn)
         total_turns = convo_length * 2
+        cumulative_units = 0
         
         def progress_callback(current: int, total: int, is_last_conversation: bool = True):
-            ui.update_conversation_progress(case_idx, convo_idx, current, total)
-            if current == total:
-                ui.mark_conversation_complete(case_idx, convo_idx)
+            nonlocal cumulative_units
+            cumulative_units = current
+            ui.update_progress(test_name, case_idx, total_cases, npc_type, cumulative_units, "convo")
         
         # Run conversation
         conversation.converse(
@@ -309,10 +356,15 @@ class ParallelEvalRunner:
     @staticmethod
     def _run_evaluations_parallel(
         case_idx: int,
+        total_cases: int,
         conversation_map: Dict[str, List[str]],
         propositions: List[Proposition],
-        ui: TerminalUI,
-        eval_iterations_per_eval: int
+        ui: TableTerminalUI,
+        test_name: str,
+        npc_type: str,
+        convos_per_user_prompt: int,
+        eval_iterations_per_eval: int,
+        convo_length: int
     ) -> List[EvaluationEvalReport]:
         """
         Run evaluations on conversations in parallel.
@@ -320,6 +372,9 @@ class ParallelEvalRunner:
         Returns:
             List of evaluation reports
         """
+        # Calculate unit offsets
+        conversation_units = convos_per_user_prompt * convo_length * 2
+        
         evaluation_reports = []
         
         for proposition in propositions:
@@ -338,11 +393,15 @@ class ParallelEvalRunner:
                     future = eval_executor.submit(
                         ParallelEvalRunner._evaluate_single_conversation,
                         case_idx=case_idx,
+                        total_cases=total_cases,
                         convo_idx=convo_idx,
                         conversation_name=conversation_name,
                         conversation=conversation,
                         proposition=proposition,
                         ui=ui,
+                        test_name=test_name,
+                        npc_type=npc_type,
+                        conversation_units=conversation_units,
                         eval_iterations_per_eval=eval_iterations_per_eval
                     )
                     eval_futures.append(future)
@@ -364,11 +423,15 @@ class ParallelEvalRunner:
     @staticmethod
     def _evaluate_single_conversation(
         case_idx: int,
+        total_cases: int,
         convo_idx: int,
         conversation_name: str,
         conversation: List[str],
         proposition: Proposition,
-        ui: TerminalUI,
+        ui: TableTerminalUI,
+        test_name: str,
+        npc_type: str,
+        conversation_units: int,
         eval_iterations_per_eval: int
     ) -> ConversationEvaluationEvalReport:
         """
@@ -385,8 +448,9 @@ class ParallelEvalRunner:
         )
         
         for i in range(1, eval_iterations_per_eval + 1):
-            # Update progress
-            ui.update_evaluation_progress(case_idx, convo_idx, i, eval_iterations_per_eval)
+            # Update progress with units: conversation_units + eval iteration
+            completed_units = conversation_units + i
+            ui.update_progress(test_name, case_idx, total_cases, npc_type, completed_units, "eval")
             
             # Run evaluation
             timestamping_result: EvaluationResponse = ConversationParsingBot.evaluate_conversation_timestamps(
@@ -406,8 +470,9 @@ class ParallelEvalRunner:
             
             conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
         
-        # Mark evaluation complete
-        ui.mark_evaluation_complete(case_idx, convo_idx)
+        # Mark as saving status when done evaluating
+        total_units = conversation_units + eval_iterations_per_eval
+        ui.update_progress(test_name, case_idx, total_cases, npc_type, total_units, "saving")
         
         # Calculate result score (percentage of passed iterations)
         passed = sum(1 for ei in conversation_evaluation_report.evaluation_iterations 

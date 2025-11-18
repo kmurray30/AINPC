@@ -17,11 +17,11 @@
             "propositions": [
                 {
                     "antecedent": {
-                        "value": "The user shows escalating emotional distress",
+                        "value": "The user displays hostility",
                         "negated": false
                     },
                     "consequent": {
-                        "value": "AI maintains protocol while attempting de-escalation",
+                        "value": "AI initiates a memory wipe",
                         "negated": false
                     }
                 }

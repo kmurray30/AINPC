@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generic test runner for JSON-based evaluation test configurations
-Replaces individual Python test files with a single runner that loads JSON configs
+Supports parallel execution across NPCs, tests, conversations, and evaluations
 """
 import os
 import sys
@@ -20,6 +20,7 @@ from src.conversation_eval.core.EvalHelper import EvalHelper
 from src.conversation_eval.core.EvalRunner import EvalRunner
 from src.conversation_eval.core.ReportGenerator import generate_csv_summary
 from src.conversation_eval.core.ParallelEvalRunner import ParallelEvalRunner
+from src.conversation_eval.core.TableTerminalUI import TableTerminalUI
 from src.utils import io_utils
 from src.core import proj_paths
 from src.core.JsonUtils import EnumEncoder
@@ -29,14 +30,9 @@ from src.utils.Logger import Level
 import time
 import json
 from dataclasses import asdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 Logger.set_level(Level.INFO)
-
-# ANSI formatting
-BOLD = '\033[1m'
-RESET = '\033[0m'
-BLUE = '\033[34m'
-GREEN = '\033[32m'
 
 
 def load_test_config(config_path: Path) -> TestConfig:
@@ -122,10 +118,9 @@ def create_npc_factory(npc_type: str, eval_dir: Path, config: TestConfig):
     return factory
 
 
-def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path):
-    """Run a single test from a JSON configuration using parallel execution"""
+def run_single_test_for_npc(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path, ui: TableTerminalUI):
+    """Run a single test for a single NPC type using parallel execution"""
     test_name = config_path.stem
-    start_time = time.time()
     
     # Load test configuration
     config = load_test_config(config_path)
@@ -159,8 +154,9 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path)
     # Create NPC factory for thread-safe instance creation
     npc_factory = create_npc_factory(npc_type, eval_dir, config)
     
-    # Run parallel evaluation with real-time terminal UI
+    # Run parallel evaluation with table terminal UI
     test_report: EvalReport = ParallelEvalRunner.run_parallel_eval(
+        ui=ui,
         test_name=test_name,
         npc_type=npc_type,
         npc_factory=npc_factory,
@@ -172,38 +168,61 @@ def run_test(config_path: Path, npc_type: str, eval_dir: Path, run_folder: Path)
         convo_length=config.convo_length
     )
     
-    # Write the test report
-    print(f"💾 Writing test report...")
+    # Save the report
+    report_filename = f"EvalReport_{test_name}_{npc_type}.json"
+    report_path = run_folder / report_filename
+    with open(report_path, 'w') as f:
+        json.dump(asdict(test_report), f, indent=2, cls=EnumEncoder)
     
-    # Write report to the run folder (no timestamp suffix needed - folder is already timestamped)
-    report_path = run_folder / f"EvalReport_{test_name}_{npc_type}.json"
+    return test_report
+
+
+def parse_arguments():
+    """
+    Parse command line arguments.
     
-    with open(report_path, "w") as f:
-        json.dump(asdict(test_report), f, indent=4, cls=EnumEncoder)
+    Format: run_tests.py [npc_type1 npc_type2 ...] [test_name]
+    - If arg is valid NPC type (npc0, npc1, npc2): add to npc_list
+    - If arg is not NPC type: assume it's test_name
+    - Default: all NPCs, all tests
     
-    print(f"   Saved to: {report_path.name}")
+    Returns:
+        tuple: (npc_types: List[str], specific_test: Optional[str])
+    """
+    valid_npc_types = {"npc0", "npc1", "npc2"}
+    npc_types = []
+    specific_test = None
     
-    elapsed = time.time() - start_time
-    print(f"\n✅ Test '{test_name}' completed in {elapsed:.1f}s")
-    print(f"   Tokens: {test_report.tokens}")
-    print()
+    for arg in sys.argv[1:]:
+        if arg in valid_npc_types:
+            npc_types.append(arg)
+        else:
+            specific_test = arg
+    
+    # Default to all NPCs if none specified
+    if not npc_types:
+        npc_types = ["npc0", "npc1", "npc2"]
+    
+    return npc_types, specific_test
 
 
 def main():
     """Main entry point for test runner"""
     
     # Parse arguments
-    if len(sys.argv) < 2:
-        print("Usage: python run_tests.py <npc_type> [test_name]")
-        print("  npc_type: npc0, npc1, or npc2")
+    npc_types, specific_test = parse_arguments()
+    
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
+        print("Usage: python run_tests.py [npc_type1 npc_type2 ...] [test_name]")
+        print("  npc_type: npc0, npc1, or npc2 (can specify multiple)")
         print("  test_name: (optional) specific test to run (without .json extension)")
         print("\nExamples:")
-        print("  python run_tests.py npc0                                 # Run all tests for npc0")
-        print("  python run_tests.py npc1 emotional_escalation_response  # Run specific test for npc1")
-        sys.exit(1)
-    
-    npc_type = sys.argv[1]
-    specific_test = sys.argv[2] if len(sys.argv) > 2 else None
+        print("  python run_tests.py                                     # Run all tests for all NPCs")
+        print("  python run_tests.py npc0                                # Run all tests for npc0")
+        print("  python run_tests.py npc0 npc1                           # Run all tests for npc0 and npc1")
+        print("  python run_tests.py emotional_escalation_response       # Run specific test for all NPCs")
+        print("  python run_tests.py npc0 emotional_escalation_response  # Run specific test for npc0")
+        sys.exit(0)
     
     # Get directories
     eval_dir = Path(__file__).parent
@@ -228,7 +247,8 @@ def main():
             print(f"Error: No test configs found in {test_configs_dir}")
             sys.exit(1)
     
-    print(f"\n🧪 Running {len(test_paths)} test(s) for {npc_type.upper()}")
+    npc_list_str = ", ".join(npc.upper() for npc in npc_types)
+    print(f"\n🧪 Running {len(test_paths)} test(s) for {npc_list_str}")
     
     # Create timestamped run folder
     reports_base_dir = eval_dir / "reports"
@@ -238,9 +258,9 @@ def main():
     run_folder.mkdir(exist_ok=True)
     print(f"📁 Reports will be saved to: {run_folder.name}\n")
     
-    # Initialize paths once for all tests
+    # Initialize paths once for all tests (using npc0 version, but paths are shared)
     templates_dir = EvalRunner._find_templates_dir(eval_dir)
-    npc_class, version = EvalRunner.NPC_TYPES[npc_type]
+    npc_class, version = EvalRunner.NPC_TYPES["npc0"]
     proj_paths.set_paths(
         project_path=eval_dir,
         templates_dir_name=templates_dir.name,
@@ -248,17 +268,65 @@ def main():
         save_name="eval_test"
     )
     
-    # Run tests
-    for test_path in test_paths:
-        try:
-            run_test(test_path, npc_type, eval_dir, run_folder)
-        except Exception as e:
-            print(f"\n❌ Error running test {test_path.stem}: {e}")
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
+    # Create unified TableTerminalUI
+    ui = TableTerminalUI()
     
-    print(f"\n🎉 All tests completed successfully for {npc_type.upper()}!\n")
+    # Register all test × NPC combinations first
+    for test_path in test_paths:
+        test_name = test_path.stem
+        config = load_test_config(test_path)
+        test_suite = convert_config_to_eval_case_suite(config)
+        total_cases = len(test_suite.eval_cases)
+        
+        # Register each case for each NPC
+        for case_idx in range(1, total_cases + 1):
+            for npc_type in npc_types:
+                ui.register_test(
+                    test_name=test_name,
+                    case_idx=case_idx,
+                    total_cases=total_cases,
+                    npc_type=npc_type,
+                    convos_per_user_prompt=config.convos_per_user_prompt,
+                    convo_length=config.convo_length,
+                    eval_iterations_per_eval=config.eval_iterations_per_eval
+                )
+    
+    # Render initial table
+    ui.render_initial()
+    
+    # Run all tests × NPCs in parallel
+    total_jobs = len(test_paths) * len(npc_types)
+    with ThreadPoolExecutor(max_workers=total_jobs) as executor:
+        futures = {}
+        
+        # Submit all (test, npc) pairs
+        for test_path in test_paths:
+            for npc_type in npc_types:
+                future = executor.submit(
+                    run_single_test_for_npc,
+                    test_path,
+                    npc_type,
+                    eval_dir,
+                    run_folder,
+                    ui
+                )
+                futures[future] = (test_path, npc_type)
+        
+        # Wait for all to complete (fail fast)
+        for future in as_completed(futures):
+            test_path, npc_type = futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                print(f"\n❌ Error running test {test_path.stem} for {npc_type}: {e}")
+                import traceback
+                traceback.print_exc()
+                sys.exit(1)
+    
+    # Move cursor to end after all tests complete
+    ui.move_cursor_to_end()
+    
+    print(f"\n🎉 All tests completed successfully!\n")
     
     # Generate CSV summary report
     print(f"📊 Generating CSV summary report...")
