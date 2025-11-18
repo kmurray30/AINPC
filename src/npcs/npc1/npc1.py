@@ -120,7 +120,7 @@ class NPC1:
             raise e
 
     def _init_state(self) -> None:
-        Logger.log(f"Initializing state for {self.npc_name}", Level.INFO)
+        Logger.log(f"Initializing state for {self.npc_name}", Level.DEBUG)
         self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.summarization_prompt)
         # Load entities from template if they exist
         if self.template.entities is not None and len(self.template.entities) > 0:
