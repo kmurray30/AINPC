@@ -250,6 +250,51 @@ class TestMultipleTestsMultipleNPCs:
         assert result.count("pending") >= 4  # At least 4 cells pending
 
 
+class TestTableString:
+    """Test getting the table as a string."""
+    
+    def test_get_table_string(self):
+        """Test getting the table as a string for saving to file."""
+        ui = TableTerminalUI()
+        
+        # Register some tests
+        ui.register_test("test1", 1, 2, "npc0", 2, 5, 3)
+        ui.register_test("test1", 2, 2, "npc0", 2, 5, 3)
+        ui.register_test("test2", 1, 1, "npc1", 1, 5, 2)
+        
+        # Set some progress and results
+        ui.update_progress("test1", 1, 2, "npc0", 10, "convo")
+        ui.set_results("test1", 2, 2, "npc0", 3, 6)
+        ui.update_progress("test2", 1, 1, "npc1", 5, "eval")
+        
+        # Get table string
+        table = ui.get_table_string()
+        
+        # Verify structure
+        lines = table.split('\n')
+        
+        # Should have: top border, header, separator, 2 data rows for test1, 1 for test2, separator, total, bottom border
+        # That's 9 lines total
+        assert len(lines) == 9
+        
+        # Check header
+        assert "npc0" in lines[1]
+        assert "npc1" in lines[1]
+        
+        # Check test rows
+        assert "test1 case 1" in lines[3]
+        assert "test1 case 2" in lines[4]
+        assert "test2" in lines[5]
+        
+        # Check total row
+        assert "total" in lines[7]
+        
+        # Check that progress is reflected
+        assert "convo" in lines[3]  # test1 case 1 should show convo progress
+        assert "3/6" in lines[4]     # test1 case 2 should show results
+        assert "eval" in lines[5]    # test2 should show eval progress
+
+
 class TestTotalRowCalculation:
     """Test total row aggregation"""
     

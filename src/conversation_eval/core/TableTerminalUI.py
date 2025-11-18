@@ -348,6 +348,58 @@ class TableTerminalUI:
             if self.first_render:
                 self._render()
     
+    def get_table_string(self) -> str:
+        """
+        Get the current table as a string (for saving to file).
+        
+        Returns:
+            The ASCII table as a string
+        """
+        with self.lock:
+            # Get sorted NPC types
+            npc_order = sorted(self.npc_types_used)
+            
+            # Build horizontal separator
+            separator = "+" + "-" * (self.row_name_width + 2)
+            for _ in npc_order:
+                separator += "+" + "-" * (self.col_width + 2)
+            separator += "+"
+            
+            lines = []
+            
+            # Top border
+            lines.append(separator)
+            
+            # Build header row
+            header = "| " + "".ljust(self.row_name_width) + " |"
+            for npc_type in npc_order:
+                header += " " + npc_type.ljust(self.col_width) + " |"
+            lines.append(header)
+            
+            # Header separator
+            lines.append(separator)
+            
+            # Build data rows
+            for test_case_key in self.test_order:
+                row = "| " + self._format_test_case_name(test_case_key).ljust(self.row_name_width) + " |"
+                for npc_type in npc_order:
+                    cell_key = (test_case_key, npc_type)
+                    cell_content = self._format_cell(self.cells.get(cell_key))
+                    row += " " + cell_content.ljust(self.col_width) + " |"
+                lines.append(row)
+            
+            # Row separator before total
+            lines.append(separator)
+            
+            # Build total row
+            total_row = self._calculate_total_row(npc_order)
+            lines.append(total_row)
+            
+            # Bottom border
+            lines.append(separator)
+            
+            return "\n".join(lines)
+    
     def move_cursor_to_end(self):
         """Move cursor to end of output (for final messages)."""
         print()  # Just add a newline
