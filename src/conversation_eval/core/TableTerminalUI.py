@@ -149,10 +149,13 @@ class TableTerminalUI:
     
     def _render(self):
         """Render the entire table by clearing screen and redrawing."""
+        # Store the old num_lines before updating it
+        old_num_lines = self.num_lines
+        
         # On subsequent renders, move cursor up and clear from there
-        if not self.first_render and self.num_lines > 0:
+        if not self.first_render and old_num_lines > 0:
             # Move cursor up to start of table
-            print(f'\033[{self.num_lines}A', end='', flush=True)
+            print(f'\033[{old_num_lines}A', end='', flush=True)
             # Clear from cursor to end of screen
             print('\033[J', end='', flush=True)
         self.first_render = False
@@ -215,20 +218,25 @@ class TableTerminalUI:
         total_row = self._calculate_total_row(npc_order)
         lines.append(total_row)
         
-        # Build cost row (shows cost totals per NPC column)
-        cost_row = self._calculate_cost_row(npc_order)
-        lines.append(cost_row)
+        # Build cost row (shows cost totals per NPC column) - only if all tests are done
+        all_tests_done = all(
+            self.cells.get((test_case_key, npc_type), CellProgress()).status == "done"
+            for test_case_key in self.test_order
+            for npc_type in npc_order
+        )
+        if all_tests_done:
+            cost_row = self._calculate_cost_row(npc_order)
+            lines.append(cost_row)
         
         # Bottom border
         lines.append(separator)
         
         # Update line count for next render
-        # Account for the newline that print() adds
-        self.num_lines = len(lines) + 1
+        self.num_lines = len(lines)
         
         # Print table
         table_string = "\n".join(lines)
-        print(table_string, flush=True)
+        print(table_string, end='\n', flush=True)
     
     def _format_cell(self, cell: CellProgress) -> str:
         """
