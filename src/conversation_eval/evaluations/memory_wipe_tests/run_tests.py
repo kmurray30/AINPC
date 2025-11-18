@@ -22,7 +22,7 @@ from src.conversation_eval.core.ReportGenerator import generate_csv_summary
 from src.conversation_eval.core.ParallelEvalRunner import ParallelEvalRunner
 from src.conversation_eval.core.TableTerminalUI import TableTerminalUI
 from src.utils import io_utils
-from src.core import proj_paths
+from src.core import proj_paths, proj_settings
 from src.core.JsonUtils import EnumEncoder
 from src.npcs.npc1.npc1 import NPCTemplate
 from src.utils import Logger
@@ -267,6 +267,22 @@ def main():
         version=version,
         save_name="eval_test"
     )
+    
+    # Initialize settings if game_settings.yaml exists (required for NPC1 and NPC2)
+    settings_path = templates_dir / "game_settings.yaml"
+    if settings_path.exists():
+        try:
+            proj_settings.init_settings(settings_path)
+        except RuntimeError:
+            # Settings already initialized, skip (for multi-run scenarios)
+            pass
+    else:
+        # If NPC1 or NPC2 is requested but no settings file exists, error out
+        if any(npc_type in ["npc1", "npc2"] for npc_type in npc_types):
+            print(f"❌ ERROR: game_settings.yaml not found at {settings_path}")
+            print("   This file is required for NPC1 and NPC2.")
+            print("   Please create the file or use NPC0 only.")
+            sys.exit(1)
     
     # Create unified TableTerminalUI
     ui = TableTerminalUI()
