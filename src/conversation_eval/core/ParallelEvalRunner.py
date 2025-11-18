@@ -308,15 +308,15 @@ class ParallelEvalRunner:
         # Debug logging to verify parallelization
         import threading
         thread_id = threading.current_thread().name
-        print(f"[Thread {thread_id}] Starting {test_name} case {case_idx} convo {convo_idx}", flush=True)
+        # Debug output removed - was interfering with table rendering
         
         # Create new NPC instance for thread safety
         assistant_npc = npc_factory()
         
-        # Log the model being used
-        if hasattr(assistant_npc, 'response_agent') and hasattr(assistant_npc.response_agent, 'model'):
-            model = assistant_npc.response_agent.model
-            print(f"[Thread {thread_id}] Using model: {model}", flush=True)
+        # Log the model being used (commented out to avoid interfering with table)
+        # if hasattr(assistant_npc, 'response_agent') and hasattr(assistant_npc.response_agent, 'model'):
+        #     model = assistant_npc.response_agent.model
+        #     print(f"[Thread {thread_id}] Using model: {model}", flush=True)
         
         # Create conversation
         conversation = EvalConversation()

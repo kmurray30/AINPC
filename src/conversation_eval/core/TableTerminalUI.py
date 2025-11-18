@@ -47,6 +47,8 @@ class TableTerminalUI:
         self.status_width = 7  # Fixed width for status text ("convo  ", "eval   ", "saving ")
         self.progress_bar_width = progress_bar_width  # Number of characters in progress bar
         self.progress_bar_positions = progress_bar_width * 8  # Total positions (8 per character)
+        self.first_render = True  # Track if this is the first render
+        self.num_lines = 0  # Track number of lines in the table
     
     def register_test(self, test_name: str, case_idx: int, total_cases: int, npc_type: str, 
                      convos_per_user_prompt: int, convo_length: int, eval_iterations_per_eval: int):
@@ -143,8 +145,13 @@ class TableTerminalUI:
     
     def _render(self):
         """Render the entire table by clearing screen and redrawing."""
-        # Clear screen and move to home
-        print('\033[2J\033[H', end='', flush=True)
+        # On subsequent renders, move cursor up and clear from there
+        if not self.first_render and self.num_lines > 0:
+            # Move cursor up to start of table
+            print(f'\033[{self.num_lines}A', end='', flush=True)
+            # Clear from cursor to end of screen
+            print('\033[J', end='', flush=True)
+        self.first_render = False
         
         # Get sorted NPC types
         npc_order = sorted(self.npc_types_used)
@@ -187,6 +194,9 @@ class TableTerminalUI:
         
         # Bottom border
         lines.append(separator)
+        
+        # Update line count for next render
+        self.num_lines = len(lines)
         
         # Print table
         table_string = "\n".join(lines)
@@ -334,7 +344,9 @@ class TableTerminalUI:
     def render_initial(self):
         """Render the initial table state after all tests are registered."""
         with self.lock:
-            self._render()
+            # Ensure we only render initial once
+            if self.first_render:
+                self._render()
     
     def move_cursor_to_end(self):
         """Move cursor to end of output (for final messages)."""
