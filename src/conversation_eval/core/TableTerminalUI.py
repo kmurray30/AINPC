@@ -223,7 +223,8 @@ class TableTerminalUI:
         lines.append(separator)
         
         # Update line count for next render
-        self.num_lines = len(lines)
+        # Account for the newline that print() adds
+        self.num_lines = len(lines) + 1
         
         # Print table
         table_string = "\n".join(lines)
