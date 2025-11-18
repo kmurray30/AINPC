@@ -11,7 +11,7 @@ from src.utils import Logger, llm_utils
 from src.utils.Logger import Level
 from src.core.Constants import embedding_models, Llm, Platform
 from src.utils.token_counter import count_tokens_for_messages, count_tokens_for_text
-from src.conversation_eval.core.EvalReports import TokenCount
+from src.core.TokenTracking import TokenCount
 
 filename = os.path.splitext(os.path.basename(__file__))[0]
 if __name__ == "__main__" or __name__ == filename: # If the script is being run directly

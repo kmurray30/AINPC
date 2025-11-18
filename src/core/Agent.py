@@ -7,7 +7,7 @@ from src.core.ResponseTypes import ChatResponse
 from src.utils import Logger, llm_utils
 from src.core.Constants import Constants as constants, Role, Llm
 from src.utils.ChatBot import ChatBot
-from src.conversation_eval.core.EvalReports import TokenCount
+from src.core.TokenTracking import TokenCount
 
 T = TypeVar('T')
 

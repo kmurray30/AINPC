@@ -245,7 +245,7 @@ class ParallelEvalRunner:
                 total_evals += len(convo_eval.evaluation_iterations)
         
         # Calculate total cost from all tokens
-        from src.conversation_eval.core.EvalReports import aggregate_token_counts
+        from src.core.TokenTracking import aggregate_token_counts
         total_cost = aggregate_token_counts(user_prompt_report.tokens)
         
         # Set final results in UI

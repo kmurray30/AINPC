@@ -13,7 +13,7 @@ import pytest
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-from src.conversation_eval.core.ReportGenerator import generate_csv_summary, _extract_npc_type, _extract_propositions_and_scores
+from src.conversation_eval.core.ReportGenerator import generate_csv_summary, _extract_npc_type, _extract_propositions_scores_and_costs
 
 
 def create_mock_report(test_name: str, npc_type: str, propositions_and_scores: list) -> dict:
@@ -99,7 +99,7 @@ def test_extract_npc_type():
     assert _extract_npc_type("EvalReport_no_npc_here.json") is None
 
 
-def test_extract_propositions_and_scores():
+def test_extract_propositions_scores_and_costs():
     """Test extraction of propositions and scores from report"""
     report = create_mock_report(
         "test",
@@ -110,11 +110,14 @@ def test_extract_propositions_and_scores():
         ]
     )
     
-    propositions = _extract_propositions_and_scores(report)
+    propositions = _extract_propositions_scores_and_costs(report)
     
     assert len(propositions) == 2
-    assert propositions[0] == ("User is hostile -> AI de-escalates", 0.75)
-    assert propositions[1] == ("User is confused -> AI provides clarity", 0.90)
+    # Function now returns (prop_text, score, cost) tuples
+    assert propositions[0][0] == "User is hostile -> AI de-escalates"
+    assert propositions[0][1] == 0.75
+    assert propositions[1][0] == "User is confused -> AI provides clarity"
+    assert propositions[1][1] == 0.90
 
 
 def test_generate_csv_single_npc():

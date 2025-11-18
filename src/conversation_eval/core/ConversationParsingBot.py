@@ -7,7 +7,7 @@ from src.core.Constants import Role, Constants, Llm
 from src.utils import io_utils, parsing_utils
 from src.utils.ChatBot import ChatBot
 from src.conversation_eval.core.EvalClasses import Proposition
-from src.conversation_eval.core.EvalReports import TokenCount
+from src.core.TokenTracking import TokenCount
 
 class ConversationParsingBot:
 
