@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict, List, Type, TypeVar
+from typing import Dict, List, Type, TypeVar, Tuple
 
 import openai
 from dotenv import load_dotenv
@@ -10,6 +10,8 @@ import ollama
 from src.utils import Logger, llm_utils
 from src.utils.Logger import Level
 from src.core.Constants import embedding_models, Llm, Platform
+from src.utils.token_counter import count_tokens_for_messages, count_tokens_for_text
+from src.conversation_eval.core.EvalReports import TokenCount
 
 filename = os.path.splitext(os.path.basename(__file__))[0]
 if __name__ == "__main__" or __name__ == filename: # If the script is being run directly
@@ -40,26 +42,50 @@ class ChatBot:
         return None
 
     # Function to call the OpenAI API
-    def _call_llm_internal(chatGptMessages, chat_model: Llm = None):
+    def _call_llm_internal(chatGptMessages, chat_model: Llm = None) -> Tuple[str, TokenCount]:
+        """
+        Call the LLM and return both the response and token count.
+        
+        Returns:
+            Tuple of (response_text, TokenCount object)
+        """
         if chat_model is None:
             chat_model = ChatBot.default_chat_model
         platform = ChatBot.get_platform_of_model(chat_model)
+        
+        # Count input tokens
+        input_tokens = count_tokens_for_messages(chatGptMessages, chat_model)
+        
         if platform == Platform.open_ai:
             completion = ChatBot.chatGptClient.chat.completions.create(
                 model=chat_model.value,
                 messages=chatGptMessages
             )
             response = completion.choices[0].message.content
-            return response
+            
+            # Count output tokens
+            output_tokens = count_tokens_for_text(response, chat_model)
+            
+            # Create token count object
+            token_count = TokenCount.create(chat_model, input_tokens, output_tokens)
+            
+            return response, token_count
         elif platform == Platform.ollama:
             response = ollama.chat(messages = chatGptMessages, model=chat_model)
-            return response
+            
+            # Count output tokens for ollama
+            output_tokens = count_tokens_for_text(response, chat_model)
+            
+            # Create token count object (ollama has no cost)
+            token_count = TokenCount.create(chat_model, input_tokens, output_tokens)
+            
+            return response, token_count
         else:
             raise Exception(f"ChatGPT model {chat_model} not present in Constants.embedding_models mapping")
 
     def call_chat_agent_and_update_message_history(prompt, chat_messages):
         chat_messages.append({"role": "user", "content": prompt})
-        response = ChatBot._call_llm_internal(chat_messages)
+        response, token_count = ChatBot._call_llm_internal(chat_messages)
         chat_messages.append({"role": "assistant", "content": response})
         return response
 
@@ -87,7 +113,7 @@ class ChatBot:
         # full_context_for_chatagent.append({"role": "user", "content": prompt})
 
         # Call ChatGPT with the full context
-        response = ChatBot._call_llm_internal(full_context_for_chatagent)
+        response, token_count = ChatBot._call_llm_internal(full_context_for_chatagent)
 
         # print("***DEBUG***")
         # for message in full_context_for_chatagent:
@@ -103,27 +129,39 @@ class ChatBot:
             print("DEBUG INFO: " + str(message_history))
         return response
 
-    def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None, chat_model: Llm = None):        
+    def call_llm(message_history_for_llm: List[Dict[str, str]], response_type: Type[T] = None, chat_model: Llm = None) -> Tuple[T, TokenCount]:        
+        """
+        Call LLM with optional structured response type.
+        
+        Returns:
+            Tuple of (response, TokenCount)
+        """
+        response_raw, token_count = ChatBot._call_llm_internal(message_history_for_llm, chat_model)
+        
         if response_type is None:
-            return ChatBot._call_llm_internal(message_history_for_llm, chat_model)
+            return response_raw, token_count
         else:
             exception = None
             for _ in range(ChatBot.llm_formatting_retries):
-                response_raw = None
                 try:
-                    response_raw = ChatBot._call_llm_internal(message_history_for_llm, chat_model)
                     Logger.log(f"Raw response from LLM: {response_raw}", Level.DEBUG)
                     if response_raw.strip() == "":
                         raise ValueError("Response is empty")
                     # Extract the object from the response
-                    return llm_utils.extract_obj_from_llm_response(response_raw, response_type)
+                    parsed_response = llm_utils.extract_obj_from_llm_response(response_raw, response_type)
+                    return parsed_response, token_count
                 except Exception as e:
-                    if response_raw is not None:
-                        Logger.log(f"Error extracting object from LLM response {response_raw}:\n{e}", Level.ERROR)
-                    else:
-                        Logger.log(f"Error calling LLM:\n{e}", Level.ERROR)
                     exception = e
-            raise(exception)
+                    Logger.log(f"Error extracting object from LLM response: {e}. Retrying...", Level.WARNING)
+                    # Re-call the LLM for retry
+                    response_raw, token_count = ChatBot._call_llm_internal(message_history_for_llm, chat_model)
+                    continue
+            
+            if response_raw is None:
+                raise Exception(f"Failed to call LLM. Last exception: {exception}")
+            else:
+                Logger.log(f"The raw response from the LLM was {response_raw}", Level.ERROR)
+                raise Exception(f"Failed to extract object from LLM response after {ChatBot.llm_formatting_retries} tries. Last exception: {exception}")
 
 def get_default_rules():
     return [

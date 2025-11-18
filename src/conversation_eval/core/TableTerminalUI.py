@@ -16,6 +16,7 @@ class CellProgress:
     status: str = "pending"  # "pending", "convo", "eval", "saving", "done"
     passes: int = 0  # For final results
     total_evals: int = 0  # For final results
+    cost_usd: float = 0.0  # Cost in USD for this cell
 
 
 class TableTerminalUI:
@@ -43,6 +44,7 @@ class TableTerminalUI:
         self.test_order: List[str] = []  # Ordered test case keys
         self.npc_types_used: set = set()  # Track which NPC types are actually used
         self.col_width = 20  # Fixed column width for NPC columns
+        self.cost_col_width = 12  # Fixed width for cost column
         self.row_name_width = 30  # Fixed width for row names
         self.status_width = 7  # Fixed width for status text ("convo  ", "eval   ", "saving ")
         self.progress_bar_width = progress_bar_width  # Number of characters in progress bar
@@ -117,7 +119,7 @@ class TableTerminalUI:
                 self._render()
     
     def set_results(self, test_name: str, case_idx: int, total_cases: int, npc_type: str, 
-                   passes: int, total_evals: int):
+                   passes: int, total_evals: int, cost_usd: float = 0.0):
         """
         Set final results for a cell after evaluation completes.
         
@@ -128,6 +130,7 @@ class TableTerminalUI:
             npc_type: NPC type (npc0, npc1, npc2)
             passes: Number of passing evaluations
             total_evals: Total number of evaluations
+            cost_usd: Total cost in USD for this cell
         """
         with self.lock:
             # Create test case key
@@ -141,6 +144,7 @@ class TableTerminalUI:
                 self.cells[cell_key].status = "done"
                 self.cells[cell_key].passes = passes
                 self.cells[cell_key].total_evals = total_evals
+                self.cells[cell_key].cost_usd = cost_usd
                 self._render()
     
     def _render(self):
@@ -156,41 +160,64 @@ class TableTerminalUI:
         # Get sorted NPC types
         npc_order = sorted(self.npc_types_used)
         
-        # Build horizontal separator
+        # Build horizontal separator (includes cost column)
         separator = "+" + "-" * (self.row_name_width + 2)
         for _ in npc_order:
             separator += "+" + "-" * (self.col_width + 2)
-        separator += "+"
+        separator += "+" + "-" * (self.cost_col_width + 2) + "+"  # Add cost column
         
         lines = []
         
         # Top border
         lines.append(separator)
         
-        # Build header row
+        # Build header row (includes cost column header)
         header = "| " + "".ljust(self.row_name_width) + " |"
         for npc_type in npc_order:
             header += " " + npc_type.ljust(self.col_width) + " |"
+        header += " " + "cost".ljust(self.cost_col_width) + " |"  # Add cost column header
         lines.append(header)
         
         # Header separator
         lines.append(separator)
         
-        # Build data rows
+        # Build data rows (includes cost column)
         for test_case_key in self.test_order:
             row = "| " + self._format_test_case_name(test_case_key).ljust(self.row_name_width) + " |"
+            row_cost = 0.0
+            all_done = True
+            
             for npc_type in npc_order:
                 cell_key = (test_case_key, npc_type)
-                cell_content = self._format_cell(self.cells.get(cell_key))
+                cell = self.cells.get(cell_key)
+                cell_content = self._format_cell(cell)
                 row += " " + cell_content.ljust(self.col_width) + " |"
+                
+                # Track if all cells in row are done and accumulate cost
+                if cell and cell.status == "done":
+                    row_cost += cell.cost_usd
+                else:
+                    all_done = False
+            
+            # Add cost cell for this row (only show if all cells done)
+            if all_done:
+                cost_str = self._format_cost(row_cost)
+            else:
+                cost_str = "pending"
+            row += " " + cost_str.ljust(self.cost_col_width) + " |"
+            
             lines.append(row)
         
-        # Row separator before total
+        # Row separator before total and cost rows
         lines.append(separator)
         
-        # Build total row
+        # Build total row (shows pass/fail totals per NPC)
         total_row = self._calculate_total_row(npc_order)
         lines.append(total_row)
+        
+        # Build cost row (shows cost totals per NPC column)
+        cost_row = self._calculate_cost_row(npc_order)
+        lines.append(cost_row)
         
         # Bottom border
         lines.append(separator)
@@ -308,13 +335,14 @@ class TableTerminalUI:
     
     def _calculate_total_row(self, npc_order: List[str]) -> str:
         """
-        Calculate and format the total row.
+        Calculate and format the total row (shows pass/fail totals).
         
         For each NPC:
         - If all cells done: show "passes/total" summed across all test cases
         - If any cell pending/in-progress: show "pending"
         """
         row = "| " + "total".ljust(self.row_name_width) + " |"
+        grand_total_cost = 0.0
         
         for npc_type in npc_order:
             total_passes = 0
@@ -339,7 +367,83 @@ class TableTerminalUI:
             
             row += " " + cell_content.ljust(self.col_width) + " |"
         
+        # Add empty cost cell for total row
+        row += " " + "".ljust(self.cost_col_width) + " |"
+        
         return row
+    
+    def _calculate_cost_row(self, npc_order: List[str]) -> str:
+        """
+        Calculate and format the cost row (shows cost totals per NPC column).
+        
+        For each NPC column:
+        - If all cells done: show total cost
+        - Otherwise: show "pending"
+        """
+        row = "| " + "cost".ljust(self.row_name_width) + " |"
+        grand_total_cost = 0.0
+        all_columns_done = True
+        
+        for npc_type in npc_order:
+            column_cost = 0.0
+            column_done = True
+            
+            for test_case_key in self.test_order:
+                cell_key = (test_case_key, npc_type)
+                cell = self.cells.get(cell_key)
+                
+                if cell is None or cell.status != "done":
+                    column_done = False
+                    all_columns_done = False
+                    break
+                
+                column_cost += cell.cost_usd
+            
+            if column_done:
+                cell_content = self._format_cost(column_cost)
+                grand_total_cost += column_cost
+            else:
+                cell_content = "pending"
+            
+            row += " " + cell_content.ljust(self.col_width) + " |"
+        
+        # Add grand total cost (bottom-right cell)
+        if all_columns_done:
+            grand_total_str = self._format_cost(grand_total_cost)
+        else:
+            grand_total_str = "pending"
+        row += " " + grand_total_str.ljust(self.cost_col_width) + " |"
+        
+        return row
+    
+    def _format_cost(self, cost_usd: float) -> str:
+        """
+        Format cost in USD with 2 significant figures to the right of decimal point.
+        
+        Examples: $435.34, $0.043, $0.00012, $1234.56
+        
+        Args:
+            cost_usd: Cost in USD
+            
+        Returns:
+            Formatted cost string
+        """
+        if cost_usd == 0.0:
+            return "$0.00"
+        
+        # For costs >= $1, use 2 decimal places
+        if cost_usd >= 1.0:
+            return f"${cost_usd:.2f}"
+        
+        # For costs < $1, find how many decimal places we need for 2 sig figs
+        # Count leading zeros after decimal point
+        import math
+        if cost_usd > 0:
+            # Number of decimal places needed = leading zeros + 2 sig figs
+            decimal_places = -math.floor(math.log10(cost_usd)) + 1
+            return f"${cost_usd:.{decimal_places}f}"
+        
+        return "$0.00"
     
     def render_initial(self):
         """Render the initial table state after all tests are registered."""
@@ -359,41 +463,64 @@ class TableTerminalUI:
             # Get sorted NPC types
             npc_order = sorted(self.npc_types_used)
             
-            # Build horizontal separator
+            # Build horizontal separator (includes cost column)
             separator = "+" + "-" * (self.row_name_width + 2)
             for _ in npc_order:
                 separator += "+" + "-" * (self.col_width + 2)
-            separator += "+"
+            separator += "+" + "-" * (self.cost_col_width + 2) + "+"  # Add cost column
             
             lines = []
             
             # Top border
             lines.append(separator)
             
-            # Build header row
+            # Build header row (includes cost column header)
             header = "| " + "".ljust(self.row_name_width) + " |"
             for npc_type in npc_order:
                 header += " " + npc_type.ljust(self.col_width) + " |"
+            header += " " + "cost".ljust(self.cost_col_width) + " |"  # Add cost column header
             lines.append(header)
             
             # Header separator
             lines.append(separator)
             
-            # Build data rows
+            # Build data rows (includes cost column)
             for test_case_key in self.test_order:
                 row = "| " + self._format_test_case_name(test_case_key).ljust(self.row_name_width) + " |"
+                row_cost = 0.0
+                all_done = True
+                
                 for npc_type in npc_order:
                     cell_key = (test_case_key, npc_type)
-                    cell_content = self._format_cell(self.cells.get(cell_key))
+                    cell = self.cells.get(cell_key)
+                    cell_content = self._format_cell(cell)
                     row += " " + cell_content.ljust(self.col_width) + " |"
+                    
+                    # Track if all cells in row are done and accumulate cost
+                    if cell and cell.status == "done":
+                        row_cost += cell.cost_usd
+                    else:
+                        all_done = False
+                
+                # Add cost cell for this row (only show if all cells done)
+                if all_done:
+                    cost_str = self._format_cost(row_cost)
+                else:
+                    cost_str = "pending"
+                row += " " + cost_str.ljust(self.cost_col_width) + " |"
+                
                 lines.append(row)
             
-            # Row separator before total
+            # Row separator before total and cost rows
             lines.append(separator)
             
-            # Build total row
+            # Build total row (shows pass/fail totals per NPC)
             total_row = self._calculate_total_row(npc_order)
             lines.append(total_row)
+            
+            # Build cost row (shows cost totals per NPC column)
+            cost_row = self._calculate_cost_row(npc_order)
+            lines.append(cost_row)
             
             # Bottom border
             lines.append(separator)

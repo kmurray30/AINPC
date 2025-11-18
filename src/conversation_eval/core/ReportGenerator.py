@@ -4,9 +4,38 @@ Generates CSV summary reports from JSON evaluation reports
 """
 import json
 import csv
+import math
 from pathlib import Path
 from typing import Dict, List, Tuple
 from collections import defaultdict
+
+
+def format_cost_usd(cost_usd: float) -> str:
+    """
+    Format cost in USD with 2 significant figures to the right of decimal point.
+    
+    Examples: $435.34, $0.043, $0.00012
+    
+    Args:
+        cost_usd: Cost in USD
+        
+    Returns:
+        Formatted cost string
+    """
+    if cost_usd == 0.0:
+        return "$0.00"
+    
+    # For costs >= $1, use 2 decimal places
+    if cost_usd >= 1.0:
+        return f"${cost_usd:.2f}"
+    
+    # For costs < $1, find how many decimal places we need for 2 sig figs
+    if cost_usd > 0:
+        # Number of decimal places needed = leading zeros + 2 sig figs
+        decimal_places = -math.floor(math.log10(cost_usd)) + 1
+        return f"${cost_usd:.{decimal_places}f}"
+    
+    return "$0.00"
 
 
 def generate_csv_summary(run_folder: Path) -> Path:
@@ -33,7 +62,10 @@ def generate_csv_summary(run_folder: Path) -> Path:
     
     # Parse reports and extract data
     # Structure: {proposition_text: {npc_type: score}}
+    # Structure: {npc_type: total_cost}
     proposition_scores = defaultdict(dict)
+    proposition_costs = defaultdict(dict)  # Track costs per proposition per NPC
+    npc_total_costs = defaultdict(float)  # Track total cost per NPC
     npc_types = set()
     
     for report_file in report_files:
@@ -46,11 +78,13 @@ def generate_csv_summary(run_folder: Path) -> Path:
         with open(report_file, 'r') as f:
             report = json.load(f)
         
-        # Extract propositions and scores
-        propositions = _extract_propositions_and_scores(report)
+        # Extract propositions, scores, and costs
+        propositions = _extract_propositions_scores_and_costs(report)
         
-        for prop_text, score in propositions:
+        for prop_text, score, cost in propositions:
             proposition_scores[prop_text][npc_type] = score
+            proposition_costs[prop_text][npc_type] = cost
+            npc_total_costs[npc_type] += cost
     
     # Sort NPC types for consistent column ordering
     npc_types_sorted = sorted(npc_types)
@@ -61,25 +95,32 @@ def generate_csv_summary(run_folder: Path) -> Path:
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         
-        # Write header row
-        header = [''] + npc_types_sorted
+        # Write header row (includes "cost" column)
+        header = [''] + npc_types_sorted + ['cost']
         writer.writerow(header)
         
-        # Write data rows
+        # Write data rows (includes cost per row)
         for prop_text in sorted(proposition_scores.keys()):
             row = [prop_text]
+            row_cost = 0.0
+            
             for npc_type in npc_types_sorted:
                 score = proposition_scores[prop_text].get(npc_type)
                 if score is not None:
                     # Convert 0.0-1.0 to percentage string
                     percentage = f"{int(score * 100)}%"
                     row.append(percentage)
+                    # Add cost for this cell
+                    row_cost += proposition_costs[prop_text].get(npc_type, 0.0)
                 else:
                     row.append('')  # Empty cell for missing data
+            
+            # Add row cost
+            row.append(format_cost_usd(row_cost))
             writer.writerow(row)
         
         # Write Total row (average of all scores per NPC)
-        total_row = ['Total']
+        total_row = ['total']
         for npc_type in npc_types_sorted:
             scores = [
                 proposition_scores[prop][npc_type]
@@ -91,7 +132,18 @@ def generate_csv_summary(run_folder: Path) -> Path:
                 total_row.append(f"{int(avg_score * 100)}%")
             else:
                 total_row.append('')
+        total_row.append('')  # Empty cell for total row cost column
         writer.writerow(total_row)
+        
+        # Write Cost row (total cost per NPC column)
+        cost_row = ['cost']
+        grand_total = 0.0
+        for npc_type in npc_types_sorted:
+            cost = npc_total_costs.get(npc_type, 0.0)
+            cost_row.append(format_cost_usd(cost))
+            grand_total += cost
+        cost_row.append(format_cost_usd(grand_total))  # Grand total in bottom-right
+        writer.writerow(cost_row)
     
     return csv_path
 
@@ -114,15 +166,15 @@ def _extract_npc_type(filename: str) -> str:
     return None
 
 
-def _extract_propositions_and_scores(report: dict) -> List[Tuple[str, float]]:
+def _extract_propositions_scores_and_costs(report: dict) -> List[Tuple[str, float, float]]:
     """
-    Extract proposition texts and their scores from a report
+    Extract proposition texts, scores, and costs from a report
     
     Args:
         report: Parsed JSON report dictionary
         
     Returns:
-        List of tuples (proposition_text, score)
+        List of tuples (proposition_text, score, cost_usd)
     """
     propositions = []
     
@@ -158,7 +210,11 @@ def _extract_propositions_and_scores(report: dict) -> List[Tuple[str, float]]:
                 # Extract score
                 score = evaluation.get("result_score", 0.0)
                 
-                propositions.append((prop_text, score))
+                # Extract cost from tokens list
+                tokens_list = evaluation.get("tokens", [])
+                cost = sum(token.get("cost", 0.0) for token in tokens_list)
+                
+                propositions.append((prop_text, score, cost))
     
     except (KeyError, IndexError, TypeError) as e:
         # Handle malformed reports gracefully

@@ -52,6 +52,20 @@ class PassFail(Enum):
     FAIL = 0
     PASS = 1
 
+# Pricing per 1M tokens (as of Nov 2024)
+# Source: OpenAI pricing page
+LLM_PRICING = {
+    Llm.gpt_4o_mini: {"input": 0.150, "output": 0.600},  # per 1M tokens
+    Llm.gpt_4o: {"input": 2.50, "output": 10.00},
+    Llm.gpt_3_5_turbo: {"input": 0.50, "output": 1.50},
+    Llm.gpt_3_5_turbo_instruct: {"input": 1.50, "output": 2.00},
+    Llm.o1: {"input": 15.00, "output": 60.00},
+    # Placeholder pricing for models without official pricing
+    Llm.gpt_5_nano: {"input": 0.10, "output": 0.40},
+    Llm.gpt_5_mini: {"input": 0.20, "output": 0.80},
+    Llm.llama3: {"input": 0.0, "output": 0.0},  # Local model, no cost
+}
+
 class Constants:
     pass_name = "Pass"
     fail_name = "Fail"

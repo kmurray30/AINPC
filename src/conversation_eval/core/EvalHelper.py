@@ -243,13 +243,13 @@ class EvalHelper:
         # Begin the evaluations
         Logger.increment_indent() # Begin evaluations section
         for evaluation_proposition in evaluation_propositions:
-            evaluation_report = EvaluationEvalReport(evaluation_proposition=evaluation_proposition, conversation_evaluations=[], result_score="", tokens=0)
+            evaluation_report = EvaluationEvalReport(evaluation_proposition=evaluation_proposition, conversation_evaluations=[], result_score="", tokens=[])
             
             Logger.log(f"∟ Evaluating: {evaluation_proposition}", Level.VERBOSE)
             Logger.increment_indent(1) # Begin one evaluation
             for conversation_name, conversation in conversation_map.items():
                 Logger.log(f"∟ {conversation_name}", Level.VERBOSE)
-                conversation_evaluation_report = ConversationEvaluationEvalReport(conversation_name=conversation_name, evaluation_iterations=[], result_score=0, tokens=0)
+                conversation_evaluation_report = ConversationEvaluationEvalReport(conversation_name=conversation_name, evaluation_iterations=[], result_score=0, tokens=[])
                 evaluation_report.conversation_evaluations.append(conversation_evaluation_report)
                 # TODO add the PropositionTestReport
                 Logger.increment_indent() # Begin evaluation iterations section
@@ -260,19 +260,33 @@ class EvalHelper:
                     if eval_progress_callback:
                         eval_progress_callback(i, eval_iterations_per_eval)
                     
-                    timestamping_result: EvaluationResponse = ConversationParsingBot.evaluate_conversation_timestamps(conversation, evaluation_proposition)
+                    timestamping_result, token_count = ConversationParsingBot.evaluate_conversation_timestamps(conversation, evaluation_proposition)
                     # Print the result as a json
                     Logger.increment_indent() # Begin result section
                     Logger.log(json.dumps(timestamping_result.__dict__, indent=4), Level.VERBOSE)
                     Logger.decrement_indent() # End result section
                     evaluation_result: EvaluationResult = EvalHelper.evaluate_result_from_timestamps(timestamping_result, len(conversation), evaluation_proposition)
-                    evaluation_iteration_report = EvaluationIterationEvalReport(timestamping_response=timestamping_result, result=evaluation_result.pass_fail, explanation=evaluation_result.message, tokens=0)
+                    evaluation_iteration_report = EvaluationIterationEvalReport(timestamping_response=timestamping_result, result=evaluation_result.pass_fail, explanation=evaluation_result.message, tokens=[token_count])
                     conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
                 Logger.decrement_indent() # End evaluation iterations section
+                
+                # Aggregate tokens from all evaluation iterations
+                all_tokens = []
+                for iteration in conversation_evaluation_report.evaluation_iterations:
+                    all_tokens.extend(iteration.tokens)
+                conversation_evaluation_report.tokens = all_tokens
+                
             Logger.decrement_indent() # End one evaluation
 
             # Score the evaluations
             EvalHelper.aggregate_scores(evaluation_report)
+            
+            # Aggregate tokens from all conversation evaluations
+            all_tokens = []
+            for convo_eval in evaluation_report.conversation_evaluations:
+                all_tokens.extend(convo_eval.tokens)
+            evaluation_report.tokens = all_tokens
+            
             evaluation_reports.append(evaluation_report)
         Logger.decrement_indent() # End evaluations section
         return evaluation_reports

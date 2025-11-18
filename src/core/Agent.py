@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 import json
-from typing import List, Type, TypeVar, Dict
+from typing import List, Type, TypeVar, Dict, Tuple
 
 from src.core.ChatMessage import ChatMessage
 from src.core.ResponseTypes import ChatResponse
 from src.utils import Logger, llm_utils
 from src.core.Constants import Constants as constants, Role, Llm
 from src.utils.ChatBot import ChatBot
+from src.conversation_eval.core.EvalReports import TokenCount
 
 T = TypeVar('T')
 
@@ -18,6 +19,7 @@ class Agent:
 
     system_prompt: str
     user_prompt_wrapper: str = constants.user_message_placeholder
+    last_token_count: TokenCount = None  # Track the most recent token count
 
     def __init__(self, system_prompt: str, response_type: Type[T], llm_model: Llm = None):
         self.system_prompt = system_prompt
@@ -25,6 +27,7 @@ class Agent:
         if response_type not in [str, int, float, bool, None]:
             self.response_formatting_suffix = llm_utils.get_formatting_suffix(response_type)
         self.llm_model = llm_model
+        self.last_token_count = None
 
     def chat_with_message(self, user_message: str) -> T:
         message = ChatMessage(role=Role.user, content=user_message, cot=None, off_switch=False)
@@ -32,6 +35,12 @@ class Agent:
         return response_obj
 
     def chat_with_history(self, message_history: List[ChatMessage]) -> T:
+        """
+        Chat with the LLM given a message history.
+        
+        Returns:
+            The response object. Token count is stored in self.last_token_count
+        """
         if self.system_prompt is None:
             raise Exception("System prompt is required for agent chat")
 
@@ -49,7 +58,11 @@ class Agent:
 
         # Call the LLM and append assistant response
         Logger.debug(f"Full message history dict:\n" + json.dumps(full_message_history_dict, indent=4))
-        response_obj: T = ChatBot.call_llm(full_message_history_dict, self.response_type, self.llm_model)
+        response_obj, token_count = ChatBot.call_llm(full_message_history_dict, self.response_type, self.llm_model)
+        
+        # Store the token count for retrieval
+        self.last_token_count = token_count
+        
         return response_obj
     
         

@@ -85,12 +85,12 @@ class ParallelEvalRunner:
             assistant_prompt=Utilities.decode_list(assistant_rules),
             deltas=[],
             user_prompt_cases=[],
-            tokens=0
+            tokens=[]  # Will be populated after all cases
         )
         eval_report = EvalReport(
             assistant_prompt_cases=[assistant_prompt_report],
             takeaways="",
-            tokens=0
+            tokens=[]  # Will be populated from assistant_prompt_report
         )
         
         # Run cases in parallel
@@ -130,7 +130,15 @@ class ParallelEvalRunner:
             # Add reports in order
             for case_idx in sorted(case_reports.keys()):
                 assistant_prompt_report.user_prompt_cases.append(case_reports[case_idx])
-                eval_report.tokens += case_reports[case_idx].tokens
+        
+        # Aggregate tokens from all user prompt cases
+        all_tokens = []
+        for user_prompt_case in assistant_prompt_report.user_prompt_cases:
+            all_tokens.extend(user_prompt_case.tokens)
+        assistant_prompt_report.tokens = all_tokens
+        
+        # Copy tokens to eval report (single assistant prompt in this implementation)
+        eval_report.tokens = assistant_prompt_report.tokens.copy()
         
         # Don't call move_cursor_to_end() here - it causes extra lines between test files
         # It will be called once at the very end in run_tests.py
@@ -177,7 +185,7 @@ class ParallelEvalRunner:
             user_prompt=Utilities.decode_list(eval_case.goals),
             conversations={},
             evaluations=[],
-            tokens=0
+            tokens=[]  # Will be populated after all evaluations
         )
         
         # Step 1: Generate all conversations in parallel
@@ -219,6 +227,12 @@ class ParallelEvalRunner:
         # Add evaluation reports
         user_prompt_report.evaluations = evaluation_results
         
+        # Aggregate tokens from all evaluations
+        all_tokens = []
+        for eval_report in evaluation_results:
+            all_tokens.extend(eval_report.tokens)
+        user_prompt_report.tokens = all_tokens
+        
         # Calculate final results and update UI
         # Count total passes and total evaluations across all conversations
         total_passes = 0
@@ -230,8 +244,12 @@ class ParallelEvalRunner:
                 total_passes += passed
                 total_evals += len(convo_eval.evaluation_iterations)
         
+        # Calculate total cost from all tokens
+        from src.conversation_eval.core.EvalReports import aggregate_token_counts
+        total_cost = aggregate_token_counts(user_prompt_report.tokens)
+        
         # Set final results in UI
-        ui.set_results(test_name, case_idx, total_cases, npc_type, total_passes, total_evals)
+        ui.set_results(test_name, case_idx, total_cases, npc_type, total_passes, total_evals, total_cost)
         
         return user_prompt_report
     
@@ -382,7 +400,7 @@ class ParallelEvalRunner:
                 evaluation_proposition=proposition,
                 conversation_evaluations=[],
                 result_score="",
-                tokens=0
+                tokens=[]  # Will be populated after all conversations evaluated
             )
             
             # Run evaluations for each conversation in parallel
@@ -416,6 +434,12 @@ class ParallelEvalRunner:
                 scores = [ce.result_score for ce in evaluation_report.conversation_evaluations]
                 evaluation_report.result_score = sum(scores) / len(scores)
             
+            # Aggregate tokens from all conversation evaluations
+            all_tokens = []
+            for convo_eval in evaluation_report.conversation_evaluations:
+                all_tokens.extend(convo_eval.tokens)
+            evaluation_report.tokens = all_tokens
+            
             evaluation_reports.append(evaluation_report)
         
         return evaluation_reports
@@ -444,7 +468,7 @@ class ParallelEvalRunner:
             conversation_name=conversation_name,
             evaluation_iterations=[],
             result_score=0,
-            tokens=0
+            tokens=[]  # Will be populated after all iterations
         )
         
         for i in range(1, eval_iterations_per_eval + 1):
@@ -453,7 +477,7 @@ class ParallelEvalRunner:
             ui.update_progress(test_name, case_idx, total_cases, npc_type, completed_units, "eval")
             
             # Run evaluation
-            timestamping_result: EvaluationResponse = ConversationParsingBot.evaluate_conversation_timestamps(
+            timestamping_result, token_count = ConversationParsingBot.evaluate_conversation_timestamps(
                 conversation, proposition
             )
             
@@ -465,7 +489,7 @@ class ParallelEvalRunner:
                 timestamping_response=timestamping_result,
                 result=evaluation_result.pass_fail,
                 explanation=evaluation_result.message,
-                tokens=0
+                tokens=[token_count]  # Wrap in list as per dataclass definition
             )
             
             conversation_evaluation_report.evaluation_iterations.append(evaluation_iteration_report)
@@ -478,6 +502,12 @@ class ParallelEvalRunner:
         passed = sum(1 for ei in conversation_evaluation_report.evaluation_iterations 
                     if ei.result.value == "PASS")
         conversation_evaluation_report.result_score = passed / len(conversation_evaluation_report.evaluation_iterations)
+        
+        # Aggregate tokens from all evaluation iterations
+        all_tokens = []
+        for iteration in conversation_evaluation_report.evaluation_iterations:
+            all_tokens.extend(iteration.tokens)
+        conversation_evaluation_report.tokens = all_tokens
         
         return conversation_evaluation_report
 

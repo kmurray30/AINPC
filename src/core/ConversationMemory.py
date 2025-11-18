@@ -118,7 +118,8 @@ class ConversationMemory:
             print(f"{message['role']}: {message['content']}")
 
         # Call the llm agent with the context, expecting an untyped response
-        summary: ChatSummary = ChatBot.call_llm(summarization_prompt_and_message_history, ChatSummary)
+        summary, token_count = ChatBot.call_llm(summarization_prompt_and_message_history, ChatSummary)
+        # Note: We're not tracking tokens for summarization currently
 
         if enable_printing:
             Logger.log(f"Summary: {summary}", Level.VERBOSE)

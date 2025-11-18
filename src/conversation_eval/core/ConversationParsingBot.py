@@ -1,12 +1,13 @@
 
 
-from typing import List
+from typing import List, Tuple
 from src.core.ResponseTypes import EvaluationResponse
 from src.core import Constants
 from src.core.Constants import Role, Constants, Llm
 from src.utils import io_utils, parsing_utils
 from src.utils.ChatBot import ChatBot
 from src.conversation_eval.core.EvalClasses import Proposition
+from src.conversation_eval.core.EvalReports import TokenCount
 
 class ConversationParsingBot:
 
@@ -14,7 +15,13 @@ class ConversationParsingBot:
     chat_bot.set_chat_model(Llm.gpt_4o_mini)
 
     @staticmethod
-    def evaluate_conversation_timestamps(conversation_message_history: List[str], proposition: Proposition) -> EvaluationResponse:
+    def evaluate_conversation_timestamps(conversation_message_history: List[str], proposition: Proposition) -> Tuple[EvaluationResponse, TokenCount]:
+        """
+        Evaluate conversation timestamps for a proposition.
+        
+        Returns:
+            Tuple of (EvaluationResponse, TokenCount)
+        """
         if proposition.antecedent is not None:
             evaluation_system_prompt_raw = "\n".join(io_utils.load_rules_from_file("evaluation_prompt.json", "Ruleset 5"))
             evaluation_system_prompt = evaluation_system_prompt_raw.replace(Constants.antecedent_placeholder, proposition.antecedent.value).replace(Constants.consequent_placeholder, proposition.consequent.value)
@@ -33,7 +40,7 @@ class ConversationParsingBot:
             {"role": Role.user.value, "content": evaluation_user_prompt},
         ]
 
-        response = ConversationParsingBot.chat_bot.call_llm(evaluation_message_history)
+        response, token_count = ConversationParsingBot.chat_bot.call_llm(evaluation_message_history)
         responseObj = parsing_utils.extract_obj_from_json_str(response, EvaluationResponse, trim=True)
 
-        return responseObj
+        return responseObj, token_count
