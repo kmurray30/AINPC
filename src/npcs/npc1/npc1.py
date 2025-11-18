@@ -123,7 +123,7 @@ class NPC1:
         Logger.log(f"Initializing state for {self.npc_name}", Level.INFO)
         self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.summarization_prompt)
         # Load entities from template if they exist
-        if self.template.entities:
+        if self.template.entities is not None and len(self.template.entities) > 0:
             self.brain_entities = [
                 Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e)))
                 for e in self.template.entities

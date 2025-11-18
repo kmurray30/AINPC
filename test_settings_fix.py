@@ -81,6 +81,44 @@ def test_old_npc2_block_removed():
     return True
 
 
+def test_npc2_template_has_entities_field():
+    """Verify NPC2's NPCTemplate has the entities field"""
+    
+    npc2_path = Path(__file__).parent / "src/npcs/npc2/npc2.py"
+    
+    with open(npc2_path, 'r') as file_handle:
+        content = file_handle.read()
+    
+    # Check that NPCTemplate has entities field
+    assert "entities: List[str] = None" in content, \
+        "NPC2's NPCTemplate should have entities field"
+    
+    # Check that the entities check is safe (uses 'is not None')
+    assert "if self.template.entities is not None" in content, \
+        "NPC2 should check entities with 'is not None'"
+    
+    print("✅ NPC2's NPCTemplate has entities field with proper None check")
+    
+    return True
+
+
+def test_npc1_template_entities_check():
+    """Verify NPC1 also has safe entities checking"""
+    
+    npc1_path = Path(__file__).parent / "src/npcs/npc1/npc1.py"
+    
+    with open(npc1_path, 'r') as file_handle:
+        content = file_handle.read()
+    
+    # Check that the entities check is safe
+    assert "if self.template.entities is not None" in content, \
+        "NPC1 should check entities with 'is not None'"
+    
+    print("✅ NPC1 has safe entities checking")
+    
+    return True
+
+
 if __name__ == "__main__":
     print("Testing NPC factory settings fix...\n")
     
@@ -91,13 +129,19 @@ if __name__ == "__main__":
         print()
         test_old_npc2_block_removed()
         print()
-        print("🎉 All tests passed! The fix is correctly implemented.")
+        test_npc2_template_has_entities_field()
         print()
-        print("Summary of the fix:")
-        print("  1. Added proj_settings import")
+        test_npc1_template_entities_check()
+        print()
+        print("🎉 All tests passed! The fixes are correctly implemented.")
+        print()
+        print("Summary of the fixes:")
+        print("  1. Added proj_settings import to run_tests.py")
         print("  2. Added settings initialization after proj_paths.set_paths()")
         print("  3. Added proper error handling for missing settings file")
         print("  4. Removed the old NPC2 blocking code")
+        print("  5. Added 'entities' field to NPC2's NPCTemplate dataclass")
+        print("  6. Made entities checking safe with 'is not None' for both NPC1 and NPC2")
         sys.exit(0)
     except AssertionError as e:
         print(f"\n❌ Test failed: {e}")
