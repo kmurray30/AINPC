@@ -344,19 +344,16 @@ def main():
     
     print(f"\n🎉 All tests completed successfully!\n")
     
-    # Generate CSV summary report
-    print(f"📊 Generating summary reports...")
+    # Generate summary report
+    print(f"📊 Generating summary report...")
     try:
-        csv_path = generate_csv_summary(run_folder)
-        print(f"   Saved CSV summary to: {csv_path.name}")
-        
         # Save ASCII table as text file
         txt_path = run_folder / "summary.txt"
         table_string = ui.get_table_string()
         txt_path.write_text(table_string)
-        print(f"   Saved ASCII table to: {txt_path.name}\n")
+        print(f"   Saved summary to: {txt_path.name}\n")
     except Exception as e:
-        print(f"   ⚠️  Warning: Could not generate summary reports: {e}\n")
+        print(f"   ⚠️  Warning: Could not generate summary report: {e}\n")
 
 
 if __name__ == "__main__":

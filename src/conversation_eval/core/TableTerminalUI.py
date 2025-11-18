@@ -43,10 +43,10 @@ class TableTerminalUI:
         self.cells: Dict[Tuple[str, str], CellProgress] = {}  # (test_case_key, npc_type) -> progress
         self.test_order: List[str] = []  # Ordered test case keys
         self.npc_types_used: set = set()  # Track which NPC types are actually used
-        self.col_width = 20  # Fixed column width for NPC columns
-        self.cost_col_width = 12  # Fixed width for cost column
+        self.col_width = 10  # Fixed column width for NPC columns (8 + 2 padding)
+        self.cost_col_width = 10  # Fixed width for cost column
         self.row_name_width = 30  # Fixed width for row names
-        self.status_width = 7  # Fixed width for status text ("convo  ", "eval   ", "saving ")
+        self.status_width = 5  # Fixed width for status text ("convo", "eval ", "savin")
         self.progress_bar_width = progress_bar_width  # Number of characters in progress bar
         self.progress_bar_positions = progress_bar_width * 8  # Total positions (8 per character)
         self.first_render = True  # Track if this is the first render
@@ -211,22 +211,19 @@ class TableTerminalUI:
             
             lines.append(row)
         
-        # Row separator before total and cost rows
+        # Row separator before total row
         lines.append(separator)
         
         # Build total row (shows pass/fail totals per NPC)
         total_row = self._calculate_total_row(npc_order)
         lines.append(total_row)
         
-        # Build cost row (shows cost totals per NPC column) - only if all tests are done
-        all_tests_done = all(
-            self.cells.get((test_case_key, npc_type), CellProgress()).status == "done"
-            for test_case_key in self.test_order
-            for npc_type in npc_order
-        )
-        if all_tests_done:
-            cost_row = self._calculate_cost_row(npc_order)
-            lines.append(cost_row)
+        # Separator before cost row
+        lines.append(separator)
+        
+        # Build cost row (shows cost totals per NPC column) - always render
+        cost_row = self._calculate_cost_row(npc_order)
+        lines.append(cost_row)
         
         # Bottom border
         lines.append(separator)
@@ -240,10 +237,10 @@ class TableTerminalUI:
     
     def _format_cell(self, cell: CellProgress) -> str:
         """
-        Format cell content based on status.
+        Format cell content based on status, with truncation to fit column width.
         
         Returns:
-            - During execution: "convo   [▉  ]", "eval    [█▋ ]", "saving  [███]"
+            - During execution: "convo|▉  |", "eval |█▋ |", "savin|███|"
             - After completion: "5/9" (passes/total_evals)
             - Pending: "pending"
         """
@@ -251,14 +248,26 @@ class TableTerminalUI:
             return "pending"
         
         if cell.status == "done":
-            return f"{cell.passes}/{cell.total_evals}"
+            result = f"{cell.passes}/{cell.total_evals}"
+            # Truncate if too long (shouldn't happen with normal numbers)
+            if len(result) > self.col_width:
+                return result[:self.col_width]
+            return result
         elif cell.status == "pending":
             return "pending"
         elif cell.status in ["convo", "eval", "saving"]:
             progress_bar = self._calculate_progress_bar(cell.completed_units, cell.total_units)
-            # Use fixed-width status text (7 chars) so bar doesn't move
-            status_text = cell.status.ljust(self.status_width)
-            return f"{status_text}{progress_bar}"
+            # Truncate status text to fit (status + bar must fit in col_width)
+            # Progress bar is always 5 chars (|███|), so status gets remaining space
+            bar_width = self.progress_bar_width + 2  # bar + 2 pipes
+            available_for_status = self.col_width - bar_width
+            
+            if available_for_status > 0:
+                status_text = cell.status[:available_for_status].ljust(available_for_status)
+                return f"{status_text}{progress_bar}"
+            else:
+                # If column too narrow, just show the bar
+                return progress_bar
         else:
             return "unknown"
     
@@ -271,7 +280,7 @@ class TableTerminalUI:
             total: Total number of units
             
         Returns:
-            Progress bar string like "[▌  ]" or "[███]"
+            Progress bar string like "|▌  |" or "|███|"
         """
         if total == 0:
             ratio = 0
@@ -291,7 +300,7 @@ class TableTerminalUI:
             char_position = min(8, max(0, position - (i * 8)))
             bar_chars.append(chars[char_position])
         
-        return f"[{''.join(bar_chars)}]"
+        return f"|{''.join(bar_chars)}|"
     
     def _format_test_case_name(self, test_case_key: str) -> str:
         """
@@ -428,6 +437,7 @@ class TableTerminalUI:
     def _format_cost(self, cost_usd: float) -> str:
         """
         Format cost in USD with 2 significant figures to the right of decimal point.
+        Truncates to fit in cost column width if necessary.
         
         Examples: $435.34, $0.043, $0.00012, $1234.56
         
@@ -435,24 +445,41 @@ class TableTerminalUI:
             cost_usd: Cost in USD
             
         Returns:
-            Formatted cost string
+            Formatted cost string (max length = cost_col_width)
         """
         if cost_usd == 0.0:
             return "$0.00"
         
+        import math
+        
         # For costs >= $1, use 2 decimal places
         if cost_usd >= 1.0:
-            return f"${cost_usd:.2f}"
+            formatted = f"${cost_usd:.2f}"
+        else:
+            # For costs < $1, find how many decimal places we need for 2 sig figs
+            if cost_usd > 0:
+                # Number of decimal places needed = leading zeros + 2 sig figs
+                decimal_places = -math.floor(math.log10(cost_usd)) + 1
+                formatted = f"${cost_usd:.{decimal_places}f}"
+            else:
+                return "$0.00"
         
-        # For costs < $1, find how many decimal places we need for 2 sig figs
-        # Count leading zeros after decimal point
-        import math
-        if cost_usd > 0:
-            # Number of decimal places needed = leading zeros + 2 sig figs
-            decimal_places = -math.floor(math.log10(cost_usd)) + 1
-            return f"${cost_usd:.{decimal_places}f}"
+        # Truncate if too long for column width
+        if len(formatted) > self.cost_col_width:
+            # Try reducing decimal places
+            if cost_usd >= 1.0:
+                # For large numbers, reduce decimals
+                for decimals in [1, 0]:
+                    formatted = f"${cost_usd:.{decimals}f}"
+                    if len(formatted) <= self.cost_col_width:
+                        return formatted
+                # If still too long, use scientific notation
+                return f"${cost_usd:.1e}"[:self.cost_col_width]
+            else:
+                # For small numbers, truncate decimal places
+                return formatted[:self.cost_col_width]
         
-        return "$0.00"
+        return formatted
     
     def render_initial(self):
         """Render the initial table state after all tests are registered."""
@@ -520,12 +547,15 @@ class TableTerminalUI:
                 
                 lines.append(row)
             
-            # Row separator before total and cost rows
+            # Row separator before total row
             lines.append(separator)
             
             # Build total row (shows pass/fail totals per NPC)
             total_row = self._calculate_total_row(npc_order)
             lines.append(total_row)
+            
+            # Separator before cost row
+            lines.append(separator)
             
             # Build cost row (shows cost totals per NPC column)
             cost_row = self._calculate_cost_row(npc_order)
