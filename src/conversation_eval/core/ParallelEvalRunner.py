@@ -132,8 +132,8 @@ class ParallelEvalRunner:
                 assistant_prompt_report.user_prompt_cases.append(case_reports[case_idx])
                 eval_report.tokens += case_reports[case_idx].tokens
         
-        # Move cursor to end for final messages
-        ui.move_cursor_to_end()
+        # Don't call move_cursor_to_end() here - it causes extra lines between test files
+        # It will be called once at the very end in run_tests.py
         
         return eval_report
     
