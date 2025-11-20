@@ -1,7 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "test",
-        "--ignore=test/unit/utils/test_milvus_utils.py"
+        "."
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

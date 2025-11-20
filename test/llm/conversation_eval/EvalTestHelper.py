@@ -4,11 +4,11 @@ from typing import Dict, List
 from dataclasses import asdict
 import sys
 
-from src.conversation_eval.EvalHelper import EvalHelper
+from src.conversation_eval.core.EvalHelper import EvalHelper
 from ConversationOutcome import ConversationOutcome
 from EvalTestReports import EvalTestReport, EvaluationEvalTestReport, PropositionEvalTestReport, ConversationEvaluationEvalTestReport, EvaluationIterationEvalTestReport, EvaluationResponseEvalTestReport, TermEvalTestReport
-from src.conversation_eval.EvalReports import EvaluationEvalReport
-from src.conversation_eval.EvalClasses import Proposition, Term
+from src.conversation_eval.core.EvalReports import EvaluationEvalReport
+from src.conversation_eval.core.EvalClasses import Proposition, Term
 from src.utils import Logger, Utilities, io_utils
 from src.core import JsonUtils
 

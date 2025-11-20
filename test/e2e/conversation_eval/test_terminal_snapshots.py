@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from test.utils.virtual_terminal import VirtualTerminal
 from test.utils.snapshot_helper import redirect_to_vterm, assert_snapshot_matches, save_snapshot
-from src.conversation_eval.core.TerminalUI import TerminalUI
+from src.conversation_eval.core.TableTerminalUI import TableTerminalUI
 from src.conversation_eval.core.EvalClasses import EvalCase, Proposition, Term
 
 

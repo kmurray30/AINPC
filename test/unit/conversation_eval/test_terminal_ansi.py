@@ -12,7 +12,7 @@ import pytest
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-from src.conversation_eval.core.TerminalUI import TerminalUI
+from src.conversation_eval.core.TableTerminalUI import TableTerminalUI
 from src.conversation_eval.core.EvalClasses import EvalCase, Proposition, Term
 
 

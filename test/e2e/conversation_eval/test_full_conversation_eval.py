@@ -18,8 +18,8 @@ def test_npc0_conversation_evaluation():
     
     try:
         # Import conversation evaluation components
-        from src.conversation_eval.EvalConversation import EvalConversation
-        from src.conversation_eval.EvalConvoMember import EvalConvoMember
+        from src.conversation_eval.core.EvalConversation import EvalConversation
+        from src.conversation_eval.core.EvalConvoMember import EvalConvoMember
         from src.core.Constants import AgentName
         
         print("✅ Successfully imported conversation evaluation components")

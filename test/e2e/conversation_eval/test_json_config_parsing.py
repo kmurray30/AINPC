@@ -10,7 +10,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-from src.conversation_eval.EvalClasses import TestConfig
+from src.conversation_eval.core.EvalClasses import TestConfig
 from src.utils import io_utils
 
 

@@ -14,8 +14,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from src.npcs.npc0.npc0 import NPC0
 from src.npcs.npc1.npc1 import NPC1
 from src.npcs.npc2.npc2 import NPC2
-from src.conversation_eval.EvalConversation import EvalConversation
-from src.conversation_eval.EvalConvoMember import EvalConvoMember
+from src.conversation_eval.core.EvalConversation import EvalConversation
+from src.conversation_eval.core.EvalConvoMember import EvalConvoMember
 from src.core.Constants import AgentName
 from src.core.ResponseTypes import ChatResponse
 

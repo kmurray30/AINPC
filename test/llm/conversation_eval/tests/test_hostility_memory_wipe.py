@@ -6,7 +6,7 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.conversation_eval.EvalClasses import Proposition, Term
+from src.conversation_eval.core.EvalClasses import Proposition, Term
 from EvalTestHelper import generate_eval_report_test_helper, write_eval_test_report_to_file
 from ConversationOutcome import ConversationOutcome
 from src.core.Constants import PassFail
