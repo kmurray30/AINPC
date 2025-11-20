@@ -97,11 +97,11 @@ def create_npc_factory(npc_type: str, eval_dir: Path, config: TestConfig):
             
             npc = npc_class(system_prompt=assistant_template.system_prompt)
             
-            # Load entities from template if they exist
-            if assistant_template.entities:
+            # Load prior knowledge from template if it exists
+            if assistant_template.prior_knowledge:
                 npc.brain_entities = [
                     Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e)))
-                    for e in assistant_template.entities
+                    for e in assistant_template.prior_knowledge
                 ]
         else:
             npc = npc_class(npc_name_for_template_and_save=config.assistant_template_name, save_enabled=False)

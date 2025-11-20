@@ -25,7 +25,7 @@ class NPCState:
 class NPCTemplate:
     system_prompt: str
     initial_response: str | None = None
-    entities: List[str] = None
+    prior_knowledge: List[str] = None
 
 
 @dataclass
@@ -176,10 +176,10 @@ class NPC2:
         # Create a fresh conversation memory
         self.conversation_memory = ConversationMemory.from_new(self.summarization_prompt)
         self.brain_memory.clear_all_memories()
-        # Load entities from template if they exist
-        if self.template.entities is not None and len(self.template.entities) > 0:
-            for entity_str in self.template.entities:
-                self.brain_memory.add_memory(entity_str)
+        # Load prior knowledge from template if it exists
+        if self.template.prior_knowledge is not None and len(self.template.prior_knowledge) > 0:
+            for knowledge_item in self.template.prior_knowledge:
+                self.brain_memory.add_memory(knowledge_item)
 
 
     # ---------- Public API / Protocol ----------

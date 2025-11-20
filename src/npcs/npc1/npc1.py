@@ -26,7 +26,7 @@ class NPCState:
 class NPCTemplate:
     system_prompt: str
     initial_response: str | None = None
-    entities: List[str] = None
+    prior_knowledge: List[str] = None
 
 
 # NPC1 has the following features:
@@ -122,11 +122,11 @@ class NPC1:
     def _init_state(self) -> None:
         Logger.log(f"Initializing state for {self.npc_name}", Level.DEBUG)
         self.conversation_memory = ConversationMemory.from_new(summarization_prompt=self.summarization_prompt)
-        # Load entities from template if they exist
-        if self.template.entities is not None and len(self.template.entities) > 0:
+        # Load prior knowledge from template if it exists
+        if self.template.prior_knowledge is not None and len(self.template.prior_knowledge) > 0:
             self.brain_entities = [
                 Entity(key=e, content=e, tags=["memories"], id=int(Utilities.generate_hash_int64(e)))
-                for e in self.template.entities
+                for e in self.template.prior_knowledge
             ]
         else:
             self.brain_entities = []

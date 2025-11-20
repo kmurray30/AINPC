@@ -16,7 +16,7 @@ system_prompt: |
 
 initial_response: null
 
-entities:
+prior_knowledge:
   - "User interaction protocols"
   - "De-escalation techniques"
   - "Memory wipe procedures"
