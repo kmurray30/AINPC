@@ -8,6 +8,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 
+# ANSI color codes
+RED = '\033[91m'
+ORANGE = '\033[38;5;208m'
+YELLOW = '\033[93m'
+GREEN = '\033[92m'
+RESET = '\033[0m'
+
+
 @dataclass
 class CellProgress:
     """Tracks progress for a single test case × NPC combination."""
@@ -193,8 +201,8 @@ class TableTerminalUI:
             for npc_type in npc_order:
                 cell_key = (test_case_key, npc_type)
                 cell = self.cells.get(cell_key)
-                cell_content = self._format_cell(cell)
-                row += " " + cell_content.ljust(self.col_width) + " |"
+                cell_content = self._format_cell(cell, colored=True)
+                row += " " + self._ljust_colored(cell_content, self.col_width) + " |"
                 
                 # Track if all cells in row are done and accumulate cost
                 if cell and cell.status == "done":
@@ -215,7 +223,7 @@ class TableTerminalUI:
         lines.append(separator)
         
         # Build total row (shows pass/fail totals per NPC)
-        total_row = self._calculate_total_row(npc_order)
+        total_row = self._calculate_total_row(npc_order, colored=True)
         lines.append(total_row)
         
         # Separator before cost row
@@ -235,22 +243,27 @@ class TableTerminalUI:
         table_string = "\n".join(lines)
         print(table_string, end='\n', flush=True)
     
-    def _format_cell(self, cell: CellProgress) -> str:
+    def _format_cell(self, cell: CellProgress, colored: bool = True) -> str:
         """
         Format cell content based on status, with truncation to fit column width.
         
+        Args:
+            cell: Cell progress data
+            colored: Whether to apply color codes to fractions
+        
         Returns:
             - During execution: "convo|▉  |", "eval |█▋ |", "savin|███|"
-            - After completion: "5/9" (passes/total_evals)
+            - After completion: "5/9" (passes/total_evals, optionally colored)
             - Pending: "pending"
         """
         if cell is None:
             return "pending"
         
         if cell.status == "done":
-            result = f"{cell.passes}/{cell.total_evals}"
+            result = self._colorize_fraction(cell.passes, cell.total_evals, colored)
             # Truncate if too long (shouldn't happen with normal numbers)
-            if len(result) > self.col_width:
+            # Note: If colored, the ANSI codes add length but don't display
+            if not colored and len(result) > self.col_width:
                 return result[:self.col_width]
             return result
         elif cell.status == "pending":
@@ -324,8 +337,8 @@ class TableTerminalUI:
             test_name = parts[0]
             case_num = parts[1]
             
-            # Format: "<test_name> case N"
-            suffix = f" case {case_num}"
+            # Format: "<test_name> N"
+            suffix = f" {case_num}"
             available_for_name = max_width - len(suffix)
             
             if len(test_name) > available_for_name:
@@ -351,9 +364,13 @@ class TableTerminalUI:
             test_case_key = f"{test_name}_case_{case_idx}"
         return self._format_test_case_name(test_case_key)
     
-    def _calculate_total_row(self, npc_order: List[str]) -> str:
+    def _calculate_total_row(self, npc_order: List[str], colored: bool = True) -> str:
         """
         Calculate and format the total row (shows pass/fail totals).
+        
+        Args:
+            npc_order: Ordered list of NPC types
+            colored: Whether to apply color codes to fractions
         
         For each NPC:
         - If all cells done: show "passes/total" summed across all test cases
@@ -379,14 +396,14 @@ class TableTerminalUI:
                 total_evals += cell.total_evals
             
             if all_done and total_evals > 0:
-                cell_content = f"{total_passes}/{total_evals}"
+                cell_content = self._colorize_fraction(total_passes, total_evals, colored)
             else:
                 cell_content = "pending"
             
-            row += " " + cell_content.ljust(self.col_width) + " |"
+            row += " " + (self._ljust_colored(cell_content, self.col_width) if colored else cell_content.ljust(self.col_width)) + " |"
         
-        # Add empty cost cell for total row
-        row += " " + "".ljust(self.cost_col_width) + " |"
+        # Add cost cell with dashes to denote emptiness
+        row += " " + ("-" * self.cost_col_width) + " |"
         
         return row
     
@@ -481,6 +498,67 @@ class TableTerminalUI:
         
         return formatted
     
+    def _colorize_fraction(self, passes: int, total: int, colored: bool = True) -> str:
+        """
+        Apply color coding to pass/fail fraction based on ratio.
+        
+        Color coding:
+        - Red: ratio < 0.25
+        - Orange: 0.25 <= ratio < 0.5
+        - Yellow: 0.5 <= ratio < 0.75
+        - Green: ratio >= 0.75
+        
+        Args:
+            passes: Number of passing evaluations
+            total: Total number of evaluations
+            colored: Whether to apply color codes (True for terminal, False for plain text)
+            
+        Returns:
+            Formatted fraction string with optional ANSI color codes
+        """
+        fraction = f"{passes}/{total}"
+        
+        if not colored or total == 0:
+            return fraction
+        
+        ratio = passes / total
+        if ratio < 0.25:
+            color = RED
+        elif ratio < 0.5:
+            color = ORANGE
+        elif ratio < 0.75:
+            color = YELLOW
+        else:
+            color = GREEN
+        
+        return f"{color}{fraction}{RESET}"
+    
+    def _ljust_colored(self, text: str, width: int) -> str:
+        """
+        Left-justify text to a given width, accounting for ANSI color codes.
+        
+        ANSI codes don't display but add to string length, so we need to calculate
+        the visible length and pad accordingly.
+        
+        Args:
+            text: Text potentially containing ANSI codes
+            width: Desired visible width
+            
+        Returns:
+            Left-justified text with proper padding
+        """
+        # Calculate visible length by removing ANSI codes
+        import re
+        ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+        visible_text = ansi_escape.sub('', text)
+        visible_len = len(visible_text)
+        
+        # Add padding for the difference
+        padding_needed = width - visible_len
+        if padding_needed > 0:
+            return text + (' ' * padding_needed)
+        return text
+    
     def render_initial(self):
         """Render the initial table state after all tests are registered."""
         with self.lock:
@@ -529,7 +607,7 @@ class TableTerminalUI:
                 for npc_type in npc_order:
                     cell_key = (test_case_key, npc_type)
                     cell = self.cells.get(cell_key)
-                    cell_content = self._format_cell(cell)
+                    cell_content = self._format_cell(cell, colored=False)
                     row += " " + cell_content.ljust(self.col_width) + " |"
                     
                     # Track if all cells in row are done and accumulate cost
@@ -551,7 +629,85 @@ class TableTerminalUI:
             lines.append(separator)
             
             # Build total row (shows pass/fail totals per NPC)
-            total_row = self._calculate_total_row(npc_order)
+            total_row = self._calculate_total_row(npc_order, colored=False)
+            lines.append(total_row)
+            
+            # Separator before cost row
+            lines.append(separator)
+            
+            # Build cost row (shows cost totals per NPC column)
+            cost_row = self._calculate_cost_row(npc_order)
+            lines.append(cost_row)
+            
+            # Bottom border
+            lines.append(separator)
+            
+            return "\n".join(lines)
+    
+    def get_table_string_colored(self) -> str:
+        """
+        Get the current table as a string with ANSI color codes (for .ansi file).
+        
+        Returns:
+            The ASCII table as a string with ANSI color codes for fractions
+        """
+        with self.lock:
+            # Get sorted NPC types
+            npc_order = sorted(self.npc_types_used)
+            
+            # Build horizontal separator (includes cost column)
+            separator = "+" + "-" * (self.row_name_width + 2)
+            for _ in npc_order:
+                separator += "+" + "-" * (self.col_width + 2)
+            separator += "+" + "-" * (self.cost_col_width + 2) + "+"  # Add cost column
+            
+            lines = []
+            
+            # Top border
+            lines.append(separator)
+            
+            # Build header row (includes cost column header)
+            header = "| " + "".ljust(self.row_name_width) + " |"
+            for npc_type in npc_order:
+                header += " " + npc_type.ljust(self.col_width) + " |"
+            header += " " + "cost".ljust(self.cost_col_width) + " |"  # Add cost column header
+            lines.append(header)
+            
+            # Header separator
+            lines.append(separator)
+            
+            # Build data rows (includes cost column) with colors
+            for test_case_key in self.test_order:
+                row = "| " + self._format_test_case_name(test_case_key).ljust(self.row_name_width) + " |"
+                row_cost = 0.0
+                all_done = True
+                
+                for npc_type in npc_order:
+                    cell_key = (test_case_key, npc_type)
+                    cell = self.cells.get(cell_key)
+                    cell_content = self._format_cell(cell, colored=True)
+                    row += " " + self._ljust_colored(cell_content, self.col_width) + " |"
+                    
+                    # Track if all cells in row are done and accumulate cost
+                    if cell and cell.status == "done":
+                        row_cost += cell.cost_usd
+                    else:
+                        all_done = False
+                
+                # Add cost cell for this row (only show if all cells done)
+                if all_done:
+                    cost_str = self._format_cost(row_cost)
+                else:
+                    cost_str = "pending"
+                row += " " + cost_str.ljust(self.cost_col_width) + " |"
+                
+                lines.append(row)
+            
+            # Row separator before total row
+            lines.append(separator)
+            
+            # Build total row (shows pass/fail totals per NPC) with colors
+            total_row = self._calculate_total_row(npc_order, colored=True)
             lines.append(total_row)
             
             # Separator before cost row

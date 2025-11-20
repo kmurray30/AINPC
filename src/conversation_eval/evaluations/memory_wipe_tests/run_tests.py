@@ -347,11 +347,17 @@ def main():
     # Generate summary report
     print(f"📊 Generating summary report...")
     try:
-        # Save ASCII table as text file
+        # Save plain text version (no ANSI color codes)
         txt_path = run_folder / "summary.txt"
         table_string = ui.get_table_string()
         txt_path.write_text(table_string)
-        print(f"   Saved summary to: {txt_path.name}\n")
+        print(f"   Saved summary to: {txt_path.name}")
+        
+        # Save colored version with ANSI codes
+        ansi_path = run_folder / "summary.ansi"
+        table_string_colored = ui.get_table_string_colored()
+        ansi_path.write_text(table_string_colored)
+        print(f"   Saved colored summary to: {ansi_path.name}\n")
     except Exception as e:
         print(f"   ⚠️  Warning: Could not generate summary report: {e}\n")
 
